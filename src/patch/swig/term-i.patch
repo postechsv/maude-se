@@ -6,5 +6,5 @@
 > 
 > 	RewriteSmtSequenceSearch* smtSearch2(SearchType type,
 > 			EasyTerm* target, Connector* connector, Converter* converter, bool fold = true, bool merge = false,
-> 			const Vector<ConditionFragment*> &condition = NO_CONDITION,
+> 			const Vector<ConditionFragment*> &condition = NO_CONDITION, const Vector<ConditionFragment*> &smtCondition = NO_CONDITION,
 > 			int depth = -1);
