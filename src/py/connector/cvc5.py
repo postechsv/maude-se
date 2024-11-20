@@ -4,7 +4,7 @@ import time
 from cvc5 import Kind as cvcKind
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector, SmtTerm, TermSubst
+from maudeSE.maude import PyConverter, PyConnector
 
 class Cvc5Connector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
