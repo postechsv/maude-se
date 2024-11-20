@@ -144,7 +144,7 @@ class SearchHook(Hook):
         
         eqSymbol = module.findSymbol('_=_', [termk, termk], eqCondk)
         assnSymbol = module.findSymbol('_:=_', [termk, termk], eqCondk)
-        conjSymbol = module.findSymbol('_/\_', [condk, condk], condk)
+        conjSymbol = module.findSymbol('_/\\_', [condk, condk], condk)
         nilSymbol = module.findSymbol('nil', [], eqCondk)
 
         c_l = nilSymbol.makeTerm([])
@@ -182,6 +182,7 @@ class SearchHook(Hook):
             init,
             goal,
             cond,
+            smtCond,
             step,
             bound,
             sol,
@@ -211,20 +212,7 @@ class SearchHook(Hook):
             else int(b.split(".")[0].replace("(", "").replace(")", ""))
         )
 
-        if str(cond.getSort()) == "EqCondition":
-            (
-                l,
-                r,
-            ) = cond.arguments()
-
-            downR = module.downTerm(r)
-
-            if downR is None:
-                downR = ff.getModule().downTerm(r)
-
-            c = EqualityCondition(module.downTerm(l), downR)
-        else:
-            raise Exception("currently only a single equality condition is supported")
+        nonSmtCond, smtCond = module.downTerm(cond), module.downTerm(smtCond)
 
         is_fold = "true" in str(fold)
         is_merge = "true" in str(merge)
@@ -241,7 +229,7 @@ class SearchHook(Hook):
                 self.conv,
                 is_fold,
                 is_merge,
-                [c],
+                [nonSmtCond], [smtCond],
                 max_depth,
             )
         ):
