@@ -58,6 +58,14 @@ patch_src() {
   cp "$patch_src_dir/setup.py" "$maude_src_dir"
   cp "$patch_src_dir/meson_options.txt" "$maude_src_dir/subprojects/maudesmc/"
   cp "$patch_src_dir/meson.build" "$maude_src_dir/subprojects/maudesmc/"
+  cp "$patch_src_dir/maude/SMT_EngineWrapper.hh" "$maude_src_dir/SMT"
+  cp "$patch_src_dir/maude/variableGenerator.hh" "$maude_src_dir/Mixfix"
+  cp "$patch_src_dir/maude/variableGenerator.hh" "$maude_src_dir/Mixfix"
+  cp "$patch_src_dir/maude/interpreter.hh" "$maude_src_dir/Mixfix"
+  # cp "$src_dir/maude/metaLevelOpSymbol.hh" "$maude_src_dir/Meta"
+  # cp "$src_dir/maude/metaLevelOpSymbol.cc" "$maude_src_dir/Meta"
+  # cp "$src_dir/maude/descentSignature.cc" "$maude_src_dir/Meta"
+  # cp "$src_dir/maude/metaLevelSignature.cc" "$maude_src_dir/Meta"
 }
 
 prepare() {
@@ -113,6 +121,13 @@ build_maude_lib() {
   cp "$src_dir/maude/smtStateTransitionGraph.cc" "$maude_src_dir/SMT"
   cp "$src_dir/maude/smtStateTransitionGraph.hh" "$maude_src_dir/SMT"
   cp "$src_dir/maude/rewriteSmtSearch.cc" "$maude_src_dir/Mixfix"
+  cp "$src_dir/maude/pysmt.hh" "$maude_src_dir/Mixfix"
+  cp "$src_dir/maude/pysmt.cc" "$maude_src_dir/Mixfix" 
+  cp "$src_dir/maude/metaSmtSearch.cc" "$maude_src_dir/Meta"
+  cp "$src_dir/maude/metaLevelSmtOpSymbol.hh" "$maude_src_dir/Meta"
+  cp "$src_dir/maude/metaLevelSmtOpSymbol.cc" "$maude_src_dir/Meta"
+  cp "$src_dir/maude/descentSmtSignature.cc" "$maude_src_dir/Meta"
+  cp "$src_dir/maude/metaLevelSmtSignature.cc" "$maude_src_dir/Meta"
 
   cd maude-bindings/subprojects/maudesmc
   (
@@ -123,8 +138,8 @@ build_maude_lib() {
       arch -arm64 meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
             -Dextra-lib-dirs="$build_dir/lib" \
             -Dextra-include-dirs="$build_dir/include" \
-            -Dstatic-libs='buddy, gmp, sigsegv, yices2' \
-            -Dwith-smt='yices2' \
+            -Dstatic-libs='buddy, gmp, sigsegv' \
+            -Dwith-smt='pysmt' \
             -Dwith-ltsmin=disabled \
             -Dwith-simaude=disabled \
             -Dc_args='-mno-thumb' \
@@ -134,8 +149,8 @@ build_maude_lib() {
       meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
             -Dextra-lib-dirs="$build_dir/lib" \
             -Dextra-include-dirs="$build_dir/include" \
-            -Dstatic-libs='buddy, gmp, sigsegv, yices2' \
-            -Dwith-smt='yices2' \
+            -Dstatic-libs='buddy, gmp, sigsegv' \
+            -Dwith-smt='pysmt' \
             -Dwith-ltsmin=disabled \
             -Dwith-simaude=disabled \
             -Dc_args='-mno-thumb' \
