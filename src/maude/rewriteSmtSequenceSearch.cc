@@ -32,7 +32,7 @@
 
 RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
                                                    SearchType searchType,
-                                                   Pattern *goal,
+                                                   Pattern *goal, Pattern* smtGoal,
                                                    const SMT_Info &smtInfo,
                                                    SMT_EngineWrapper *engine,
                                                    FreshVariableGenerator *freshVariableGenerator,
@@ -41,21 +41,25 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
                                                    int maxDepth,
                                                    const mpz_class &avoidVariableNumber)
     : SmtStateTransitionGraph(initial, smtInfo, engine, freshVariableGenerator, connector, converter, fold, merge, avoidVariableNumber),
-      goal(goal),
+      goal(goal), smtGoal(smtGoal),
       maxDepth((searchType == ONE_STEP) ? 1 : maxDepth)
 {
-  trueGoal = new Pattern(goal->getLhs(), false);
-
   initState->constTermIndex = consTermSeen[initState->hashConsIndex].size();
-  DagNode *initConst = makeConstraintFromCondition(goal->getCondition());
+  // DagNode *initConst = makeConstraintFromCondition(smtGoal->getCondition());
 
-  SmtTerm *initRi = convDag2Term(initConst);
+	DagNode* trueDag = smtInfo.getTrueSymbol()->makeDagNode();
+	trueDag->computeTrueSort(*initial);
+
+  SmtTerm *initRi = convDag2Term(trueDag);
+
+  smtGoalConst = smtGoal->getLhs()->term2Dag();
+  // SmtTerm *initRi = convDag2Term(initConst);
 
   // PyObject *next = PyObject_CallMethodObjArgs(connector, add_const, Py_None, initRi, NULL);
   SmtTerm* next = connector->add_const(nullptr, initRi);
   if (next == nullptr)
   {
-    IssueWarning("failed to make a constraint22");
+    IssueWarning("failed to translate an initial SMT constraint to a solver term");
   }
 
   // Py_XINCREF(next);
@@ -68,7 +72,7 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
 
   newVariableNumber = 0;
 
-  finalConstraint = 0;
+  // finalConstraint = 0;
   matchState = 0;
   explore = -1;
   exploreDepth = -1;
@@ -79,19 +83,18 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
   nextArc = NONE;
 
   time = 0.0;
+  // Verbose("RewriteSmtSeqSearch : " << this << " [parent : " << static_cast<SmtStateTransitionGraph*>(this) << "]" 
+  // << " [rootContainer : " << static_cast<RootContainer*>(this) << "]" << " [folder : " << &stateCollection << "] (alloc)");
 }
 
 RewriteSmtSequenceSearch::~RewriteSmtSequenceSearch()
 {
   delete matchState;
   delete goal;
+  delete smtGoal;
   delete engine;
-
-  // for (auto& i : smtVarDags){
-  //   if (i.second) delete i.second;
-  // }
-  unlink();
-  // delete trueGoal; // virtual do not call this...
+  // Verbose("RewriteSmtSeqSearch : " << this << "[parent : " << static_cast<SmtStateTransitionGraph*>(this) << "] " 
+  // << " [rootContainer : " << static_cast<RootContainer*>(this) << "] (free)");
 }
 
 void RewriteSmtSequenceSearch::markReachableNodes()
@@ -128,6 +131,8 @@ void RewriteSmtSequenceSearch::markReachableNodes()
   //
   // if (finalConstraint != 0)
   //   finalConstraint->mark();
+  if (smtGoalConst)
+    smtGoalConst->mark();
 }
 
 bool RewriteSmtSequenceSearch::findNextMatch()
@@ -151,10 +156,14 @@ bool RewriteSmtSequenceSearch::findNextMatch()
       DagNode* stateDag = getStateDag(stateNr);
 
       Verbose("\n");
-      Verbose("  goal original : " << trueGoal->getLhs() << " which should match with " << stateDag << " index : " << stateNr);
+      Verbose("  goal pattern : ");
+      Verbose("    " << goal->getLhs());
+      Verbose("  checking pattern matching with the term : ");
+      Verbose("    " << stateDag);
+      Verbose("  term's internal state # " << stateNr);
 
       matchState = new MatchSearchState(getContext()->makeSubcontext(stateDag),
-                                        trueGoal,
+                                        goal,
                                         MatchSearchState::GC_CONTEXT);
     }
 
@@ -257,7 +266,6 @@ int RewriteSmtSequenceSearch::findNextInterestingState()
       return explore;
     }
   }
-  // cout << "reach end " << endl;
   return NONE;
 }
 
@@ -273,10 +281,10 @@ void RewriteSmtSequenceSearch::findSMT_Variables()
   //
   //	Find any SMT variables in the pattern, make dagnode versions and record their indices.
   //
-  int nrVariables = trueGoal->getNrRealVariables();
+  int nrVariables = goal->getNrRealVariables();
   for (int i = 0; i < nrVariables; ++i)
   {
-    VariableTerm *v = safeCast(VariableTerm *, trueGoal->index2Variable(i));
+    VariableTerm *v = safeCast(VariableTerm *, goal->index2Variable(i));
     VariableSymbol *vs = safeCast(VariableSymbol *, v->symbol());
     SMT_Info::SMT_Type type = smtInfo.getType(vs->getSort());
     if (type != SMT_Info::NOT_SMT)
@@ -298,7 +306,7 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
   //
   Vector<DagNode *> args(2);
   const Substitution *substitution = matchState->getContext();
-  DagNode *matchConstraint = 0;
+  DagNode *matchConstraint = smtGoalConst;
   // for (auto &i : smtVarDags)
   // {
   //   Verbose("smtVarDags " << i.first << " : " << i.second);
@@ -330,43 +338,31 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
     }
   }
 
-  if (matchConstraint != 0)
+  ConstrainedTerm *constrained = consTermSeen[seen[stateNr]->hashConsIndex][seen[stateNr]->constTermIndex];
+  std::vector<SmtTerm*> ll;
+  ll.push_back(constrained->constraint);
+  SmtTerm* matchTerm = 0;
+
+  if (matchConstraint)
   {
     Verbose("matchConstraint: " << matchConstraint);
-    SmtTerm* matchTerm = convDag2Term(matchConstraint);
-    ConstrainedTerm *constrained = consTermSeen[seen[stateNr]->hashConsIndex][seen[stateNr]->constTermIndex];
-    SmtTerm *pyConst = constrained->constraint;
-
-    // Py_XINCREF(pyConst);
-
-    // PyObject *check_sat_r = PyObject_CallMethodObjArgs(connector, check_sat, pyConst, matchTerm, NULL);
-    std::vector<SmtTerm*> ll;
-    ll.push_back(pyConst);
+    matchTerm = convDag2Term(matchConstraint);
     ll.push_back(matchTerm);
+  } 
 
-    bool check_sat_r = connector->check_sat(ll);
+  if (!connector->check_sat(ll))
+  {
+    return false;
+  }
+  else 
+  {
+    // get a model
+    constrained->model = connector->get_model();
 
-    // if (check_sat_r != nullptr)
-    // {
-      // if (PyObject_RichCompareBool(check_sat_r, Py_True, Py_EQ) <= 0)
-      // {
-      //   return false;
-      // }
-      if (!check_sat_r)
-      {
-        return false;
-      }
-      else 
-      {
-          constrained->constraint = connector->add_const(constrained->constraint, matchTerm);
-          // constrained->constraint = PyObject_CallMethodObjArgs(connector, add_const, constrained->constraint, matchTerm, NULL);
-          // Py_XINCREF(constrained->constraint);
-      }
-    // }
-    // else
-    // {
-      // IssueWarning("fail to checkSat");
-    // }
+    // update acc const if matching term exists
+    if (matchTerm){
+      constrained->constraint = connector->add_const(constrained->constraint, matchTerm);
+    }
   }
   return true;
 }

@@ -36,6 +36,7 @@ public:
   int getNextState(int stateNr, int index);
   DagNode *getStateDag(int stateNr);
   SmtTerm* getStateConst(int stateNr);
+  std::map<DagNode*, DagNode*>* getStateModel(int stateNr);
   int getStateDepth(int stateNr) const;
   const ArcMap &getStateFwdArcs(int stateNr) const;
   //
@@ -72,6 +73,7 @@ protected:
 
     DagNode *dag;
     SmtTerm *constraint;
+    SmtModel* model;
     // for matching
     VariableInfo variableInfo;
     Term *term;
@@ -114,49 +116,8 @@ protected:
   void printStateConst(int depth);
 
 protected:
-  PyObject *mainModule;
-  PyObject *maudeModule;
-  PyObject *stateManager;
-  PyObject *solver;
   Converter *termConverter;
   Connector *connector;
-  PyObject *easySubst;
-
-  // state manager
-  PyObject *subsume;
-  PyObject *mergeF;
-
-  // solver method
-  PyObject *push;
-  PyObject *check_sat;
-  PyObject *add;
-  PyObject *pop;
-  PyObject *make_assignment;
-
-  PyObject *sat;
-  PyObject *unsat;
-
-  PyObject *prefix1;
-  PyObject *prefix2;
-
-  // termConv method
-
-  PyObject *dag2term;
-  PyObject *term2dag;
-
-  // Connector
-  PyObject *add_const;
-  PyObject *makeConjunct;
-  PyObject *makeEq;
-  PyObject *add2match;
-  PyObject *clearMatch;
-
-  // Easy subst
-  PyObject *insert;
-  PyObject *instantiate;
-
-  // for sort
-  Sort *boolSort;
 
   //
   typedef map<const char *, PyObject *> SortMap;
@@ -171,6 +132,10 @@ protected:
 
 protected:
   SmtTerm *convDag2Term(DagNode *dag);
+
+public:
+  // Aux function
+  // VariableInfo* getVariableInfo(int stateNr);
 };
 
 inline SmtStateTransitionGraph::State::State(int hashConsIndex, int parent)
@@ -225,6 +190,64 @@ SmtStateTransitionGraph::getStateConst(int stateNr)
   return ct->constraint;
 }
 
+// inline VariableInfo*
+// SmtStateTransitionGraph::getVariableInfo(int stateNr)
+// {
+//   // TODO: return const DAG
+//   if (seen.size() <= stateNr)
+//   {
+//     IssueWarning("not found in seen states");
+//   }
+
+//   State *state = seen[stateNr];
+
+//   if (consTermSeen[state->hashConsIndex].size() <= state->constTermIndex)
+//   {
+//     IssueWarning("consTermseen length wrong");
+//   }
+//   ConstrainedTerm *ct = consTermSeen[state->hashConsIndex][state->constTermIndex];
+//   return &ct->variableInfo;
+// }
+
+inline std::map<DagNode*, DagNode*>*
+SmtStateTransitionGraph::getStateModel(int stateNr)
+{
+  // TODO: return const DAG
+  if (seen.size() <= stateNr)
+  {
+    IssueWarning("not found in seen states");
+  }
+
+  State *state = seen[stateNr];
+
+  if (consTermSeen[state->hashConsIndex].size() <= state->constTermIndex)
+  {
+    IssueWarning("consTermseen length wrong");
+  }
+  ConstrainedTerm *ct = consTermSeen[state->hashConsIndex][state->constTermIndex];
+  std::map<DagNode*, DagNode*>* modelMap = new std::map<DagNode*, DagNode*>();
+  if (ct->model == nullptr){
+    IssueWarning("bug occured");
+  }
+
+  std::vector<SmtTerm*>* ks = ct->model->keys();
+
+  for (auto &elem : *ks){
+    DagNode* t = termConverter->term2dag(elem);
+    DagNode* v = termConverter->term2dag(ct->model->get(elem));
+
+    t->computeTrueSort(*initial);
+    v->computeTrueSort(*initial);
+
+    // cout << tD << " ---> " << tV << endl;
+    // (*modelMap)[tD] = tV;
+    modelMap->insert(std::pair<DagNode*, DagNode*>(t, v));
+  }
+
+  delete ks;
+  return modelMap;
+}
+
 inline int SmtStateTransitionGraph::getStateDepth(int stateNr) const
 {
   return seen[stateNr]->depth;
@@ -258,16 +281,16 @@ inline SmtTerm *SmtStateTransitionGraph::convDag2Term(DagNode *dag)
 {
   // call Python the dag2Term method of the Converter class
   // PyObject *maudeTerm = dag2maudeTerm(dag);
+
   clock_t loop_s = clock();
-  EasyTerm* ff = termConverter->convert(dag);
-  SmtTerm *term = termConverter->dag2term(ff);
+  SmtTerm *term = termConverter->dag2term(dag);
   clock_t loop_e = clock();
   elseTime += (double)(loop_e - loop_s);
 
-  if (term == nullptr)
-  {
-    IssueWarning("failed to call Converter's dag2term for " << dag);
-  }
+  // if (term == nullptr)
+  // {
+  //   IssueWarning("failed to call Converter's dag2term for " << dag);
+  // }
   return term;
 }
 

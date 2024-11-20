@@ -23,19 +23,11 @@
 #include "term.hh"
 #include "lhsAutomaton.hh"
 #include "subproblem.hh"
-// #include "freeDagNode.hh"
-
-//	core class definitions
-// #include "narrowingVariableInfo.hh"
 #include "rewriteSmtSearchState.hh"
 #include "variableInfo.hh"
 #include "smtStateTransitionGraph.hh"
 #include "freshVariableGenerator.hh"
-
 #include "token.hh"
-// #include "Python.h"
-
-// #include <sstream>
 
 SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 												 const SMT_Info &smtInfo, SMT_EngineWrapper *engine,
@@ -49,10 +41,6 @@ SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 		Verbose("folding option is on");
 	else
 		Verbose("folding option is off");
-
-	DagNode *trueDag = smtInfo.getTrueSymbol()->makeDagNode();
-	trueDag->computeTrueSort(*initial);
-	boolSort = trueDag->getSort();
 
 	initial->reduce();
 
@@ -80,15 +68,15 @@ SmtStateTransitionGraph::~SmtStateTransitionGraph()
 	{
 		// this is double free?
 		delete seen[i]->rewriteState;
-		//   if (seen[i]->dag) delete seen[i]->dag;
 		delete seen[i];
 	}
 
-	//   for (auto it = consTermSeen.begin(); it != consTermSeen.end(); it++){
-	//     for (ConstrainedTerm* c : it->second){
-	//       if (c->dag) delete c->dag;
-	//     }
-	//   }
+	for (auto& it : consTermSeen){
+		for (auto &ct : it.second){
+			delete ct;
+		}
+	}
+	delete initial;
 }
 
 int SmtStateTransitionGraph::getNextState(int stateNr, int index)
@@ -190,6 +178,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 				return NONE;
 			}
 			initial->addInCount(*c);
+			delete c;
 
 			//  assume the dag has two arugments ...
 
@@ -199,19 +188,18 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			while (arg->valid())
 			{
 				nrChild++;
-				//   Verbose(arg->argument());
 				dg.append(arg->argument());
 				arg->next();
 			}
 
 			if (nrChild != 2)
 			{
-				Verbose("error");
+				IssueWarning("failed to apply one-step symbolic rewrite (error term : " << r.first << ")");
 			}
 
 			DagNode *c1 = dg[0];
 			DagNode *c2 = dg[1];
-			c1->mark();
+			// c1->mark();
 
 			Verbose("first argument is " << c1 << " and second is " << c2);
 
@@ -227,24 +215,10 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			ll.push_back(acc);
 			ll.push_back(cur);
 
-			bool result = connector->check_sat(ll);
-
-			// if (result == nullptr)
-			// {
-			// 	IssueWarning("failed to check constraint");
-			// }
-
-			// if (PyObject_RichCompareBool(result, Py_True, Py_EQ) <= 0)
-			// {
-			// 	Verbose("constraint is unsatisfiable ... continue");
-			// 	continue;
-			// }
-			if (!result){
+			if (!connector->check_sat(ll)){
 				Verbose("constraint is unsatisfiable ... continue");
 				continue;
 			}
-
-			delete c;
 
 			int nextState;
 			int index2;
@@ -268,7 +242,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 					SmtTerm* next = connector->add_const(acc, cur);
 					if (next == nullptr)
 					{
-						IssueWarning("failed to make a constraint");
+						IssueWarning("failed to accumulate constraints");
 					}
 
 					// Py_XINCREF(next);
@@ -304,7 +278,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 					// Verbose("  " << ss00);
 
 					ConstrainedTerm *t = new ConstrainedTerm(c1, next);
-					t->dag->mark();
+					// t->dag->mark();
 
 					//   newState->constraint = conjunct;
 					// newState->constTermIndex = consTermSeen[counter].size();
@@ -332,7 +306,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 				if (it != consTermSeen.end())
 				{
 					int cc = 0;
-					for (auto constTerm : it->second)
+					for (auto &constTerm : it->second)
 					{
 						Verbose("  check folding from " << c1 << " to " << constTerm->dag);
 						// check the conjunt dag is subsumed by an older one
@@ -423,7 +397,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 						// Verbose("  " << ss00);
 
 						ConstrainedTerm *t = new ConstrainedTerm(c1, next);
-						t->dag->mark();
+						// t->dag->mark();
 
 						consTermSeen[index2].append(t);
 						map2seen.insert(Map2Seen::value_type(make_tuple(index2, newState->constTermIndex), seen.size()));
@@ -666,7 +640,7 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 	if (result)
 	{
 		int maxSize = matcher.nrFragileBindings();
-		std::vector<EasyTerm*> vars, vals;
+		std::map<DagNode*, DagNode*> subst_dict;
 		for (int i = 0; i < maxSize; i++)
 		{
 			Term *v_term = variableInfo.index2Variable(i);
@@ -674,14 +648,12 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 			DagNode *left = v_term->term2Dag();
 			DagNode *right = matcher.value(i);
 
-			left->mark();
-			right->mark();
-
-			vars.push_back(converter->convert(left));
-			vals.push_back(converter->convert(right));
+			subst_dict.insert(std::pair<DagNode*, DagNode*>(left, right));
 		}
 
-		subst = connector->mkSubst(vars, vals);
+		// delete old subst, if any exists
+		if (subst) delete subst;
+		subst = connector->mk_subst(subst_dict);
 	}
 	return result;
 }

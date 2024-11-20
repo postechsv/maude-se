@@ -6,17 +6,18 @@
 #include "natSet.hh"
 #include "sequenceSearch.hh"
 #include "smtStateTransitionGraph.hh"
+#include "pattern.hh"
 #include "matchSearchState.hh"
 #include "simpleRootContainer.hh"
 
-class RewriteSmtSequenceSearch : public SequenceSearch, public SmtStateTransitionGraph, public SimpleRootContainer
+class RewriteSmtSequenceSearch : public SequenceSearch, public SmtStateTransitionGraph, private SimpleRootContainer
 {
   NO_COPYING(RewriteSmtSequenceSearch);
 
 public:
   RewriteSmtSequenceSearch(RewritingContext *initial,
                            SearchType searchType,
-                           Pattern *goal,
+                           Pattern *goal, Pattern *smtGoal,
                            const SMT_Info &smtInfo,
                            SMT_EngineWrapper *engine,
                            FreshVariableGenerator *freshVariableGenerator,
@@ -27,17 +28,22 @@ public:
   ~RewriteSmtSequenceSearch();
 
   bool findNextMatch();
+  //
+  //	Information particular to most recent match.
+  //
+  const Substitution *getSubstitution() const;
+  DagNode* getFinalConstraint();  // conjunction of constraints from state and constraints from match
+  const mpz_class& getMaxVariableNumber() const;  // largest fresh variable appearing in substitution or constraint
+  const NatSet& getSMT_VarIndices() const;
+
   const Pattern *getGoal() const;
   Rule *getStateRule(int stateNr) const;
   int getStateNr() const;
-  const Substitution *getSubstitution() const;
-  DagNode *getFinalConstraint() const;
+
+  VariableInfo* getVariableInfo();
 
 private:
   int findNextInterestingState();
-
-  PyObject *goalAbstConst;
-  PyObject *finalConstraint;
 
   DagNode *makeConstraintFromCondition(
       const Vector<ConditionFragment *> &condition);
@@ -57,7 +63,7 @@ private:
   mpz_class newVariableNumber;
 
   Pattern *const goal;
-  Pattern *trueGoal;
+  Pattern *const smtGoal;
   const int maxDepth;
   int explore;
   int exploreDepth;
@@ -70,6 +76,8 @@ private:
   int stateNr;
 
   double time;
+
+  DagNode* smtGoalConst;
 };
 
 inline const Pattern *
@@ -84,6 +92,11 @@ RewriteSmtSequenceSearch::getSubstitution() const
   return matchState->getContext();
 }
 
+inline VariableInfo*
+RewriteSmtSequenceSearch::getVariableInfo(){
+  return matchState->getPattern();
+}
+
 inline int
 RewriteSmtSequenceSearch::getStateNr() const
 {
@@ -91,8 +104,26 @@ RewriteSmtSequenceSearch::getStateNr() const
 }
 
 inline DagNode *
-RewriteSmtSequenceSearch::getFinalConstraint() const
+RewriteSmtSequenceSearch::getFinalConstraint()
 {
-  return nullptr;
+  // TODO
+  SmtTerm* finalConstTerm = this->getStateConst(stateNr);
+  DagNode* finalConst = termConverter->term2dag(finalConstTerm);
+
+  finalConst->computeTrueSort(*initial);
+  return finalConst;
+}
+
+inline const mpz_class&
+RewriteSmtSequenceSearch::getMaxVariableNumber() const
+{
+  // TODO: should update with a new interface
+  return seen[stateNr]->avoidVariableNumber;
+}
+
+inline const NatSet&
+RewriteSmtSequenceSearch::getSMT_VarIndices() const
+{
+  return smtVarIndices;
 }
 #endif
