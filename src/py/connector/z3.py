@@ -3,7 +3,7 @@ import time
 
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector, SmtTerm, TermSubst
+from maudeSE.maude import PyConverter, PyConnector, PySmtTerm, PySmtModel, PyTermSubst
 
 class Z3Connector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
@@ -27,7 +27,7 @@ class Z3Connector(PyConnector):
         self._s.push()
 
         for const in consts:
-            c, _, _ = const.getData()
+            c, _, _ = const.data()
             self._s.add(c)
 
         r = self._s.check()
@@ -47,34 +47,35 @@ class Z3Connector(PyConnector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            (cur_t, _, cur_v) = cur.getData()
+            cur_t, _, cur_v = cur.data()
             body = cur_t
 
         else:
-            (acc_f, _, acc_v), (cur_t, _, cur_v) = acc.getData(), cur.getData()
+            acc_f, _, acc_v = acc.data()
+            cur_t, _, cur_v = cur.data()
             body = z3.And(acc_f, cur_t)
 
-        return SmtTerm([z3.simplify(body), None, None])
+        return PySmtTerm([z3.simplify(body), None, None])
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
         
         d_s = time.time()
         t_l = list()
-        sub = subst.getSubst()
+        sub = subst.keys()
         for p in sub:
-            src, _, _ = self._c.dag2term(p).getData()
-            trg, _, _ = self._c.dag2term(sub[p]).getData()
+            src, _, _ = self._c.dag2term(p).data()
+            trg, _, _ = self._c.dag2term(subst.get(p)).data()
 
             t_l.append((src, trg))
         d_e = time.time()
 
         self._dt += d_e - d_s
 
-        prev_c, _, _ = prev.getData()
+        prev_c, _, _ = prev.data()
 
-        acc_c, _, _ = acc.getData()
-        cur_c, _, _ = cur.getData()
+        acc_c, _, _ = acc.data()
+        cur_c, _, _ = cur.data()
     
         so_s = time.time()
         self._s.push()
@@ -135,18 +136,47 @@ class Z3Connector(PyConnector):
 
         return tuple([new_prev, tuple([z3.simplify(c), None, None])])
     
-    def mkSubst(self, vars, vals):
-        subst = dict()
-        for v, val in zip(vars, vals):
-            subst[v] = val
-        return TermSubst(subst)
+    # def mk_subst(self, vars, vals):
+    #     subst = dict()
+    #     for v, val in zip(vars, vals):
+    #         subst[v] = val
+    #     return PyTermSubst(subst)
 
+    # def get_model(self):
     def get_model(self):
-        model_dict = dict()
-        for d in self._m.decls():
-            model_dict[SmtTerm([d, None, None])] = SmtTerm([self._m[d], None, None])
+        # model_dict = dict()
+        # for d in self._m.decls():
+        #     model[PySmtTerm([d, None, None])] = PySmtTerm([self._m[d], None, None])
 
-        return model_dict
+        # return model_dict
+        # m = SmtModel()
+        # for d in self._m.decls():
+        #     k, v = PySmtTerm([d, None, None]), PySmtTerm([self._m[d], None, None])
+        #     print(k, v)
+        #     print(d, self._m[d])
+        #     m.set(k, v)
+        #     g = m.get(k)
+        #     print("get test -- ", k, g)
+        # print(m)
+        # print("--------")
+        # for a in m.keys():
+        #     print(a)
+        # print("---------")
+        # m = dict()
+        m = PySmtModel()
+        for d in self._m.decls():
+            k, v = [d, None, None], [self._m[d], None, None]
+            # print(d, self._m[d])
+            m.set(k, v)
+            # g = m.get(k)
+            # print("get test -- ", k, g)
+        # print(m)
+        # print("--------")
+        # for a in m.keys():
+        #     print("", a, "-->", m.get(a))
+        # print("---------")
+        return m
+
     
     def print_model(self):
         print(self._m)

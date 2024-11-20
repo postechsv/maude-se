@@ -1,5 +1,5 @@
 from typing import Dict
-from maudeSE.maude import PyConverter, SmtTerm
+from maudeSE.maude import PyConverter, PySmtTerm
 from ..util import *
 from functools import reduce
 from maudeSE.maude import *
@@ -183,23 +183,25 @@ class Z3Converter(PyConverter):
         return self._func_dict[key]
     
     def term2dag(self, term):
-        t, _, _ = term.getData()
+        t, _, _ = term.data()
         return self._module.parseTerm(self._term2dag(t))
 
     def _term2dag(self, term):
 
         if z3.is_and(term):
-            return " and ".join([self._term2dag(c) for c in term.children()])
+            r = " and ".join([self._term2dag(c) for c in term.children()])
+            return f"({r})"
         
         if z3.is_or(term):
-            return " or ".join([self._term2dag(c) for c in term.children()])
+            r = " or ".join([self._term2dag(c) for c in term.children()])
+            return f"({r})"
 
         if z3.is_not(term):
             return f"(not {self._term2dag(term.arg(0))})"
 
         if z3.is_eq(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} === {r}"
+            return f"({l} === {r})"
 
         if z3.is_gt(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
@@ -270,7 +272,10 @@ class Z3Converter(PyConverter):
         
         # Boolean
         if isinstance(term, z3.z3.BoolRef):
-            return f"({str(term).lower()}).Boolean"
+            if not (z3.is_true(term) and z3.is_false(term)):
+                return f"{term}:Boolean"
+            else:
+                return f"({str(term).lower()}).Boolean"
         
         # In this case, the term must be a variable
         if isinstance(term, z3.z3.ArithRef):
@@ -288,7 +293,7 @@ class Z3Converter(PyConverter):
         :returns: A pair of an SMT solver term and its variables
         """
         term, v_set = self._dag2term(t)
-        return SmtTerm([term, None, list(v_set)])
+        return PySmtTerm([term, None, list(v_set)])
 
     def _dag2term(self, t: Term):
 
@@ -316,30 +321,30 @@ class Z3Converter(PyConverter):
                     v = z3.Const(v_name, sort)
             
             if v is not None:
-                v_hash = hash(v)
-                if v_hash not in self._var_map:
-                    self._var_map[v_hash] = t
+                # v_hash = hash(v)
+                # if v_hash not in self._var_map:
+                #     self._var_map[v_hash] = t
                 return tuple([v, set([v])])
 
             raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
 
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
 
-        if symbol_sort in self._special_const:
-            if t not in self._special_id:
-                self._special_id[t] = next(self._g)
+        # if symbol_sort in self._special_const:
+        #     if t not in self._special_id:
+        #         self._special_id[t] = next(self._g)
 
-            # remove "var" from type for backward compatibility
-            name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
-            sort = self._special_const[symbol_sort]()
+        #     # remove "var" from type for backward compatibility
+        #     name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
+        #     sort = self._special_const[symbol_sort]()
             
-            v = z3.Const(name, sort)
+        #     v = z3.Const(name, sort)
 
-            # keep track of special const
-            v_hash = hash(v)
-            if v_hash not in self._var_map:
-                self._var_map[v_hash] = t
-            return tuple([v, set([v])])
+        #     # keep track of special const
+        #     # v_hash = hash(v)
+        #     # if v_hash not in self._var_map:
+        #     #     self._var_map[v_hash] = t
+        #     return tuple([v, set([v])])
 
         sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
         sorts.append(self._decl_sort(str(t.symbol().getRangeSort())))
