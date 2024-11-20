@@ -184,6 +184,9 @@ elif smtOption == 'cvc4'
 			required: false)
 	libraries += [cvc4, cln]
 	conf.set('USE_CVC4', 1, description: 'use CVC4 SMT solver library')
+
+elif smtOption == 'pysmt'
+	conf.set('USE_PYSMT', 1, description: 'use Python SMT solver library')
 endif
 
 #
@@ -888,6 +891,7 @@ meta_source = [
 	'src/Meta/metaOpCache.cc',
 	'src/Meta/metaModule.cc',
 	'src/Meta/metaLevelOpSymbol.cc',
+	'src/Meta/metaLevelSmtOpSymbol.cc',
 	'src/Meta/metaPreModule.cc',
 	'src/Meta/metaView.cc',
 ]

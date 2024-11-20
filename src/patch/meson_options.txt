@@ -1,4 +1,4 @@
-option('with-smt', type: 'combo', choices: ['cvc4', 'yices2', 'no'], value: 'cvc4', description: 'use CVC4 or Yices2 as SMT solver library')
+option('with-smt', type: 'combo', choices: ['cvc4', 'yices2', 'pysmt', 'no'], value: 'cvc4', description: 'use CVC4 or Yices2 as SMT solver library')
 option('with-readline', type: 'feature', description: 'use GNU readline command line editing library')
 option('with-sigsegv', type: 'feature', description: 'use GNU libsigsegv library')
 option('enable-compiler', type: 'boolean', value: false, description: 'build the experimental integrated compiler')
