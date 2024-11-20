@@ -22,12 +22,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
+        # instantiate our interface
+        factory = Factory()
+        factory.create(args.s)
+
         # initialize Maude interpreter
 
-        maudeSE.maude.init(advise=False)
+        maudeSE.maude.init(advise=False, factory=factory)
 
-        # instantiate our interface
-        conv, conn = Factory().create(args.s)
+        conn, conv = factory.createConnector(), factory.createConverter()
 
         # register special hooks
         hook = CheckHook(conn, conv)
@@ -55,4 +58,6 @@ if __name__ == '__main__':
             maudeSE.maude.load('maude-se-meta.maude')
 
     except Exception as err:
+        import traceback
+        print(traceback.print_exc())
         print("error: {}".format(err))

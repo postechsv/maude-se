@@ -1,5 +1,6 @@
 load file
 load metaInterpreter
+load smt-check
 
 fmod MAUDE-SE-SYNTAX is
   pr QID-LIST .
@@ -94,7 +95,7 @@ omod MAUDE-SE-META-INTERPRETER is
   vars TY TY' : Type .
   var RES : SmtCheckResult .
   var ASSNS : SatAssignmentSet .
-  var SUBS : Substitution .
+  vars SUBS SUBS' : Substitution .
   var B : Bool .
   var NTL : NeTermList .
   var V : Variable .
@@ -246,20 +247,24 @@ omod MAUDE-SE-META-INTERPRETER is
 
   rl < O : MaudeSE | state : 24, mi : MI, mn : MN, search-info : (NT, MT, T, T', T''), search-bound : {C, N}, logic : LO, search-fold : B >
   => < O : MaudeSE | state : 25, search-info : (NT, MT, T, T', T'') > 
-    reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearch2(upModule(MN, false), T, T', T'' = upTerm((true).Bool), '=>*, getNum(MT), C, LO, B))) .
+    reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearch(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(N), LO, B))) .
 
   rl < O : MaudeSE | state : 25, mi : MI, mn : MN, search-bound : {C, N} > reducedTerm(O, MI, N', T, TY)
   => < O : MaudeSE | state : 26, search-result : {downTerm(T, (failure).SmtResult2?)} > write(stdout, O, smtResult2str(upModule(MN, false), C, downTerm(T, (failure).SmtResult2?))) .
 
-  crl < O : MaudeSE | state : 26, search-bound : {C, N}, search-result : SR > wrote(O, O')
-   => < O : MaudeSE | state : 24, search-bound : {C + 1, N} > if check(C, N, SR) .
+  --- crl < O : MaudeSE | state : 26, search-bound : {C, N}, search-result : SR > wrote(O, O')
+  ---  => < O : MaudeSE | state : 24, search-bound : {C + 1, N} > if check(C, N, SR) .
 
-  crl < O : MaudeSE | state : 26, search-bound : {C, N}, search-result : SR > wrote(O, O')
+  rl < O : MaudeSE | state : 26, search-bound : {C, N}, search-result : SR > wrote(O, O')
    => < O : MaudeSE | state : 2, search-bound : noSearchBound, search-result : noSearchResult > 
-      getLine(stdin, O, "MaudeSE> ") if not check(C, N, SR) .
+      getLine(stdin, O, "MaudeSE> ") .
 
   op getNum : Qid -> Nat .
   eq getNum(QI) = downTerm(qid("s_^" + string(downTerm(QI, QI)))['0.Zero], (0).Nat) .
+
+  op mkSolNum : Nat -> Nat .
+  eq mkSolNum(s N) = N .
+  eq mkSolNum(0) = 0 . 
 
   op check : Nat Nat SearchResult? -> Bool .
   eq check(C, N, {failure}) = false .
@@ -267,12 +272,14 @@ omod MAUDE-SE-META-INTERPRETER is
 
   op smtResult2str : Module Nat SmtResult2? -> String .
   eq smtResult2str(MO, C, failure) = "No more solutions.\n\n" .
-  eq smtResult2str(MO, C, {T, SUBS, T', T'', N}) = printTokens(
+  ceq smtResult2str(MO, C, {T, SUBS, T', SUBS', N}) = printTokens(
     'Solution qid(string(C, 10) + " ") '\s '`( 'state qid(" " + string(N, 10)) '`) '\n
     'Symbolic 'state: metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '\n
-    'Constraint: metaPrettyPrint(MO, getVars(T''), T'', mixfix with-parens) '\n 
+    'Constraint: metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '\n 
     'Substitution: printSubst(MO, SUBS) '\n
-    'Concrete 'state: metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '\n '\n) .
+    'Assignment: printSubst(MO, SUBS') '\n
+    'Concrete 'state: metaPrettyPrint(MO, getVars(T''), T'', mixfix with-parens) '\n '\n) 
+  if T'' := applySubstitution(MO, T, SUBS') .
 
   op printSubst : Module Substitution -> QidList .
   eq printSubst(MO, none) = nil .

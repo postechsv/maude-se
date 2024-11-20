@@ -1,3 +1,6 @@
+load smt 
+--- we need to import this ...
+
 fmod SATISFYING-ASSIGNMENTS is
   pr META-LEVEL .
 
@@ -166,10 +169,10 @@ fmod RULE-TRANSFORM is
 
   var M : Module .
   vars L' R' : Term .
-  vars COND CND CND' : EqCondition .
+  vars COND COND' CND CND' : EqCondition .
   var ATTR : AttrSet .
   vars N N' N'' : Nat .
-  vars T T' CTL : Term .
+  vars T T' SMT : Term .
   var RS RS' : RuleSet .
   vars RU RU' : Rule .
   vars CD CD' : TermList .
@@ -177,20 +180,26 @@ fmod RULE-TRANSFORM is
 --- rule format
 --- rule condition is syntatically seperated
   sort SepCondition .
-  op {_,_} : Condition TermList -> SepCondition [ctor] .
+  op {_,_} : Condition Condition -> SepCondition [ctor] .
 
   op sep : Condition -> SepCondition .
-  eq sep(CND /\ CTL = 'true.Boolean) = {CND, CTL} .
-  eq sep(CTL = 'true.Boolean /\ CND) = {CND, CTL} .
-  eq sep(CND) = {CND, empty} [owise] .
+  ceq sep(CND /\ T = 'true.Boolean /\ CND') = {COND, T = 'true.Boolean /\ COND'} 
+  if {COND, COND'} := sep(CND /\ CND') .
+  --- eq sep(T = 'true.Boolean /\ CND) = {CND, T = 'true.Boolean} .
+  eq sep(CND) = {CND, 'true.Boolean = 'true.Boolean} [owise] .
+
+  op $getSmt : Condition -> Term .
+  eq $getSmt(T = 'true.Boolean /\ CND) = '_and_[T, $getSmt(CND)] .
+  eq $getSmt(CND) = 'true.Boolean [owise] .
 
   sort TranslateResult .
   op {_,_} : Rule Nat -> TranslateResult [ctor] .
 
   op trRule : Module Rule Nat -> TranslateResult . 
   ceq trRule (M, crl T => T' if COND [ATTR]., N) =
-  	{ crl '`[_`][L'] => '`[_|_`]['`[_`][R'], conj((CD, CD', CTL))] if CND [nonexec ATTR]., N' + N'' }
-  if {L', CD, N'} := abst(M, T, N) /\ {R', CD', N''} := abst(M, T', N + N') /\ {CND, CTL} := sep(COND) .
+  	{ crl '`[_`][L'] => '`[_|_`]['`[_`][R'], conj((CD, CD', SMT))] if CND [nonexec ATTR]., N' + N'' }
+  if {L', CD, N'} := abst(M, T, N) /\ {R', CD', N''} := abst(M, T', N + N') 
+  /\ {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
   ceq trRule (M, rl T => T' [ATTR]., N) =
     { rl '`[_`][L'] => '`[_|_`]['`[_`][R'], conj((CD, CD'))] [nonexec ATTR]., N' + N''} 
@@ -253,7 +262,7 @@ fmod TRANSFORMATION is
 
   op replaceRule : Module RuleSet Type ~> Module .
   eq replaceRule(mod H is IL sorts SS . SSDS OPDS MAS EQS RLS endm, RLS', TY)
-    = mod H is IL sorts ('$constTerm ; SS ) . SSDS
+    = mod H is (protecting 'BOOLEAN . IL) sorts ('$constTerm ; SS ) . SSDS
 	    (op '`[_|_`] : '$constTerm 'Boolean -> '$constTerm [ctor] . 
        op '`[_`] : TY -> '$constTerm [ctor] . OPDS) MAS EQS RLS' endm .
 
@@ -321,35 +330,41 @@ fmod META-SMT-SEARCH2 is
   pr TRANSFORMATION .
 
   var M : Module .
-  vars T T' : Term .
-  var COND : Condition .
+  vars T T' SMT : Term .
+  vars COND : Condition .
+  vars CND CND' : Condition .
   vars STEP LOGIC : Qid .
   var B : Bound .
-  var N : Nat .
+  vars N VN : Nat .
   vars FOLD MERGE : Bool .
 
   sorts SmtResult2 SmtResult2? .
   subsort SmtResult2 < SmtResult2? .
 
-  op {_,_,_,_,_} : Term Substitution Term Term Nat -> SmtResult2 [ctor] . 
+  op {_,_,_,_,_} : Term Substitution Term Substitution Nat -> SmtResult2 [ctor] . 
   op failure : -> SmtResult2? [ctor] .
 
-  op metaSmtSearch2 : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> SmtResult2? .
-  eq metaSmtSearch2(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
-   = metaSmtSearchInternal(transform(M), makeConstTerm(T), makeConstTerm(T'), COND, STEP, B, N, LOGIC, FOLD, MERGE) .
+  op  metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> SmtResult2? .
+  ceq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
+    = metaSmtSearch(transform(M), makeConstTerm(T), makeConstTerm(T'), CND, SMT, STEP, 0, B, N, LOGIC, FOLD, MERGE) --- testing
+  if {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
-  op metaSmtSearch2 : Module Term Term Condition Qid Bound Nat Qid -> SmtResult2? .
-  eq metaSmtSearch2(M, T, T', COND, STEP, B, N, LOGIC)
-   = metaSmtSearch2(M, T, T', COND, STEP, B, N, LOGIC, false, false) .
+  op metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid ~> SmtResult2? .
+  eq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC)
+   = metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, false, false) .
 
-  op metaSmtSearch2 : Module Term Term Condition Qid Bound Nat Qid Bool -> SmtResult2? .
-  eq metaSmtSearch2(M, T, T', COND, STEP, B, N, LOGIC, FOLD)
-   = metaSmtSearch2(M, T, T', COND, STEP, B, N, LOGIC, FOLD, false) .
+  op metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid Bool ~> SmtResult2? .
+  eq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, FOLD)
+   = metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, FOLD, false) .
 
-  op metaSmtSearchInternal : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> SmtResult2?
-    [special (id-hook SpecialHubSymbol      (SmtSearchSymbol)
-              op-hook failureSymbol         (failure : ~> SmtResult2?)
-              op-hook resultSymbol          ({_,_,_,_,_} : Term Substitution Term Term Nat ~> SmtResult2))].
+  op metaSmtSearch : Module Term Term Condition Term Qid Nat Bound Nat Qid Bool Bool ~> SmtResult2?
+    [special (id-hook MetaLevelSmtOpSymbol     (metaSmtSearch)
+              op-hook smtFailureSymbol         (failure : ~> SmtResult2?)
+              op-hook smtResultSymbol          ({_,_,_,_,_} : Term Substitution Term Substitution Nat ~> SmtResult2)
+              op-hook assignmentSymbol         (_<-_ : Qid Term ~> Assignment)
+              op-hook substitutionSymbol       (_;_ : Substitution Substitution ~> Substitution)
+              op-hook emptySubstitutionSymbol  (none : ~> Substitution)
+              op-hook shareWith                (metaReduce : Module Term ~> ResultPair))] .
 
   sorts TraceStep2 Trace2 .
   subsort TraceStep2 < Trace2 .
@@ -365,9 +380,10 @@ fmod META-SMT-SEARCH2 is
   op {_,_} : Trace2 Substitution -> Trace2Result [ctor] .
   op failure : -> Trace2Result? [ctor] .
 
-  op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> Trace2Result? .
-  eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
-   = metaSmtSearchPathInternal(transform(M), makeConstTerm(T), makeConstTerm(T'), COND, STEP, B, N, LOGIC, FOLD, MERGE) .
+  op  metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> Trace2Result? .
+  ceq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
+    = metaSmtSearchPathInternal(transform(M), makeConstTerm(T), makeConstTerm(T'), CND, CND', STEP, B, N, LOGIC, FOLD, MERGE) 
+  if {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
   op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid -> Trace2Result? .
   eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC)
@@ -377,7 +393,7 @@ fmod META-SMT-SEARCH2 is
   eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD)
    = metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, false) .
 
-  op metaSmtSearchPathInternal : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> Trace2Result?
+  op metaSmtSearchPathInternal : Module Term Term Condition Condition Qid Bound Nat Qid Bool Bool -> Trace2Result?
     [special (id-hook SpecialHubSymbol      (SmtSearchPathSymbol)
               op-hook traceStepSymbol       ({_||_,_,_} : Term Term Type Rule ~> TraceStep2)
               op-hook traceStepRootSymbol   ({_||_,_} : Term Term Type ~> TraceStep2)
