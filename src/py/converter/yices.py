@@ -228,14 +228,14 @@ class YicesConverter(PyConverter):
         if constructor == YICES_NOT_TERM:
             c = yices_term_child(t, 0)
             child = self._term2dag((c, bool_type)) 
-            return f"not {child}"
+            return f"(not {child})"
 
         if constructor == YICES_OR_TERM: 
             ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
 
             l = self._term2dag((ts[0], bool_type))
             r = self._term2dag((ts[1], bool_type))
-            return f"{l} or {r}"
+            return f"({l} or {r})"
 
         # case YICES_XOR_TERM: {
         #     Vector < DagNode * > arg(2);

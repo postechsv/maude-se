@@ -3,7 +3,7 @@ import time
 from yices import *
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector, SmtTerm, TermSubst
+from maudeSE.maude import PyConverter, PyConnector
 
 class YicesConnector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
@@ -152,14 +152,23 @@ class YicesConnector(PyConnector):
 
     def get_model(self):
         # hack
-        model_dict = dict()
+        # model_dict = dict()
+        # for t in self._m.collect_defined_terms():
+        #     try:
+        #         ty = Terms.type_of_term(t)
+        #         model_dict[SmtTerm([(t, ty), None, None])] = SmtTerm([(Terms.parse_term(str(self._m.get_value(t)).lower()), ty), None, None])
+        #     except:
+        #         continue
+        # return model_dict
+        m = SmtModel()
         for t in self._m.collect_defined_terms():
             try:
                 ty = Terms.type_of_term(t)
-                model_dict[SmtTerm([(t, ty), None, None])] = SmtTerm([(Terms.parse_term(str(self._m.get_value(t)).lower()), ty), None, None])
+                k, v = [(t, ty), None, None], [(Terms.parse_term(str(self._m.get_value(t)).lower()), ty), None, None]
+                m.set(k, v)
             except:
                 continue
-        return model_dict
+        return m
     
     def print_model(self):
         print(self._m.to_string(80, 100, 0))
