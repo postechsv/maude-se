@@ -1,0 +1,28 @@
+
+***(
+    Coffee Machine
+    --------------
+
+*)
+
+load pta-base .
+
+mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+
+    --- --------------------
+    vars X1 X2 X3     : Real .
+    vars X1' X2' X3   : Real .
+    vars P1 P2 P3     : Real .
+    var  T            : Real . 
+    --- --------------------
+
+    ops idle sugar coffee done error : -> Location .
+
+    op <_:_;_> <_;_;_> : Location Real Real Real Real Real -> NState .
+    op [_:_;_] <_;_;_> : Location Real Real Real Real Real -> DState .
+
+
+endm
+
