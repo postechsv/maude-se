@@ -32,7 +32,7 @@ mod MODEL is
     crl [done-idle] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
                       [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > 
                       if (X1 === 10/1) = true [nonexec] .
-                      
+
     crl [sugar-sugar] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
                       [ sugar : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
                       if (X2 <= P2 and X1 >= P1) = true [nonexec] .
@@ -41,6 +41,15 @@ mod MODEL is
                       [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > 
                       if (X2 <= P3 and X2 === P2) = true .
 
+    --- crl [tick-sugar]
+
+    --- crl [coffee-done]
+
+    --- crl [tick-coffee] 
+
+    --- crl [done-sugar]
+
+    --- crl [tick-done]
 
 endm
 
