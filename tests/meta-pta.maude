@@ -56,6 +56,7 @@ mod META-PTA is
     --- Module including the meta-definitions
     op meta-module : -> Module [memo] .
     eq meta-module = upModule('META-PTA, false) .
+    --- TODO: upModule parameter
 
 
     --- ----------------------------
@@ -190,12 +191,12 @@ mod META-PTA is
     --- Checking the implication on constraints 
     op checkImplication : Term Term -> Bool .
     eq checkImplication(C1, C2) = 
-        metaCheck(pta-module, 'not_['_implies_[C1, C2]]) == false .
+        metaSmtCheck(pta-module, 'not_['_implies_[C1, C2]],'QF_LRA, false) == false .
 
     --- Checking if the constraint in a (constrained) term is sat
     op check-constraint : Term -> Bool .
     eq check-constraint('_|_[T1, C1]) =
-         metaCheck(pta-module, C1) .
+         metaSmtCheck(pta-module, C1, 'QF_LRA, false) .
 
     --- One step of computation in the PTA 
     op step : Term Term Nat Nat  -> SmtResult? .
@@ -275,9 +276,9 @@ mod META-PTA is
      if LT =/= empty .
 
     --- simplifying constraints (only on Maude-SE)
-    op simplify : SCTerm -> SCTerm .
-    eq simplify(< St | B >) = < St | simplifyFormula(B) > .
-    eq simplify( Ct ;; SCt) = simplify(Ct) ;; simplify(SCt) .
+    --- op simplify : SCTerm -> SCTerm .
+    --- eq simplify(< St | B >) = < St | simplifyFormula(B) > .
+    --- eq simplify( Ct ;; SCt) = simplify(Ct) ;; simplify(SCt) .
 
     *** utility function (don't needed in Maude 3.2)
   --- op applySubstitution : Module Term Substitution -> Term .
@@ -293,4 +294,3 @@ mod META-PTA is
   --- eq $applySubstitution(Q:Qid, S:Substitution) = Q:Qid [owise] .
 
 endm
-
