@@ -279,5 +279,18 @@ mod META-PTA is
     eq simplify(< St | B >) = < St | simplifyFormula(B) > .
     eq simplify( Ct ;; SCt) = simplify(Ct) ;; simplify(SCt) .
 
+    *** utility function (don't needed in Maude 3.2)
+  --- op applySubstitution : Module Term Substitution -> Term .
+  --- eq applySubstitution(M:Module, T:Term, S:Substitution) =
+  ---   getTerm(metaNormalize(M:Module, $applySubstitution(T:Term, S:Substitution))) .
+
+  --- op $applySubstitution : NeTermList Substitution -> Term .
+  --- eq $applySubstitution(V:Variable, (V:Variable <- T:Term ; S:Substitution)) = T:Term .
+  --- eq $applySubstitution(Q:Qid[TL:NeTermList], S:Substitution) =
+  ---   Q:Qid[$applySubstitution(TL:NeTermList, S:Substitution)] .
+  --- eq $applySubstitution((T:Term, TL:NeTermList), S:Substitution) =
+  ---   $applySubstitution(T:Term, S:Substitution), $applySubstitution(TL:NeTermList, S:Substitution) .
+  --- eq $applySubstitution(Q:Qid, S:Substitution) = Q:Qid [owise] .
+
 endm
 
