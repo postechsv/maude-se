@@ -15,6 +15,10 @@ mod PTA-COFFEE is
     inc NAT .
     pr QID .
 
+    --- Fresh variables
+    subsort Nat < SMTVarId .
+    subsort Qid < SMTVarId .
+
     --- ---------------------------
     vars x y z     : RealExpr .
     vars x' y' z'  : RealExpr .
@@ -24,4 +28,5 @@ mod PTA-COFFEE is
     vars C C'      : BooleanExpr .
     --- ---------------------------
 
+    sorts State State' Location .
 endm
