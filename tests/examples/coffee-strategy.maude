@@ -148,7 +148,7 @@ srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 
 using sugar-str(1) .
 
 srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
-using sugar-str(0)' .
+using sugar-str' .
 
 
 quit .
