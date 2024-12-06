@@ -57,7 +57,9 @@ mod MODEL is
                       [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 >  
                        if (0/1 <= P2) = true [nonexec] .
 
-    --- crl [tick-done]
+    crl [tick-done] : [ done : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < done : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X1 + T <= 10/1) = true [nonexec] .
 
 endm
 
