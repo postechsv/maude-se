@@ -45,8 +45,10 @@ mod MODEL is
                       < sugar : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
                       if (T >= 0/1 and X2 + T <= P2) = true [nonexec] .
 
+    crl [coffee-done] : < coffee : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ done ; X2 ] < P1 ; P2 ; P3 > 
+                      if (1 <= 10) = true [nonexec] .
 
-    --- crl [coffee-done]
 
     --- crl [tick-coffee] 
 
