@@ -12,8 +12,8 @@ mod MODEL is
     pr REAL .
 
     --- --------------------
-    vars X1 X2 X3     : Real .
-    vars X1' X2' X3   : Real .
+    vars X1 X2        : Real .
+    vars X1' X2'      : Real .
     vars P1 P2 P3     : Real .
     var  T            : Real . 
     --- --------------------
