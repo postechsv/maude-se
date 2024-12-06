@@ -42,7 +42,7 @@ mod PTA-COFFEE is
         < N | C | < idle ; x ; y > < p1 ; p2 ; p3 > >  =>
         < N | C' | [ sugar ; 0/1 ; 0/1 ] < p1 ; p2 ; p3 > >
         if 
-            C' := C and 0/1 <= p2 /\
+            C' := simplify(C and 0/1 <= p2) /\
             smtCheck(C')
             .
 
