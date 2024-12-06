@@ -103,3 +103,14 @@ mod PTA-COFFEE is
     eq simplify(C) = C .
 
 endm
+
+smod COFFEE-STR is 
+    protecting PTA-COFFEE . 
+    
+    strat sugar-str : Nat @ State .
+    strat sugar-str' @ State .
+    strat add-sugar : Nat @ State .
+    strat n-coffees : Nat @ State .
+    strat $n-coffees : Nat @ State .
+
+ensm
