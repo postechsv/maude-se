@@ -63,6 +63,16 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
+     crl [tick-sugar] :
+         < N     | C  |  [ sugar ; x ; y ] < p1 ; p2 ; p3 > > =>
+         < N + 1 | C' |  < sugar ; x + t ; x + t2 > < p1 ; p3 > >
+         if 
+             t := r(N) /\
+             C' := simplify(C and (y + t <= p2 and t >= 0/1)) /\
+            smtCheck(C') 
+            .
+
+
     --- simplifyFormula can be used here instead
     op simplify : BooleanExpr -> BooleanExpr .
     eq simplify(C) = C .
