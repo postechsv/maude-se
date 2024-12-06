@@ -5,5 +5,4 @@ function run_maude {
   maude-se ${filename} -s yices
   # yices, z3, CVC4
   # timeout "$timeout_value fuck ${filename} -s yices"
-  # timeout "$timeout_value" ${maude} "${filename}"
 }
