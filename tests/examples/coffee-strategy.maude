@@ -45,7 +45,7 @@ mod PTA-COFFEE is
             C' := simplify(C and 0/1 <= p2) /\
             smtCheck(C')
             .
-            
+
     crl [tick-idle] : 
         < N     | C  | [ idle ; x ; y ] < p1 ; p2 ; p3 > > =>
         < N + 1 | C' | < idle ; x + t ; y + t > < p1 ; p2 ; p3 > >
@@ -54,5 +54,14 @@ mod PTA-COFFEE is
             C' := simplify(C and t >= 0/1) /\
             smtCheck(C') 
             .
+
+     crl [sugar] :
+         < N  | C  | < sugar ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N  | C' | [ sugar ; 0/1 ; y ] < p1 ; p2 ; p3 > >
+         if
+             C' := simplify(C and x >= p1 and y <= p2)  /\
+            smtCheck(C') 
+            .
+
 
 endm
