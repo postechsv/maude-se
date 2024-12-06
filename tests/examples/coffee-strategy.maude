@@ -111,7 +111,6 @@ smod COFFEE-STR is
     strat sugar-str' @ State .
     strat add-sugar : Nat @ State .
     strat n-coffees : Nat @ State .
-    strat $n-coffees : Nat @ State .
 
     --- ---------------------------
     vars x y z     : RealExpr .
@@ -126,5 +125,19 @@ smod COFFEE-STR is
     eq validity(C) = smtCheck(not C) == false .
 
     vars S  : Nat . 
+
+    --- Adding S times sugar 
+    sd sugar-str(S) := (match < N | C | [ done ; x ; y ] < p1 ; p2 ; p3 > > ) or-else --- end
+                       ( 
+                         (match < N | C | < sugar ; x ; y > < p1 ; p2 ; p3 > > ) ; add-sugar(S) ;  cup ; sugar-str(S)
+                       ) or-else --- adding sugar and delivering coffee 
+                       all ; sugar-str(S) .
+
+    --- an alternative version using smt calls. Sugar is added only once (when  x == y in state sugar)
+    sd sugar-str' := (match < N | C | [ done ; x ; y ] < p1 ; p2 ; p3 > > ) or-else --- end
+                       ( 
+                         (match < N | C | < sugar ; x ; y > < p1 ; p2 ; p3 > >  s.t. validity( C implies x === y)) ; add-sugar(1) ;  cup ; sugar-str'
+                       ) or-else --- adding sugar and delivering coffee 
+                       all ; sugar-str' .
 
 ensm
