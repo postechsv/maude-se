@@ -29,4 +29,13 @@ mod PTA-COFFEE is
     --- ---------------------------
 
     sorts State State' Location .
+
+    --- Global configuration
+    op <_|_|_> : Nat BooleanExpr State'  -> State .
+
+    --- Configurations
+    ops idle sugar coffee done : -> Location .
+    op <_;_;_> <_;_;_> : Location RealExpr RealExpr RealExpr RealExpr RealExpr  -> State' .
+    op [_;_;_] <_;_;_> : Location RealExpr RealExpr RealExpr RealExpr RealExpr  -> State' .
+
 endm
