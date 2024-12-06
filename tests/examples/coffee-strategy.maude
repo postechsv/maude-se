@@ -63,5 +63,8 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
+    --- simplifyFormula can be used here instead
+    op simplify : BooleanExpr -> BooleanExpr .
+    eq simplify(C) = C .
 
 endm
