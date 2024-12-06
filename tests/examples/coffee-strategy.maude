@@ -111,6 +111,7 @@ smod COFFEE-STR is
     strat sugar-str' @ State .
     strat add-sugar : Nat @ State .
     strat n-coffees : Nat @ State .
+    strat $n-coffees : Nat @ State .
 
     --- ---------------------------
     vars x y z     : RealExpr .
