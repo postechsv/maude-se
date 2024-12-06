@@ -142,3 +142,9 @@ smod COFFEE-STR is
                        all ; sugar-str' .
 
 ensm
+
+--- With 1 sugar, besides p2 <= p3, it must be also the case that p1 <= p2 
+srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
+using sugar-str(1) .
+
+quit .
