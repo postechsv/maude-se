@@ -125,4 +125,6 @@ smod COFFEE-STR is
     op validity : BooleanExpr -> SmtCheckResult .
     eq validity(C) = smtCheck(not C) == false .
 
+    vars S  : Nat . 
+
 ensm
