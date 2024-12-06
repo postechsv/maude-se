@@ -63,7 +63,7 @@ mod MODEL is
 
 endm
 
-search [1] < idle : X1 ; X2 >   < P1 ; P2 ; P3 >  =>*
+smt-search [1] < idle : X1 ; X2 >   < P1 ; P2 ; P3 >  =>*
                < done : X1' ; X2' > < P1 ; P2 ; P3 > 
                such that (X1 === X2 and X1 >= 0/1 and 
                P1 >= 0/1 and P2 >= 0/1 and P3 >= 0/1 ) = true .
