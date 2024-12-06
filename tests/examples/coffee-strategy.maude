@@ -6,3 +6,13 @@
     It must be run with Maude SE https://maude-se.github.io/
 
 *)
+
+load smt
+load smt-check
+
+mod PTA-COFFEE is
+    pr SMT-CHECK .
+    inc NAT .
+    pr QID .
+
+endm
