@@ -15,4 +15,13 @@ mod PTA-COFFEE is
     inc NAT .
     pr QID .
 
+    --- ---------------------------
+    vars x y z     : RealExpr .
+    vars x' y' z'  : RealExpr .
+    vars p1 p2 p3  : RealExpr . 
+    var t          : RealExpr .
+    var N          : Nat .
+    vars C C'      : BooleanExpr .
+    --- ---------------------------
+
 endm
