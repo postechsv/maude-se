@@ -22,3 +22,17 @@ function create_folder {
   fi
 }
 
+function run_benchmark {
+  local model=$1
+  local timeout=$2
+
+  # create folder to save the output of the model
+  output_folder="logs/${model}"
+  create_folder "${output_folder}"
+  cp "${model_folder}/pta-base.maude" "${model_folder}/meta-pta.maude" "${output_folder}"
+
+  # 1) generate the full model with parser
+  for mode in ${modes[@]}; do
+    parser_files $model "$mode"
+  done
+}
