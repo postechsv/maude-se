@@ -113,4 +113,16 @@ smod COFFEE-STR is
     strat n-coffees : Nat @ State .
     strat $n-coffees : Nat @ State .
 
+    --- ---------------------------
+    vars x y z     : RealExpr .
+    vars x' y' z'  : RealExpr .
+    vars p1 p2 p3  : RealExpr . 
+    var t          : RealExpr .
+    var N          : Nat .
+    vars C C'      : BooleanExpr .
+    --- ---------------------------
+
+    op validity : BooleanExpr -> SmtCheckResult .
+    eq validity(C) = smtCheck(not C) == false .
+
 ensm
