@@ -1,28 +1,5 @@
 ***(
     pta-base.maude
-    --------------
-
-    The module MODEL-BASE must be imported by the module defining the rules
-    of the PTA at hand. 
-
-    The following sorts are defined:
-
-    - NState   : a state where it is possible to perform a delay transition
-    - DState   : the resulting state after a delay transition
-    - State    : for delayed and non-delayed states
-    - Location : locations of the PTA
-    - DCTerm   : constrained terms of the form t | C where C is a Boolean
-                 expression and t a term of sort DState
-    - NCTerm   : constrained terms of the form t | C where C is a Boolean
-                 expression and t a term of sort NState
-    - CTerm    : for constrained terms of the form t | C
-    - SCTerm   : for sets of CTerm (used in the outputs of the analyses)
-
-    States of the system are user defined constructors of sort State
-    In order to use the new implemented command reachability (see meta-pta), 
-    the definition of the PTA must implement equations (not used for
-    smt-search) to define the operator get-location. 
-
 *)
 
 load smt .
