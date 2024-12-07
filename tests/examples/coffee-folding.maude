@@ -51,7 +51,7 @@ mod MODEL is
 
     crl [done-idle] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
                       [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > 
-                      if (0/1 <= P2) = true [nonexec] .
+                       if (X1 === 10/1) = true [nonexec] .
 
 
 endm
