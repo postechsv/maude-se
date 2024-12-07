@@ -1,36 +1,5 @@
 ***(
     META-PTA
-    --------
-
-    This module defines "reachability", an operation that performs a fixpoint
-    computation accumulating the reachable states with folding, collapsing
-    the states that have been already visited. Due to the meta-level
-    operations, this module protects MODEL, the specification of the PTA. 
-
-    NOTES:
-    - The name of the module specifying the PTA must be MODEL ( see pta-module
-      below )
-    - The function applySubstitution is implemented in Maude 3.2 (but not in 3.0)
-    - The function simplifyFormula is only available on Maude-SE https://maude-se.github.io/
-    - This module assumes that the rules specifying the behavior of the PTA
-      moves from DStates to NStates and vice-versa (see pta-base)
-    - For using the command that stops when a given location is reached, the module
-      defining the PTA must define the equations for the operator get-location
-      (see pta-base)
-
-    The global behavior is represented by a term of the form {{RS},{FS},N} where:
-     - RS is the set of reachable constraints (already visited)
-     - FS is the "frontier", i.e., the new states after performing one step of
-       rewriting (tick + transition)
-     - N is the number of fresh SMT variables created so far
-
-    This module provides 3 different reachability commands 
-    - reachability( C | t) computing the set of all reachable states from the 
-      constrained term C | t (representing a symbolic state of the PTA)
-    - reachability ( (C | t), n) same as before but bound to n steps
-    - reachability(l, (C | t)) stops the computation if the location l is
-      reached 
-
 *)
 
 
