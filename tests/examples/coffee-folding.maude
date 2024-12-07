@@ -31,7 +31,7 @@ mod MODEL is
 
     crl [sugar-coffee] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
                       [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > 
-                      if (X2 <= P3 and X2 === P2) = true [nonexec] .
+                      if (X2 <= P3 and X2 === P2) = true .
 
     crl [tick-sugar] : [ sugar : X1 ; X2 ] < P1 ; P2 ; P3 > =>
                       < sugar : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
