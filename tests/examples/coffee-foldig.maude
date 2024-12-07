@@ -12,4 +12,6 @@ mod MODEL is
     var  L            : Location .
     --- --------------------------
 
+    ops idle sugar coffee done : -> Location .
+
 endm
