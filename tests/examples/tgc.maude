@@ -74,8 +74,8 @@ mod MODEL is
 endm
 
 smt-search [1] < Train0Gate0Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > =>*
-               < x' ; y' ; z' > < a ; b ; c ; d ; e ; f >
-               such that ( x === y and x === z and x >= 0/1 and y >= 0/1 and z >= 0/1 and a >= 0/1 and b >= 0/1 and c >= 0/1 and d >= 0/1 ) = true .
+               < <replace> ; x' ; y' ; z' > < a ; b ; c ; d ; e ; f >
+               such that ( x === y and x === z and x >= 0/1 and y >= 0/1 and z >= 0/1 and a >= 0/1 and b >= 0/1 and c >= 0/1 and d >= 0/1 and e >= 0/1 and f >= 0/1 ) = true .
 
 quit .
 
