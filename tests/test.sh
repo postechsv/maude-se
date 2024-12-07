@@ -31,8 +31,26 @@ function run_benchmark {
   create_folder "${output_folder}"
   cp "${model_folder}/pta-base.maude" "${model_folder}/meta-pta.maude" "${output_folder}"
 
-  # 1) generate the full model with parser
+  # generate the full model with parser
   for mode in ${modes[@]}; do
     parser_files $model "$mode"
   done
+
+  for l in $locations; do
+    echo "reaching location:" $l
+
+    # run maude
+    for mode in ${modes[@]}; do
+
+      # maude files
+      maude_file="${model}.${mode}.maude"
+      echo $maude_file
+      new_file="${output_folder}/${maude_file}.${l}"
+
+      if [[ ! -f "${new_file}" ]]; then
+        sed "s/<replace>/${l}/" "${model_folder}/${maude_file}" > "${new_file}"
+        echo "Running Maude with ${new_file}"
+        run_maude "${new_file}" "${timeout}" > "${new_file}.res"
+      fi
+    done    
 }
