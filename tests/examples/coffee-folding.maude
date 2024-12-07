@@ -14,4 +14,7 @@ mod MODEL is
 
     ops idle sugar coffee done : -> Location .
 
+    op <_:_;_> <_;_;_> : Location Real Real Real Real Real -> NState .
+    op [_:_;_] <_;_;_> : Location Real Real Real Real Real -> DState .
+
 endm
