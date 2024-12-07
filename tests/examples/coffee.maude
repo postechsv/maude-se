@@ -55,7 +55,7 @@ mod MODEL is
 
     crl [done-sugar] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
                       [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 >  
-                       if (0/1 <= P2) = true [nonexec] .
+                      if (0/1 <= P2) = true [nonexec] .
 
     crl [tick-done] : [ done : X1 ; X2 ] < P1 ; P2 ; P3 > =>
                       < done : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
