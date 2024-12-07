@@ -62,8 +62,8 @@ mod MODEL is
 
 endm
 
---- load meta-pta .
+load meta-pta .
 
---- red reachability( (< idle : T:Real ; T:Real >   < P1:Real ; P2:Real ; P3:Real > 
----                     | T:Real >= 0/1 and P1:Real >= 0/1 and P2:Real >= 0/1 and P3:Real >= 0/1 and 
----                       2/1 * P1:Real > P2:Real)) .
+red reachability( (< idle : T:Real ; T:Real >   < P1:Real ; P2:Real ; P3:Real > 
+                    | T:Real >= 0/1 and P1:Real >= 0/1 and P2:Real >= 0/1 and P3:Real >= 0/1 and 
+                      2/1 * P1:Real > P2:Real)) .
