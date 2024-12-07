@@ -23,6 +23,13 @@ function create_folder {
   fi
 }
 
+# Todo refactoring
+function parser_files {
+  local model=$1
+  local mode=$2
+  cp "${model_folder}/${model}.${mode}.maude.template" "${model_folder}/${model}.${mode}.maude"
+}
+
 function run_benchmark {
   local model=$1
   local timeout=$2
