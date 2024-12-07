@@ -12,6 +12,17 @@ function run_maude {
   maude-se ${filename} -s yices
   # yices, z3, CVC4
   # timeout "$timeout_value fuck ${filename} -s yices"
+  if [[ -z "$timeout_value" ]]; then
+    timeout_value=60 # 기본 60초
+  fi
+
+  # timeout 사용해서 maude 명령어 실행
+  if timeout "${timeout_value}s" maude-se "${filename}" -s yices; then
+    return 0
+  else
+    echo "Error: Maude execution timed out or failed on $filename"
+    return 1
+  fi  
 }
 
 # create a folder
