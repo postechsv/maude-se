@@ -1,0 +1,15 @@
+load pta-base .
+
+mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+
+    --- --------------------------
+    vars X1 X2        : Real .
+    vars X1' X2'      : Real .
+    vars P1 P2 P3     : Real .
+    var  T            : Real . 
+    var  L            : Location .
+    --- --------------------------
+
+endm
