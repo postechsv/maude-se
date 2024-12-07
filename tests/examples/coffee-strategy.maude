@@ -55,7 +55,7 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [sugar] :
+    crl [sugar] :
          < N  | C  | < sugar ; x ; y > < p1 ; p2 ; p3 > > =>
          < N  | C' | [ sugar ; 0/1 ; y ] < p1 ; p2 ; p3 > >
          if
@@ -63,7 +63,7 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [tick-sugar] :
+    crl [tick-sugar] :
          < N     | C  |  [ sugar ; x ; y ] < p1 ; p2 ; p3 > > =>
          < N + 1 | C' |  < sugar ; x + t ; y + t > < p1 ; p2 ; p3 > >
          if 
@@ -72,7 +72,7 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [cup] :
+    crl [cup] :
          < N  |  C  | < sugar ; x ; y > < p1 ; p2 ; p3 > > =>
          < N  |  C' | [ coffee ; x ; y ] < p1 ; p2 ; p3 > >
          if 
@@ -80,7 +80,7 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [tick-coffee] :
+    crl [tick-coffee] :
          < N     |  C  |  [ coffee ; x ; y ] < p1 ; p2 ; p3 > > =>
          < N + 1 |  C' | < coffee ; x + t ; y + t > < p1 ; p2 ; p3 > >
          if 
@@ -89,7 +89,7 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [coffee] :
+    crl [coffee] :
          < N  | C  | < coffee ; x ; y > < p1 ; p2 ; p3 > > =>
          < N  | C' | [ done ; 0/1 ; y ] < p1 ; p2 ; p3 > >
          if 
@@ -97,12 +97,22 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
-     crl [done] :
+    crl [done] :
          < N | C  | < done ; x ; y > < p1 ; p2 ; p3 > > =>
          < N | C' | [ idle  ; x  ; y ] < p1 ; p2 ; p3 > >
          if 
              C' := simplify(C and (x === 10/1 )) /\
             smtCheck(C') 
+            .
+
+    crl [tick-done] :
+         < N      | C  | [ done ; x ; y ] < p1 ; p2 ; p3 > >  =>
+         < N + 1  | C' | < done  ; x + t  ; y + t > < p1 ; p2 ; p3 > >
+         if 
+             t := r(N) /\
+             C' := simplify(C and (t >= 0/1 and x + t  <= 10/1)) /\
+            smtCheck(C') 
+            .
 
 
 
