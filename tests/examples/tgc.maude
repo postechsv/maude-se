@@ -18,5 +18,9 @@ mod MODEL is
     rl [Train0Gate0Controller0-Train1Gate0Controller1] : < Train0Gate0Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train1Gate0Controller1 ; 0/1 ; y ; 0/1 ] < a ; b ; c ; d ; e ; f > .
     crl [tick-Train0Gate0Controller0] : [ Train0Gate0Controller0 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train0Gate0Controller0 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
+    crl [Train1Gate0Controller1-Train2Gate0Controller1] : < Train1Gate0Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train2Gate0Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (x > a) = true .
+    crl [Train1Gate0Controller1-Train1Gate1Controller2] : < Train1Gate0Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train1Gate1Controller2 ; x ; 0/1 ; z ] < a ; b ; c ; d ; e ; f > if (e < z and z < f) = true .
+    crl [tick-Train1Gate0Controller1] : [ Train1Gate0Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train1Gate0Controller1 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
+
     
 endm
