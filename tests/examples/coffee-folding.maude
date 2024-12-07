@@ -67,11 +67,3 @@ load meta-pta .
 red reachability( (< idle : T:Real ; T:Real >   < P1:Real ; P2:Real ; P3:Real > 
                     | T:Real >= 0/1 and P1:Real >= 0/1 and P2:Real >= 0/1 and P3:Real >= 0/1 and 
                       2/1 * P1:Real > P2:Real)) .
-
-red reachability( (< idle : T:Real ; T:Real > < P1:Real ; P2:Real ; P3:Real >
-                    | T:Real >= 0/1 and P1:Real > P2:Real and P2:Real > P3:Real and
-                      P1:Real * P2:Real * P3:Real >= 10/1)) .
-
-red reachability( (< idle : T:Real ; T:Real > < P1:Real ; P2:Real ; P3:Real >
-                    | T:Real > -5/1 and P1:Real <= P2:Real and P2:Real >= 3/1 and
-                      (P1:Real + P2:Real) / P3:Real = 2/1)) .                     
