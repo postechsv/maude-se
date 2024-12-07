@@ -1,0 +1,8 @@
+load smt .
+
+mod MODEL is
+    protecting REAL .
+
+    sorts State Location .
+
+endm
