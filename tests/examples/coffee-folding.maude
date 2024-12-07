@@ -41,6 +41,10 @@ mod MODEL is
                       [ done : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
                       if (0/1 <= 10/1 and X2 === P3) = true [nonexec] .
 
+    crl [tick-coffee] : [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < coffee : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X2 + T <= P3) = true [nonexec] .
+
 endm
 
 --- load meta-pta .
