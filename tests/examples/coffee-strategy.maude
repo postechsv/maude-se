@@ -97,6 +97,15 @@ mod PTA-COFFEE is
             smtCheck(C') 
             .
 
+     crl [done] :
+         < N | C  | < done ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N | C' | [ idle  ; x  ; y ] < p1 ; p2 ; p3 > >
+         if 
+             C' := simplify(C and (x === 10/1 )) /\
+            smtCheck(C') 
+
+
+
 
     --- simplifyFormula can be used here instead
     op simplify : BooleanExpr -> BooleanExpr .
@@ -142,6 +151,7 @@ smod COFFEE-STR is
                        all ; sugar-str' .
 
 ensm
+
 
 --- With 1 sugar, besides p2 <= p3, it must be also the case that p1 <= p2 
 srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
