@@ -35,5 +35,19 @@ mod MODEL is
     crl [Train3Gate2Controller2-Train0Gate2Controller3] : < Train3Gate2Controller2 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train0Gate2Controller3 ; x ; y ; 0/1 ] < a ; b ; c ; d ; e ; f > if (x < b) = true .
     crl [tick-Train3Gate2Controller2] : [ Train3Gate2Controller2 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train3Gate2Controller2 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
-    
+    crl [Train0Gate2Controller3-Train0Gate3Controller0] : < Train0Gate2Controller3 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train0Gate3Controller0 ; x ; 0/1 ; z ] < a ; b ; c ; d ; e ; f > if (e < z and z < f) = true .
+    crl [tick-Train0Gate2Controller3] : [ Train0Gate2Controller3 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train0Gate2Controller3 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
+
+    crl [Train0Gate3Controller0-Train0Gate0Controller0] : < Train0Gate3Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train0Gate0Controller0 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (c < y and y < d) = true .
+    rl [Train0Gate3Controller0-Train1Gate3Controller1] : < Train0Gate3Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train1Gate3Controller1 ; 0/1 ; y ; 0/1 ] < a ; b ; c ; d ; e ; f > .
+    crl [tick-Train0Gate3Controller0] : [ Train0Gate3Controller0 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train0Gate3Controller0 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
+
+    crl [Train1Gate3Controller1-Train1Gate0Controller1] : < Train1Gate3Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train1Gate0Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (c < y and y < d) = true .
+    crl [Train1Gate3Controller1-Train2Gate3Controller1] : < Train1Gate3Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train2Gate3Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (x > a) = true .
+    crl [tick-Train1Gate3Controller1] : [ Train1Gate3Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train1Gate3Controller1 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
+
+    crl [Train2Gate3Controller1-Train2Gate0Controller1] : < Train2Gate3Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train2Gate0Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (c < y and y < d) = true .
+    rl [Train2Gate3Controller1-Train3Gate3Controller1] : < Train2Gate3Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train3Gate3Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > .
+    crl [tick-Train2Gate3Controller1] : [ Train2Gate3Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train2Gate3Controller1 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
+
 endm
