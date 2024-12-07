@@ -116,7 +116,7 @@ mod PTA-COFFEE is
 
      rl [done] :
          < N | C | < done ; x ; y > < p1 ; p2 ; p3 > > =>
-         < N | C | [ tick-done  ; 0/1 ; 0/1 ] < p1 ; p2 ; p3 > >
+         < N | C | [ sugar ; 0/1 ; 0/1 ] < p1 ; p2 ; p3 > >
          .
 
 
