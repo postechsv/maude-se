@@ -53,6 +53,10 @@ mod MODEL is
                       [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > 
                        if (X1 === 10/1) = true [nonexec] .
 
+    crl [tick-done] : [ done : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < done : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X1 + T <= 10/1) = true [nonexec] .
+
 
 endm
 
