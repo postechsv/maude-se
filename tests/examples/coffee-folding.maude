@@ -25,6 +25,10 @@ mod MODEL is
                       < idle : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
                       if (T >= 0/1) = true [nonexec] .
 
+    crl [sugar-sugar] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ sugar : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X2 <= P2 and X1 >= P1) = true [nonexec] .
+
 endm
 
 --- load meta-pta .
