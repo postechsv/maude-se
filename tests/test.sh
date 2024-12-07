@@ -3,6 +3,7 @@ model_folder="models"
 
 # modes
 modes=("collapsing" "no-collapsing")
+locations=("loc1" "loc2")
 
 # run Maude
 function run_maude {
