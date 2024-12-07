@@ -7,6 +7,6 @@ and show that symbolic reachablity analysis using Maude-se.
 
 ### Maude files
 
-The specification can be found in the folder `maude`. It includes the following files:
+The specification can be found in the folder `tests`. It includes the following files:
 
 - _pta-base_: Sorts for defining locations, states and constrained terms.
