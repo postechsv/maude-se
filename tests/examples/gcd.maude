@@ -24,4 +24,7 @@ mod GCD is
 
   crl {CONST, gcd(X, Y)} => {simplifyFormula(CONST'), gcd(X, Y - X)} 
    if CONST' := CONST and (X < Y) === (true).Boolean /\ smtCheck(CONST', false) .  
+
+  crl {CONST, gcd(X, Y)} => {simplifyFormula(CONST'), ret(X)} 
+   if CONST' := CONST and (X === Y) === (true).Boolean /\ smtCheck(CONST', false) .
 endm
