@@ -69,4 +69,6 @@ mod MODEL is
     crl [Train3Gate3Controller1-Train3Gate0Controller1] : < Train3Gate3Controller1 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train3Gate0Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (c < y and y < d) = true .
     crl [tick-Train3Gate3Controller1] : [ Train3Gate3Controller1 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train3Gate3Controller1 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
+    var l : Location .
+    eq get-location( < l ; x ; y ; z > < a ; b ; c ; d ; e ; f > ) = l .
 endm
