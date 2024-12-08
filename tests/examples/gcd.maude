@@ -12,4 +12,10 @@ mod GCD is
   op gcd : IntegerExpr IntegerExpr -> GcdResult [ctor] .
   op ret : IntegerExpr -> GcdResult [ctor] .
 
+  sort State .
+  op [_,_] : BooleanExpr GcdResult -> State [ctor] .
+
+  vars CONST CONST' : BooleanExpr .
+  vars X Y : IntegerExpr .
+  var SS : SatAssignmentSet .
 endm
