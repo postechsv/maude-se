@@ -1,0 +1,69 @@
+load pta-base .
+
+mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+
+    --- --------------------------
+    vars X1 X2        : Real .
+    vars X1' X2'      : Real .
+    vars P1 P2 P3     : Real .
+    var  T            : Real . 
+    var  L            : Location .
+    --- --------------------------
+
+    ops idle sugar coffee done : -> Location .
+
+    op <_:_;_> <_;_;_> : Location Real Real Real Real Real -> NState .
+    op [_:_;_] <_;_;_> : Location Real Real Real Real Real -> DState .
+
+    crl [idle-sugar] : < idle : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                       [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 > 
+                       if (0/1 <= P2) = true [nonexec] .
+
+    crl [tick-idle] : [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < idle : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1) = true [nonexec] .
+
+    crl [sugar-sugar] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ sugar : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X2 <= P2 and X1 >= P1) = true [nonexec] .
+
+    crl [sugar-coffee] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X2 <= P3 and X2 === P2) = true .
+
+    crl [tick-sugar] : [ sugar : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < sugar : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X2 + T <= P2) = true [nonexec] .
+
+    crl [coffee-done] : < coffee : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ done : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (0/1 <= 10/1 and X2 === P3) = true [nonexec] .
+
+    crl [tick-coffee] : [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < coffee : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X2 + T <= P3) = true [nonexec] .
+
+    crl [done-sugar] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 >  
+                       if (0/1 <= P2) = true [nonexec] .
+
+    crl [done-idle] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > 
+                       if (X1 === 10/1) = true [nonexec] .
+
+    crl [tick-done] : [ done : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < done : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X1 + T <= 10/1) = true [nonexec] .
+
+    eq get-location( < L : X1 ; X2 > < P1 ; P2 ; P3 > ) = L .
+    eq get-location( [ L : X1 ; X2 ] < P1 ; P2 ; P3 > ) = L .
+
+endm
+
+load meta-pta .
+
+red reachability( (< idle : T:Real ; T:Real >   < P1:Real ; P2:Real ; P3:Real > 
+                    | T:Real >= 0/1 and P1:Real >= 0/1 and P2:Real >= 0/1 and P3:Real >= 0/1 and 
+                      2/1 * P1:Real > P2:Real)) .
