@@ -76,6 +76,8 @@ endm
 
 load meta-pta .
 
+red reachability (<replace>, ( < Train0Gate0Controller0 ; x:Real ; y:Real ; z:Real > < a:Real ; b:Real ; c:Real ; d:Real ; e:Real ; f:Real > | ( x:Real === y:Real and x:Real === z:Real and x:Real >= 0/1 and y:Real >= 0/1 and z:Real >= 0/1 and a:Real >= 0/1 and b:Real >= 0/1 and c:Real >= 0/1 and d:Real >= 0/1 and e:Real >= 0/1 and f:Real >= 0/1 ) )) .
+
 quit .
 
 eof
