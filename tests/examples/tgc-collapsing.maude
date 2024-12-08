@@ -13,5 +13,7 @@ mod MODEL is
     op <_;_;_;_> <_;_;_;_;_;_> : Location Real Real Real Real Real Real Real Real Real -> NState .
     op [_;_;_;_] <_;_;_;_;_;_> : Location Real Real Real Real Real Real Real Real Real -> DState .
 
+    rl [Train0Gate0Controller0-Train1Gate0Controller1] : < Train0Gate0Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train1Gate0Controller1 ; 0/1 ; y ; 0/1 ] < a ; b ; c ; d ; e ; f > .
+    crl [tick-Train0Gate0Controller0] : [ Train0Gate0Controller0 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train0Gate0Controller0 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
 endm
