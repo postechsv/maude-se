@@ -1,0 +1,9 @@
+load smt
+load smt-check
+
+mod GCD is
+  protecting INTEGER-EXPR .
+  pr SMT-CHECK .
+  pr META-LEVEL .
+
+endm
