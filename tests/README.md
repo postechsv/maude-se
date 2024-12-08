@@ -18,4 +18,4 @@ behavior of the PTA.
 
 ### Origin
 
-These example files were sourced from pta2maude by Jaime Arias and subsequently modified.
+These example files were sourced from Jaime Arias and subsequently modified.
