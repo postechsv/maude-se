@@ -1,0 +1,17 @@
+load pta-base .
+
+mod MODEL is
+    including MODEL-BASE .
+    protecting REAL .
+
+    var T : Real .
+    vars x y z : Real .
+    vars a b c d e f : Real .
+
+    ops Train0Gate0Controller0 Train1Gate0Controller1 Train1Gate1Controller2 Train1Gate2Controller2 Train2Gate2Controller2   Train0Gate3Controller0 Train1Gate3Controller1 Train2Gate3Controller1 Train2Gate0Controller1 Train2Gate1Controller2  : -> Location .
+
+    op <_;_;_;_> <_;_;_;_;_;_> : Location Real Real Real Real Real Real Real Real Real -> NState .
+    op [_;_;_;_] <_;_;_;_;_;_> : Location Real Real Real Real Real Real Real Real Real -> DState .
+
+
+endm
