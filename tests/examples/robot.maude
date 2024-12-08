@@ -1,0 +1,7 @@
+load smt
+load smt-check
+
+mod ROBOT is
+  pr REAL-EXPR .
+
+endm
