@@ -5,5 +5,9 @@ mod ROBOT is
   pr REAL-EXPR .
   inc NAT .
   pr META-LEVEL .
-  
+
+  sort State .
+  subsort Nat < SMTVarId .
+  op {_,_,_} : BooleanExpr Nat Configuration -> State [ctor] .
+
 endm
