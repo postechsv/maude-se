@@ -36,6 +36,7 @@ mod ROBOT is
             and VY' === VY + AY * TAU
             and PX' === 1/2 * AX * TAU * TAU + VX * TAU + PX
             and PY' === 1/2 * AY * TAU * TAU + VY * TAU + PY) 
+    /\ smtCheck(CONST') .
   --- accX
 
   --- accY
