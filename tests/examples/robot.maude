@@ -10,4 +10,10 @@ mod ROBOT is
   subsort Nat < SMTVarId .
   op {_,_,_} : BooleanExpr Nat Configuration -> State [ctor] .
 
+  var N : Nat .
+  vars O : Oid .
+  vars CONST CONST' : BooleanExpr .
+  vars PX VX AX PY VY AY PX' VX' AX' PY' VY' AY' T T' TAU : RealExpr .
+  var ATTS : AttributeSet .
+  
 endm
