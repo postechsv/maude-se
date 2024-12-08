@@ -30,5 +30,5 @@ mod GCD is
 endm
 
 search [1] {true, gcd(i(a), i(b))} =>* {CONST, ret(NN:IntegerExpr)} such that 
-	CONST' := CONST and i(a) + i(b) === 10 and NN:IntegerExpr === 2 
+	CONST' := CONST and i(a) + i(b) === 27 and NN:IntegerExpr === 3 
 	/\ smtCheck(CONST') = (true).Bool .
