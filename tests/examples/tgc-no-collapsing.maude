@@ -6,8 +6,8 @@ mod MODEL is
     sorts State Location .
 
     var T : Real .
-    vars x y : Real .
-    vars a b c d : Real .
+    vars x y z : Real .
+    vars a b c d e f : Real .
 
     ops Train0Gate0Controller0 Train1Gate0Controller1 Train1Gate1Controller2 Train1Gate2Controller2 Train2Gate2Controller2 Train3Gate2Controller2 Train0Gate2Controller3 Train0Gate3Controller0 Train1Gate3Controller1 Train2Gate3Controller1 Train3Gate3Controller1 Train3Gate0Controller1 Train3Gate1Controller2 Train0Gate1Controller3 Train2Gate0Controller1 Train2Gate1Controller2 : -> Location .
 
