@@ -15,5 +15,10 @@ mod ROBOT is
   vars CONST CONST' : BooleanExpr .
   vars PX VX AX PY VY AY PX' VX' AX' PY' VY' AY' T T' TAU : RealExpr .
   var ATTS : AttributeSet .
-  
+
+  --- move
+
+  --- accX
+
+  --- accY
 endm
