@@ -77,4 +77,6 @@ search [1]
                    time : toReal(0) >}
   =>*
     {CONST,  N, 
-     < r : Robot | pos  : [PX, PY], ATTS >} .
+     < r : Robot | pos  : [PX, PY], ATTS >}
+    such that
+    {SS} := smtCheck(CONST and PX === 10/1 and PY === 10/1, true) .
