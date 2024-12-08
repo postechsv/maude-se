@@ -59,8 +59,14 @@ mod MODEL is
     crl [Train3Gate1Controller2-Train0Gate1Controller3] : < Train3Gate1Controller2 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train0Gate1Controller3 ; x ; y ; 0/1 ] < a ; b ; c ; d ; e ; f > if (x < b) = true .
     crl [tick-Train3Gate1Controller2] : [ Train3Gate1Controller2 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train3Gate1Controller2 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
+    crl [Train2Gate1Controller2-Train2Gate2Controller2] : < Train2Gate1Controller2 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train2Gate2Controller2 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > if (c < y and y < d) = true .
+    rl [Train2Gate1Controller2-Train3Gate1Controller2] : < Train2Gate1Controller2 ; x ; y ; z > < a ; b ; c ; d ; e ; f > => [ Train3Gate1Controller2 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > .
+    crl [tick-Train2Gate1Controller2] : [ Train2Gate1Controller2 ; x ; y ; z ] < a ; b ; c ; d ; e ; f > => < Train2Gate1Controller2 ; x + T ; y + T ; z + T > < a ; b ; c ; d ; e ; f > if (T >= 0/1) = true [nonexec] .
 
 endm
 
 smt-search [1] < Train0Gate0Controller0 ; x ; y ; z > < a ; b ; c ; d ; e ; f > =>* < <replace> ; x':Real ; y':Real ; z':Real > < a ; b ; c ; d ; e ; f > such that ( x === y and x === z and x >= 0/1 and y >= 0/1 and z >= 0/1 and a >= 0/1 and b >= 0/1 and c >= 0/1 and d >= 0/1 and e >= 0/1 and f >= 0/1 ) = true .
 
+quit .
+
+eof
