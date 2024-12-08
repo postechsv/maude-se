@@ -17,7 +17,17 @@ mod ROBOT is
   var ATTS : AttributeSet .
 
   --- move
-
+  crl [move]:
+      {CONST, N, 
+       < O : C:Robot | pos  : [PX,  PY], 
+                       vel  : [VX,  VY],
+                       acc  : [AX,  AY],  
+                       time : T, ATTS >}
+   => {CONST', N + 5, 
+       < O : C:Robot | pos  : [PX', PY'], 
+                       vel  : [VX', VY'],
+                       acc  : [AX,  AY], 
+                       time : T + TAU, ATTS >}
   --- accX
 
   --- accY
