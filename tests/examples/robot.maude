@@ -39,5 +39,12 @@ mod ROBOT is
     /\ smtCheck(CONST') .
   --- accX
 
+  crl [accX]:
+      {CONST,  N,   < O : C:Robot | acc : [AX,  AY], ATTS >}
+   => {CONST', N + 5, < O : C:Robot | acc : [AX', AY], ATTS >}
+   if AX' := r(N)
+   /\ CONST' := simplifyFormula(CONST and AY === toReal(0))
+   /\ smtCheck(CONST') .
+
   --- accY
 endm
