@@ -55,3 +55,17 @@ mod ROBOT is
    /\ smtCheck(CONST') .
    
 endm
+
+mod ROBOT-ANALYSIS is
+  inc ROBOT-DYNAMICS .
+
+  var N : Nat .
+  vars CONST : BooleanExpr .
+  vars PX VX AX PY VY AY T : RealExpr .
+  var SS : SatAssignmentSet .
+  var OBJ : Object .
+  var ATTS : AttributeSet .
+
+  op robotInstance : -> Oid [ctor] .
+endm
+
