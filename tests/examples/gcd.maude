@@ -18,4 +18,8 @@ mod GCD is
   vars CONST CONST' : BooleanExpr .
   vars X Y : IntegerExpr .
   var SS : SatAssignmentSet .
+
+  crl {CONST, gcd(X, Y)} => {simplifyFormula(CONST'), gcd(X - Y, Y)} 
+   if CONST' := CONST and (X > Y) === (true).Boolean /\ smtCheck(CONST', false) .
+  
 endm
