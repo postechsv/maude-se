@@ -37,8 +37,8 @@ mod ROBOT is
             and PX' === 1/2 * AX * TAU * TAU + VX * TAU + PX
             and PY' === 1/2 * AY * TAU * TAU + VY * TAU + PY) 
     /\ smtCheck(CONST') .
-  --- accX
 
+  --- accX
   crl [accX]:
       {CONST,  N,   < O : C:Robot | acc : [AX,  AY], ATTS >}
    => {CONST', s N, < O : C:Robot | acc : [AX', AY], ATTS >}
@@ -47,4 +47,11 @@ mod ROBOT is
    /\ smtCheck(CONST') .
    
   --- accY
+  crl [accY]:
+      {CONST,  N,   < O : C:Robot | acc : [AX, AY],  ATTS >}
+   => {CONST', s N, < O : C:Robot | acc : [AX, AY'], ATTS >}
+   if AY' := r(N)
+   /\ CONST' := simplifyFormula(CONST and AX === toReal(0)) 
+   /\ smtCheck(CONST') .
+   
 endm
