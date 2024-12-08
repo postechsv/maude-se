@@ -69,3 +69,12 @@ mod ROBOT-ANALYSIS is
   op r : -> Oid [ctor] .
 endm
 
+search [1] 
+    {true,  0, 
+     < r : Robot | pos  : [toReal(0), toReal(0)],
+                   vel  : [toReal(0), toReal(0)],
+                   acc  : [toReal(0), toReal(0)],
+                   time : toReal(0) >}
+  =>*
+    {CONST,  N, 
+     < r : Robot | pos  : [PX, PY], ATTS >} .
