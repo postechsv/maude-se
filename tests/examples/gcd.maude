@@ -6,4 +6,10 @@ mod GCD is
   pr SMT-CHECK .
   pr META-LEVEL .
 
+  ops a b : -> SMTVarId [ctor] .
+
+  sort GcdResult .
+  op gcd : IntegerExpr IntegerExpr -> GcdResult [ctor] .
+  op ret : IntegerExpr -> GcdResult [ctor] .
+
 endm
