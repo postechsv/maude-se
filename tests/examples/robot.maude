@@ -3,5 +3,7 @@ load smt-check
 
 mod ROBOT is
   pr REAL-EXPR .
-
+  inc NAT .
+  pr META-LEVEL .
+  
 endm
