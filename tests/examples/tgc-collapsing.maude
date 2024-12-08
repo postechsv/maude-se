@@ -71,4 +71,5 @@ mod MODEL is
 
     var l : Location .
     eq get-location( < l ; x ; y ; z > < a ; b ; c ; d ; e ; f > ) = l .
+    eq get-location( [ l ; x ; y ; z ] < a ; b ; c ; d ; e ; f > ) = l .
 endm
