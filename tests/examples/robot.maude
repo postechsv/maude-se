@@ -31,6 +31,11 @@ mod ROBOT is
     if TAU := r(N)
     /\ [PX', PY'] := [r(N + 1), r(N + 2)]
     /\ [VX', VY'] := [r(N + 3), r(N + 4)]
+    /\ CONST' := simplifyFormula(CONST and TAU >= toReal(0)
+            and VX' === VX + AX * TAU
+            and VY' === VY + AY * TAU
+            and PX' === 1/2 * AX * TAU * TAU + VX * TAU + PX
+            and PY' === 1/2 * AY * TAU * TAU + VY * TAU + PY) 
   --- accX
 
   --- accY
