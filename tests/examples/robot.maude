@@ -28,6 +28,9 @@ mod ROBOT is
                        vel  : [VX', VY'],
                        acc  : [AX,  AY], 
                        time : T + TAU, ATTS >}
+    if TAU := r(N)
+    /\ [PX', PY'] := [r(N + 1), r(N + 2)]
+    /\ [VX', VY'] := [r(N + 3), r(N + 4)]
   --- accX
 
   --- accY
