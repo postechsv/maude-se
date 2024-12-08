@@ -13,7 +13,7 @@ mod GCD is
   op ret : IntegerExpr -> GcdResult [ctor] .
 
   sort State .
-  op [_,_] : BooleanExpr GcdResult -> State [ctor] .
+  op {_,_} : BooleanExpr GcdResult -> State [ctor] .
 
   vars CONST CONST' : BooleanExpr .
   vars X Y : IntegerExpr .
