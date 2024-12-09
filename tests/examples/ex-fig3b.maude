@@ -10,5 +10,13 @@
 load pta-base .
 
 mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+
+    --- ---------------------------
+    vars X Y      : Real .
+    vars X' Y'    : Real .
+    vars T      : Real .
+    --- ---------------------------
 
 endm
