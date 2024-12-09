@@ -42,4 +42,7 @@ fmod TERM-ABST is
   /\ not TY in ('Boolean ; 'Integer ; 'Real)
   /\ {TL', Cd, N'} := abst(M, TL, N) .
 
+  ceq abst(M, (T, NTL), N) = {(TL,TL'), Cd /\ Cd', N''}
+  if { TL, Cd, N' } := abst(M, T, N)
+  /\ { TL', Cd', N'' } := abst(M, NTL, N') .
 endfm
