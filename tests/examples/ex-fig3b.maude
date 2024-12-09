@@ -44,4 +44,9 @@ mod MODEL is
         < l1 : X + T  > 
         if (T >= 0/1 and 10/1 >= X + T) = true [nonexec] .
 
+    crl [l1-bad] : 
+        < l1 :  X  > =>
+        [ bad : X  ] 
+        if (X >= 11/1) = true .
+
 endm
