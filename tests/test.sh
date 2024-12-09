@@ -134,3 +134,26 @@ function run_benchmarks_parallel {
     echo "${file_list[@]}" | parallel -j4 run_maude {} 60
   fi
 }
+
+# Prints usage information
+function print_usage {
+  echo "Usage: $0 [options]"
+  echo "Options:"
+  echo "  -m <model>     Specify the model name"
+  echo "  -t <timeout>   Specify the timeout in seconds"
+  echo "  -h             Print this help message"
+}
+
+# 메인 로직: 인자 처리
+if [[ "$1" == "-h" ]]; then
+  print_usage
+  exit 0
+fi
+
+check_dependencies || exit 1
+
+# 예: 모델과 timeout을 인자로 받아서 run_benchmark 실행
+model="${1:-default_model}"
+timeout_value="${2:-60}"
+
+run_benchmark "$model" "$timeout_value"
