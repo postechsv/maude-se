@@ -102,6 +102,7 @@ function cleanup_old_results {
   fi
 }
 
+
 # Summarizes results from a directory into a CSV file
 function summarize_results {
   local log_dir=$1
@@ -118,4 +119,18 @@ function summarize_results {
       echo "$(basename "$file"),$time_val,$exit_code_val" >> "$summary_file"
     fi
   done
+}
+
+# Runs benchmarks in parallel using GNU parallel if available
+function run_benchmarks_parallel {
+  local file_list=("$@")
+  
+  if ! command -v parallel &> /dev/null; then
+    echo "Warning: 'parallel' command not found. Running sequentially."
+    for f in "${file_list[@]}"; do
+      run_maude "$f" "60"
+    done
+  else
+    echo "${file_list[@]}" | parallel -j4 run_maude {} 60
+  fi
 }
