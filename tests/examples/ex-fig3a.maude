@@ -24,6 +24,10 @@ mod EXAMPLE-INF is
     ops l0 l1 bad : -> Location .
     op <_:_;_>  : Location Real Real   -> State .
     op [_:_;_]  : Location Real Real   -> State .
-
+    
+    crl [l0-l1] : 
+        < l0 : X ; Y > =>
+        [ l1 : X ; Y ] 
+        if ( 1/1 <= X and 5/1 >= X ) = true .
 
 endm
