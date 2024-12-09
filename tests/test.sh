@@ -88,3 +88,16 @@ function check_dependencies {
   echo "All dependencies are present."
   return 0
 }
+
+
+function cleanup_old_results {
+  local log_dir=$1
+  local days_old=${2:-7}
+
+  if [ -d "$log_dir" ]; then
+    find "$log_dir" -type f -mtime +$days_old -exec rm {} \;
+    echo "Cleaned up result files older than $days_old days in $log_dir"
+  else
+    echo "Warning: $log_dir does not exist. No cleanup performed."
+  fi
+}
