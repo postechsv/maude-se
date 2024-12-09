@@ -21,7 +21,7 @@ mod EXAMPLE-INF is
     --- ---------------------------
 
     --- Configurations
-    ops l0 tick bad : -> Location .
+    ops l0 l1 bad : -> Location .
     op <_:_;_>  : Location Real Real   -> State .
     op [_:_;_]  : Location Real Real   -> State .
 
