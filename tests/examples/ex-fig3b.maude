@@ -34,11 +34,9 @@ mod MODEL is
         < l0 : X + T  > 
         if (T >= 0/1) = true [nonexec] .
 
-
     crl [l1-l0] : 
         < l1 : X    > =>
         [ l0 : 0/1  ] 
-        if (true) = true [nonexec] .
-
+        if (true) = true .
 
 endm
