@@ -11,5 +11,7 @@
 load smt .
 
 mod EXAMPLE-INF is
+    pr REAL .
+    sorts State Location .
 
 endm
