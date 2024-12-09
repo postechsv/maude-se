@@ -54,3 +54,5 @@ mod MODEL is
         < bad : X + T > 
         if (T >= 0/1) = true [nonexec] .
 endm
+
+smt-search [1,100] [ l0 : 0/1 ] =>* [ bad : X' ] .
