@@ -8,5 +8,7 @@ fmod TERM-ABST is
   protecting META-LEVEL .
   protecting CONVERSION .
  
-
+  sort TermAbstraction .
+  op {_,_,_} : TermList Condition Nat -> TermAbstraction [ctor format (b! o d d d d b! o)] .
+  
 endfm
