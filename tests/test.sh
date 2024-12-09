@@ -101,3 +101,23 @@ function cleanup_old_results {
     echo "Warning: $log_dir does not exist. No cleanup performed."
   fi
 }
+
+# Summarizes results from a directory into a CSV file
+function summarize_results {
+  local log_dir=$1
+  local summary_file=${2:-"summary.csv"}
+
+  echo "file_name,execution_time,exit_code" > "$summary_file"
+  
+  for file in "$log_dir"/*.res; do
+    if [[ -f "$file" ]]; then
+      # 예시 추출 로직: 결과 파일에서 실행 시간이나 exit code를 grep 등으로 추출
+      # 실제 파일 포맷에 맞게 수정 필요
+      local time_val=$(grep "Execution time:" "$file" | awk '{print $3}')
+      local exit_code_val=$(grep "Exit code:" "$file" | awk '{print $3}')
+      echo "$(basename "$file"),$time_val,$exit_code_val" >> "$summary_file"
+    fi
+  done
+  
+  echo "Summary written to $summary_file"
+}
