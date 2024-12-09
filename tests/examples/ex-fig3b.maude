@@ -55,4 +55,5 @@ mod MODEL is
         if (T >= 0/1) = true [nonexec] .
 endm
 
-smt-search [1,100] [ l0 : 0/1 ] =>* [ bad : X' ] .
+--- smt-search bound to 10 steps (otherwise, it does not stop)
+smt-search [1,10] [ l0 : 0/1 ] =>* [ bad : X' ] .
