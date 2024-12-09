@@ -39,4 +39,11 @@ mod EXAMPLE-INF is
         < l1 : X   ; Y > =>
         [ l0 : 0/1 ; Y ] 
         if (true) = true .
+
+    crl [l1-tick] : 
+        [ l1 : X ; Y ] =>
+        < l1 : X + T ; Y + T > 
+        if (T >= 0/1 and 10/1 >= X + T) = true [nonexec] .
+
+
 endm
