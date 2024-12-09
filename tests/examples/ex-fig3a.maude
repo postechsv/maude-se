@@ -14,4 +14,11 @@ mod EXAMPLE-INF is
     pr REAL .
     sorts State Location .
 
+    --- ---------------------------
+    vars X Y      : Real .
+    vars X' Y'    : Real .
+    vars T        : Real .
+    --- ---------------------------
+
+
 endm
