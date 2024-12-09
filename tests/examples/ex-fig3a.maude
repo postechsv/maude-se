@@ -45,5 +45,10 @@ mod EXAMPLE-INF is
         < l1 : X + T ; Y + T > 
         if (T >= 0/1 and 10/1 >= X + T) = true [nonexec] .
 
+    crl [l1-bad] : 
+        < l1 :  X ; Y > =>
+        [ bad : X ; Y ] 
+        if (X >= 11/1) = true .
+
 
 endm
