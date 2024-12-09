@@ -36,4 +36,10 @@ fmod TERM-ABST is
   ceq abst(M, C, N) = {C, nil, N}
   if TY := leastSort(M,C)
   /\ not TY in ('Boolean ; 'Integer ; 'Real) .
+
+  ceq abst(M, F[TL], N) = {F[TL'], Cd, N'}
+  if TY := leastSort(M,F[TL])
+  /\ not TY in ('Boolean ; 'Integer ; 'Real)
+  /\ {TL', Cd, N'} := abst(M, TL, N) .
+
 endfm
