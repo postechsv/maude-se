@@ -30,4 +30,7 @@ fmod TERM-ABST is
   ceq abst(M, T, N) = {NV, NV = T, s(N)}
   if not (T :: Variable)
   /\ TY := leastSort(M,T)  
+  /\ TY in ('Boolean ; 'Integer ; 'Real)
+  /\ NV := auxVarGen(N, TY) . 
+    
 endfm
