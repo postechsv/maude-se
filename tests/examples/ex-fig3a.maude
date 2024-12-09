@@ -1,0 +1,15 @@
+
+***(
+    Infinite states
+    --------------
+
+    Example in Figure 3a (infinite number of states)
+    The location BAD is reachable in this case
+
+*)
+
+load smt .
+
+mod EXAMPLE-INF is
+
+endm
