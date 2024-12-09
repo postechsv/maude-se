@@ -47,5 +47,7 @@ fmod TERM-ABST is
   /\ { TL', Cd', N'' } := abst(M, NTL, N') .
 
   eq abst(M, empty, N) = {empty, nil, N} .
-
+  
+  op auxVarGen : Nat Type -> Variable .
+  eq auxVarGen(N, TY) = qid("V" + string(N, 10) + ":" + string(TY) + "Expr") .
 endfm
