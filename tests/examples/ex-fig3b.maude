@@ -49,4 +49,8 @@ mod MODEL is
         [ bad : X  ] 
         if (X >= 11/1) = true .
 
+    crl [bad-tick] : 
+        [ bad : X ] =>
+        < bad : X + T > 
+        if (T >= 0/1) = true [nonexec] .
 endm
