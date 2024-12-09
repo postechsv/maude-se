@@ -19,4 +19,10 @@ mod MODEL is
     vars T      : Real .
     --- ---------------------------
 
+    --- Configurations
+    ops l0 l1 bad : -> Location .
+    op <_:_>  : Location Real   -> NState .
+    op [_:_]  : Location Real   -> DState .
+
+
 endm
