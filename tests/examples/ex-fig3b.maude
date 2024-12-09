@@ -24,5 +24,9 @@ mod MODEL is
     op <_:_>  : Location Real   -> NState .
     op [_:_]  : Location Real   -> DState .
 
+    crl [l0-l1] : 
+        < l0 : X > =>
+        [ l1 : X  ] 
+        if ( 5/1 <= X and 10/1 >= X ) = true .
 
 endm
