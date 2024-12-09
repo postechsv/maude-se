@@ -26,4 +26,8 @@ fmod TERM-ABST is
   op abst : Module TermList Nat -> TermAbstraction [format (r! o)] .
 
   eq abst(M, V, N) = {V, nil, N} .  
+
+  ceq abst(M, T, N) = {NV, NV = T, s(N)}
+  if not (T :: Variable)
+  /\ TY := leastSort(M,T)  
 endfm
