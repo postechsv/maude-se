@@ -14,10 +14,10 @@ function run_maude {
   # yices, z3, CVC4
   # timeout "$timeout_value fuck ${filename} -s yices"
   if [[ -z "$timeout_value" ]]; then
-    timeout_value=60 # 기본 60초
+    timeout_value=60 # default 60 seconds
   fi
 
-  # timeout 사용해서 maude 명령어 실행
+  # Using timeout, execute maude command 
   if timeout "${timeout_value}s" maude-se "${filename}" -s yices; then
     return 0
   else
@@ -112,8 +112,6 @@ function summarize_results {
   
   for file in "$log_dir"/*.res; do
     if [[ -f "$file" ]]; then
-      # 예시 추출 로직: 결과 파일에서 실행 시간이나 exit code를 grep 등으로 추출
-      # 실제 파일 포맷에 맞게 수정 필요
       local time_val=$(grep "Execution time:" "$file" | awk '{print $3}')
       local exit_code_val=$(grep "Exit code:" "$file" | awk '{print $3}')
       echo "$(basename "$file"),$time_val,$exit_code_val" >> "$summary_file"
@@ -144,7 +142,6 @@ function print_usage {
   echo "  -h             Print this help message"
 }
 
-# 메인 로직: 인자 처리
 if [[ "$1" == "-h" ]]; then
   print_usage
   exit 0
@@ -152,7 +149,6 @@ fi
 
 check_dependencies || exit 1
 
-# 예: 모델과 timeout을 인자로 받아서 run_benchmark 실행
 model="${1:-default_model}"
 timeout_value="${2:-60}"
 
