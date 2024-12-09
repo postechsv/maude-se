@@ -22,5 +22,8 @@ fmod TERM-ABST is
   var T : Term .
   vars TL TL' : TermList .
   vars NTL : NeTermList .
-  
+
+  op abst : Module TermList Nat -> TermAbstraction [format (r! o)] .
+
+  eq abst(M, V, N) = {V, nil, N} .  
 endfm
