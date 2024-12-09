@@ -9,7 +9,8 @@ locations=("loc1" "loc2")
 function run_maude {
   local filename=$1
   local timeout_value=$2
-  maude-se ${filename} -s yices
+  local solver=$3
+  maude-se ${filename} -s $solver
   # yices, z3, CVC4
   # timeout "$timeout_value fuck ${filename} -s yices"
   if [[ -z "$timeout_value" ]]; then
@@ -67,7 +68,7 @@ function run_benchmark {
       if [[ ! -f "${new_file}" ]]; then
         sed "s/<replace>/${l}/" "${model_folder}/${maude_file}" > "${new_file}"
         echo "Running Maude with ${new_file}"
-        run_maude "${new_file}" "${timeout}" > "${result_file}"
+        run_maude "${new_file}" "${timeout}" > "${result_file}" 60 yices2
       fi
     done    
   done
