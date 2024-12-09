@@ -118,6 +118,4 @@ function summarize_results {
       echo "$(basename "$file"),$time_val,$exit_code_val" >> "$summary_file"
     fi
   done
-  
-  echo "Summary written to $summary_file"
 }
