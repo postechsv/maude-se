@@ -1,0 +1,12 @@
+***
+***	Maude term abstraction module.
+***
+*** Abstracting Boolean, Integer, Real term.
+*** abstracting constants to new variables.
+***
+fmod TERM-ABST is
+  protecting META-LEVEL .
+  protecting CONVERSION .
+ 
+
+endfm
