@@ -1,0 +1,65 @@
+
+***(
+    Infinite states
+    --------------
+
+    Example in Figure 3a (infinite number of states)
+    The location BAD is reachable in this case
+
+*)
+
+load smt .
+
+mod EXAMPLE-INF is
+    pr REAL .
+    sorts State Location .
+
+    --- ---------------------------
+    vars X Y      : Real .
+    vars X' Y'    : Real .
+    vars T        : Real .
+    --- ---------------------------
+
+    --- Configurations
+    ops l0 l1 bad : -> Location .
+    op <_:_;_>  : Location Real Real   -> State .
+    op [_:_;_]  : Location Real Real   -> State .
+    
+    crl [l0-l1] : 
+        < l0 : X ; Y > =>
+        [ l1 : X ; Y ] 
+        if ( 5/1 <= X and 10/1 >= X ) = true .
+
+    crl [l0-tick] : 
+        [ l0 : X ; Y ] =>
+        < l0 : X + T ; Y + T > 
+        if (T >= 0/1) = true [nonexec] .
+
+    crl [l1-l0] : 
+        < l1 : X   ; Y > =>
+        [ l0 : 0/1 ; Y ] 
+        if (true) = true .
+
+    crl [l1-tick] : 
+        [ l1 : X ; Y ] =>
+        < l1 : X + T ; Y + T > 
+        if (T >= 0/1 and 10/1 >= X + T) = true [nonexec] .
+
+    crl [l1-bad] : 
+        < l1 :  X ; Y > =>
+        [ bad : X ; Y ] 
+        if (X >= 11/1) = true .
+
+    crl [l1-bad] : 
+        < l1 :  X ; Y > =>
+        [ bad : X ; Y ] 
+        if (Y >= 50/1) = true .
+
+    crl [bad-tick] : 
+        [ bad : X ; Y ] =>
+        < bad : X + T ; Y + T > 
+        if (T >= 0/1) = true [nonexec] .
+
+endm
+
+smt-search [1] [ l0 : 0/1 ; 0/1 ] =>* [ bad : X' ; Y' ] .
