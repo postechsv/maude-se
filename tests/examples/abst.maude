@@ -52,4 +52,6 @@ fmod TERM-ABST is
   eq auxVarGen(N, TY) = qid("V" + string(N, 10) + ":" + string(TY) + "Expr") .
 
   op _in_ : Type TypeSet ~> Bool .  
+  eq TY in (TY ; TYS) = true .
+  eq TY in TYS = false [owise] .  
 endfm
