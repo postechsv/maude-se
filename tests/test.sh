@@ -73,3 +73,18 @@ function run_benchmark {
     done    
   done
 }
+
+# Checks if Maude and solvers are installed
+function check_dependencies {
+  local required_tools=("maude-se" "yices" "z3" "cvc4" "timeout")
+  
+  for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" &> /dev/null; then
+      echo "Error: '$tool' is not installed or not in PATH."
+      return 1
+    fi
+  done
+  
+  echo "All dependencies are present."
+  return 0
+}
