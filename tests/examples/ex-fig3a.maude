@@ -61,3 +61,5 @@ mod EXAMPLE-INF is
         if (T >= 0/1) = true [nonexec] .
 
 endm
+
+smt-search [1] [ l0 : 0/1 ; 0/1 ] =>* [ bad : X' ; Y' ] .
