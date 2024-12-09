@@ -1,0 +1,14 @@
+***(
+    Infinite states
+    --------------
+
+    EXample in Figure 3b (infinite number of states)
+    The location BAD is not reachable and the search command loops (see 
+    the bounded limit in the smt-search command below)
+
+*)
+load pta-base .
+
+mod MODEL is
+
+endm
