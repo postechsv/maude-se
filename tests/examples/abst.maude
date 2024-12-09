@@ -12,15 +12,15 @@ fmod TERM-ABST is
   op {_,_,_} : TermList Condition Nat -> TermAbstraction [ctor format (b! o d d d d b! o)] .
 
   var M : Module .
-  var N N'  : Nat .
+  var N N' N'' : Nat .
   var F : Qid .
   var TY : Type .
   var TYS : TypeSet .
   var C : Constant .
-  vars Cd : Condition .
+  vars Cd Cd' : Condition .
   vars V NV : Variable .
   var T : Term .
   vars TL TL' : TermList .
   vars NTL : NeTermList .
-
+  
 endfm
