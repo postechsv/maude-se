@@ -30,4 +30,9 @@ mod EXAMPLE-INF is
         [ l1 : X ; Y ] 
         if ( 1/1 <= X and 5/1 >= X ) = true .
 
+    crl [l0-tick] : 
+        [ l0 : X ; Y ] =>
+        < l0 : X + T ; Y + T > 
+        if (T >= 0/1) = true [nonexec] .
+
 endm
