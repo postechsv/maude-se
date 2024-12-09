@@ -50,5 +50,9 @@ mod EXAMPLE-INF is
         [ bad : X ; Y ] 
         if (X >= 11/1) = true .
 
+    crl [l1-bad] : 
+        < l1 :  X ; Y > =>
+        [ bad : X ; Y ] 
+        if (Y >= 50/1) = true .
 
 endm
