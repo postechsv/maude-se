@@ -45,4 +45,7 @@ fmod TERM-ABST is
   ceq abst(M, (T, NTL), N) = {(TL,TL'), Cd /\ Cd', N''}
   if { TL, Cd, N' } := abst(M, T, N)
   /\ { TL', Cd', N'' } := abst(M, NTL, N') .
+
+  eq abst(M, empty, N) = {empty, nil, N} .
+
 endfm
