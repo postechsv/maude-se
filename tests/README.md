@@ -14,6 +14,9 @@ The specification can be found in the folder `tests`. It includes the following 
 - _coffee.maude_: Example of the coffee machine using the command smt-search.
 - _coffee-folding_: Example of the coffee machine using folding.
 - _coffee-strategy_: Example using the strategy of the coffee machine.
+- _ex-fig3a_maude_ : Example of Infinite number of states .
+- _ex-fig3b_maude_ : Example of Infinite number of states .
+
 
 ### Origin
 
