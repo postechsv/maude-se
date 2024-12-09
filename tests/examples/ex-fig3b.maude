@@ -29,4 +29,9 @@ mod MODEL is
         [ l1 : X  ] 
         if ( 5/1 <= X and 10/1 >= X ) = true .
 
+    crl [l0-tick] : 
+        [ l0 : X  ] =>
+        < l0 : X + T  > 
+        if (T >= 0/1) = true [nonexec] .
+
 endm
