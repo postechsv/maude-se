@@ -20,5 +20,10 @@ mod EXAMPLE-INF is
     vars T        : Real .
     --- ---------------------------
 
+    --- Configurations
+    ops l0 tick bad : -> Location .
+    op <_:_;_>  : Location Real Real   -> State .
+    op [_:_;_]  : Location Real Real   -> State .
+
 
 endm
