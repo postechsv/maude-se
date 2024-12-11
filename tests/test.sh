@@ -61,7 +61,7 @@ function run_benchmark {
       maude_file="${model}.${mode}.maude"
       new_file="${output_folder}/${maude_file}.${l}"
       
-      # 파일명에 timestamp 추가
+      # Add timestamp for filename
       timestamp=$(date +%Y%m%d_%H%M%S)
       result_file="${new_file}.${timestamp}.res"
 
