@@ -43,3 +43,7 @@ mod MODEL is
 
 endm
 
+load meta-pta .
+
+red reachability( (< l0 :  X:Real >  | X:Real >= 0/1)) .
+
