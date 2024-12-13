@@ -1,0 +1,9 @@
+***(
+    Infinite states
+    --------------
+
+    EXample in Figure 3b (infinite number of states)
+    The location BAD is not reachable 
+    The command reachability finds the only 2 symbolic states in this PTA
+
+*)
