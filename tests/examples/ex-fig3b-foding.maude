@@ -23,7 +23,6 @@ mod MODEL is
     ops l0 l1 bad : -> Location .
     op <_:_>  : Location Real   -> NState .
     op [_:_]  : Location Real   -> DState .
-    op {_:_}  : Location Real   -> TState .
 
     crl [l0-l1] : 
         < l0 : X > =>
