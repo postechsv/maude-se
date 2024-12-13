@@ -122,15 +122,7 @@ function summarize_results {
 # Runs benchmarks in parallel using GNU parallel if available
 function run_benchmarks_parallel {
   local file_list=("$@")
-  
-  if ! command -v parallel &> /dev/null; then
-    echo "Warning: 'parallel' command not found. Running sequentially."
-    for f in "${file_list[@]}"; do
-      run_maude "$f" "60"
-    done
-  else
-    echo "${file_list[@]}" | parallel -j4 run_maude {} 60
-  fi
+  run_maude "$f" "60"
 }
 
 # Prints usage information
