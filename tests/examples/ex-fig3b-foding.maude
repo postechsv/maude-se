@@ -7,3 +7,10 @@
     The command reachability finds the only 2 symbolic states in this PTA
 
 *)
+load pta-base .
+
+mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+endm
+
