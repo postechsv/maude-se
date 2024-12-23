@@ -15,4 +15,6 @@ mod MODEL is
   op twoCrits : -> Prop [ctor] . --- goal
   eq N ; M ; [crit(N')] [crit(M')] PS |= twoCrits = true .
   eq S |= twoCrits = false [owise] .
+
+  op wakeLHS : -> Prop [ctor] .
 endm
