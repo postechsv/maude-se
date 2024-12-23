@@ -5,4 +5,9 @@ mod MODEL is
   pr BAKERY .
   inc SATISFACTION .
   inc OBSERVATION .
+
+  subsort Conf < State .
+
+  var S : State .
+  var PS : ProcSet .  vars N N' M M' : Nat . 
 endm
