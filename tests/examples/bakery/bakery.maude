@@ -25,3 +25,7 @@ fmod BAKERY-SYNTAX is
   op _;_;_ : Nat Nat ProcSet -> Conf .
 
 endfm
+
+mod BAKERY is
+  protecting BAKERY-SYNTAX . 
+endm
