@@ -34,5 +34,5 @@ mod BAKERY is
 
   rl [wake] : N ; M ; [idle] PS    => s N rem @K ; M ; [wait(N)] PS .
   rl [crit] : N ; M ; [wait(M)] PS => N ; M ; [crit(M)] PS .
-
+  rl [exit] : N ; M ; [crit(M)] PS => N ; s M rem @K ; [idle] PS .
 endm
