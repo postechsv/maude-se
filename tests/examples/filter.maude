@@ -16,4 +16,8 @@ fmod FILTER-SYNTAX is
   subsort Vict < VictSet .
   op vict : Nat Nat -> Vict [ctor] . --- level, PID
   op __ : VictSet VictSet -> VictSet [assoc comm] .
+
+  sort Conf .
+  op _;_ : VictSet ProcSet -> Conf .
+
 endfm
