@@ -16,6 +16,7 @@ The specification can be found in the folder `tests`. It includes the following 
 - _coffee-strategy_: Example using the strategy of the coffee machine.
 - _ex-fig3a(b)_ : Example of Infinite number of states.
 - _robot_ : Example of ROBOT movements.
+- _bakery_ : Lamport's Bakery protocol in Maude.
 
 
 ### Origin
