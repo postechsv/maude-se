@@ -25,4 +25,5 @@ fmod FILTER-SYNTAX is
 
   op conflict : Nat Nat Conf -> Bool .
   ceq conflict(I, LI, VS ; proc(J, LJ, M) PS) = true if I =/= J and LJ > LI .
+  ceq conflict(I, LI, vict(LI, I) VS ; proc(J, LI, M) PS) = true if I =/= J .
 endfm
