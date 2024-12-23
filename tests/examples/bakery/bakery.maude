@@ -30,4 +30,6 @@ mod BAKERY is
   protecting BAKERY-SYNTAX . 
 
   op @K : -> Nat .
+  var PS : ProcSet .  vars N M : Nat . 
+
 endm
