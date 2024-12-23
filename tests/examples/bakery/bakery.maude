@@ -17,5 +17,8 @@ fmod BAKERY-SYNTAX is
   op `[_`] : ModeWait -> ProcWait . 
   op `[_`] : Mode -> Proc . 
   op none : -> ProcIdleSet . 
+  op __ : ProcIdleSet ProcIdleSet -> ProcIdleSet [assoc comm] . 
+  op __ : ProcWaitSet ProcWaitSet -> ProcWaitSet [assoc comm] .
+  op __ : ProcSet ProcSet -> ProcSet [assoc comm] .
 
 endfm
