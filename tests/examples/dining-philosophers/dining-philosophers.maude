@@ -23,3 +23,8 @@ fmod DINING-PHILOSOPHERS-BASE is
   op none : -> Conf [ctor] .
   op _||_ : Conf Conf -> Conf [ctor comm assoc id: none] .
 endfm
+
+mod N-DINING-PHILOSOPHERS is
+  including DINING-PHILOSOPHERS-BASE .
+  vars I J : Nat .	var C : Conf .	
+endm
