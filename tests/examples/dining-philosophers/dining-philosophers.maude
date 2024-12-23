@@ -2,4 +2,7 @@ fmod DINING-PHILOSOPHERS-BASE is
   protecting NAT .
   sorts Status .    
   ops think hungry single eat : -> Status [ctor] .
+
+  op #N : ~> Nat .  --- total number of philosophers
+
 endfm
