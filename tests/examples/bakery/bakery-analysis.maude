@@ -14,4 +14,5 @@ mod MODEL is
   --- Defining State Propositions ---
   op twoCrits : -> Prop [ctor] . --- goal
   eq N ; M ; [crit(N')] [crit(M')] PS |= twoCrits = true .
+  eq S |= twoCrits = false [owise] .
 endm
