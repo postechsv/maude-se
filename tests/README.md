@@ -17,7 +17,7 @@ The specification can be found in the folder `tests`. It includes the following 
 - _ex-fig3a(b)_ : Example of Infinite number of states.
 - _robot_ : Example of ROBOT movements.
 - _bakery_ : Lamport's Bakery protocol in Maude.
-
+- _dining-philosophers_ : Dining philosophers describing deadlock .
 
 ### Origin
 
