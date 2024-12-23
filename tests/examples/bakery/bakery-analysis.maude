@@ -17,4 +17,5 @@ mod MODEL is
   eq S |= twoCrits = false [owise] .
 
   op wakeLHS : -> Prop [ctor] .
+  eq N ; M ; [idle] PS |= wakeLHS = true .
 endm
