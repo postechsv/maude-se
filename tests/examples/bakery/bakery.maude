@@ -33,4 +33,6 @@ mod BAKERY is
   var PS : ProcSet .  vars N M : Nat . 
 
   rl [wake] : N ; M ; [idle] PS    => s N rem @K ; M ; [wait(N)] PS .
+  rl [crit] : N ; M ; [wait(M)] PS => N ; M ; [crit(M)] PS .
+
 endm
