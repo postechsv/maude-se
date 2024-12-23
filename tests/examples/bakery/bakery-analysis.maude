@@ -27,4 +27,7 @@ mod MODEL is
   op exitLHS : -> Prop [ctor] .
   eq N ; M ; [crit(M)] PS |= exitLHS = true .
   eq S |= exitLHS = false [owise] .
+
+  --- Defining Observations ---
+  eq obs(S) = < obsUpto(S, wakeLHS ; critLHS ; exitLHS ; twoCrits) > .
 endm
