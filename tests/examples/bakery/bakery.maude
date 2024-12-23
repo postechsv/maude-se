@@ -4,4 +4,6 @@ fmod BAKERY-SYNTAX is
   pr NAT .
   sorts ModeIdle ModeWait ModeCrit Mode . 
   subsorts ModeIdle ModeWait ModeCrit < Mode . 
+  sorts ProcIdle ProcWait Proc ProcIdleSet ProcWaitSet ProcSet . 
+
 endfm
