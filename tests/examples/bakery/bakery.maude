@@ -32,4 +32,5 @@ mod BAKERY is
   op @K : -> Nat .
   var PS : ProcSet .  vars N M : Nat . 
 
+  rl [wake] : N ; M ; [idle] PS    => s N rem @K ; M ; [wait(N)] PS .
 endm
