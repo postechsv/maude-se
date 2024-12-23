@@ -35,4 +35,6 @@ mod N-DINING-PHILOSOPHERS is
   rl [th]: p(I,think) => p(I,hungry) .
 
   rl [hs]: p(I,hungry) || c(J) => p(I,single) 
+
+  rl [se]: p(I,single) || c(J) => p(I,eat) 
 endm
