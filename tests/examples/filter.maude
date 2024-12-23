@@ -6,4 +6,7 @@ fmod FILTER-SYNTAX is
 
   sort Mode . --- idle wait(L) where L : current level
   ops on wait crit : -> Mode .
+
+  sorts Proc ProcSet .
+  subsort Proc < ProcSet .
 endfm
