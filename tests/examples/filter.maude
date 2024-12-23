@@ -3,4 +3,7 @@
 
 fmod FILTER-SYNTAX is
   protecting NAT .
+
+  sort Mode . --- idle wait(L) where L : current level
+  ops on wait crit : -> Mode .
 endfm
