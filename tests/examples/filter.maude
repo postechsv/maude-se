@@ -12,4 +12,6 @@ fmod FILTER-SYNTAX is
   op proc : Nat Nat Mode -> Proc [ctor] . --- proc(PID, level, Mode)
   op __ : ProcSet ProcSet -> ProcSet [assoc comm] .
 
+  sort Vict VictSet .
+  subsort Vict < VictSet .
 endfm
