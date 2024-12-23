@@ -13,4 +13,8 @@ fmod BAKERY-SYNTAX is
   op idle : -> ModeIdle . 
   op wait : Nat -> ModeWait . 
   op crit : Nat -> ModeCrit . 
+  op `[_`] : ModeIdle -> ProcIdle . 
+  op `[_`] : ModeWait -> ProcWait . 
+  op `[_`] : Mode -> Proc . 
+
 endfm
