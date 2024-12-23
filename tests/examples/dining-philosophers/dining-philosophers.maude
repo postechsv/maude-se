@@ -13,4 +13,7 @@ fmod DINING-PHILOSOPHERS-BASE is
 
   op adj : Nat Nat ~> Bool .
   eq adj(I,J) = (J == lc(I)) or (J == rc(I)) .
+
+  sorts Conf Phil Chop .
+  subsorts Phil Chop < Conf .   
 endfm
