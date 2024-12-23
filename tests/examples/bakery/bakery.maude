@@ -28,4 +28,6 @@ endfm
 
 mod BAKERY is
   protecting BAKERY-SYNTAX . 
+
+  op @K : -> Nat .
 endm
