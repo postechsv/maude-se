@@ -18,4 +18,6 @@ mod MODEL is
 
   op wakeLHS : -> Prop [ctor] .
   eq N ; M ; [idle] PS |= wakeLHS = true .
+  eq S |= wakeLHS = false [owise] .
+
 endm
