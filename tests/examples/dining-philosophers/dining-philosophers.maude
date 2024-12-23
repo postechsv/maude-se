@@ -26,5 +26,11 @@ endfm
 
 mod N-DINING-PHILOSOPHERS is
   including DINING-PHILOSOPHERS-BASE .
-  vars I J : Nat .	var C : Conf .	
+  vars I J : Nat .	var C : Conf .
+
+  *** defining the system behavior with localized fairness
+  *** NOTE: rule attributes also declare the simplified version of
+  *** spatial action patterns, e.g., wake(I) = {'wake : 'I \ I}
+
+  rl [th]: p(I,think) => p(I,hungry) .
 endm
