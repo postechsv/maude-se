@@ -10,4 +10,7 @@ fmod DINING-PHILOSOPHERS-BASE is
   eq lc(I) = I .    
   ceq rc(I) = s(I) if (s(I) < #N) = true .
   ceq rc(I) = 0 if (s(I) == #N) = true .
+
+  op adj : Nat Nat ~> Bool .
+  eq adj(I,J) = (J == lc(I)) or (J == rc(I)) .
 endfm
