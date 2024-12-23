@@ -10,4 +10,7 @@ mod MODEL is
 
   var S : State .
   var PS : ProcSet .  vars N N' M M' : Nat . 
+
+  --- Defining State Propositions ---
+  op twoCrits : -> Prop [ctor] . --- goal
 endm
