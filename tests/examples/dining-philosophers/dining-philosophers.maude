@@ -4,5 +4,5 @@ fmod DINING-PHILOSOPHERS-BASE is
   ops think hungry single eat : -> Status [ctor] .
 
   op #N : ~> Nat .  --- total number of philosophers
-
+  vars I J : Nat .  
 endfm
