@@ -1,0 +1,6 @@
+--- Peterson's Mutex algorithm for N process in Maude
+--- from The Art of Multiprocessor Programming (Herlihy), p.28
+
+fmod FILTER-SYNTAX is
+  protecting NAT .
+endfm
