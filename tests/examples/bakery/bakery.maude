@@ -2,5 +2,6 @@
 --- From: All About Maude - A High-Performance Logical Framework. 
 fmod BAKERY-SYNTAX is 
   pr NAT .
-
+  sorts ModeIdle ModeWait ModeCrit Mode . 
+  subsorts ModeIdle ModeWait ModeCrit < Mode . 
 endfm
