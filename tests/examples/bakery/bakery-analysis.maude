@@ -23,4 +23,8 @@ mod MODEL is
   op critLHS : -> Prop [ctor] .
   eq N ; M ; [wait(M)] PS |= critLHS = true .
   eq S |= critLHS = false [owise] .
+
+  op exitLHS : -> Prop [ctor] .
+  eq N ; M ; [crit(M)] PS |= exitLHS = true .
+  eq S |= exitLHS = false [owise] .
 endm
