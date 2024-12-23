@@ -21,4 +21,5 @@ fmod BAKERY-SYNTAX is
   op __ : ProcWaitSet ProcWaitSet -> ProcWaitSet [assoc comm id: none] .
   op __ : ProcSet ProcSet -> ProcSet [assoc comm id: none] .
 
+  sort Conf . 
 endfm
