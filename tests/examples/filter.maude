@@ -20,4 +20,6 @@ fmod FILTER-SYNTAX is
   sort Conf .
   op _;_ : VictSet ProcSet -> Conf .
 
+  vars I J LI LJ : Nat .
+  var PS : ProcSet . var VS : VictSet . var M : Mode .
 endfm
