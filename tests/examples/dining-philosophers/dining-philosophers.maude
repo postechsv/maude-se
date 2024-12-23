@@ -5,4 +5,7 @@ fmod DINING-PHILOSOPHERS-BASE is
 
   op #N : ~> Nat .  --- total number of philosophers
   vars I J : Nat .  
+
+  ops lc rc : Nat ~> Nat .    
+  eq lc(I) = I .    
 endfm
