@@ -19,4 +19,7 @@ fmod DINING-PHILOSOPHERS-BASE is
 
   op p : Nat Status -> Phil [ctor] .
   op c : Nat -> Chop [ctor] .    
+
+  op none : -> Conf [ctor] .
+  op _||_ : Conf Conf -> Conf [ctor comm assoc id: none] .
 endfm
