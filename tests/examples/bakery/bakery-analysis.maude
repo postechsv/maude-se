@@ -32,4 +32,6 @@ mod MODEL is
   eq obs(S) = < obsUpto(S, wakeLHS ; critLHS ; exitLHS ; twoCrits) > .
   eq reward(< FV:FeatVec , (twoCrits : true) , FV':FeatVec >) = 1.0 .
   eq reward(MS:MDPState) = 0.0 [owise] .
+  var P : Prop . var B : Bool .
+
 endm
