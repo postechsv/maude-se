@@ -5,5 +5,7 @@ fmod BAKERY-SYNTAX is
   sorts ModeIdle ModeWait ModeCrit Mode . 
   subsorts ModeIdle ModeWait ModeCrit < Mode . 
   sorts ProcIdle ProcWait Proc ProcIdleSet ProcWaitSet ProcSet . 
+  subsorts ProcIdle < ProcIdleSet . 
+  subsorts ProcWait < ProcWaitSet . 
 
 endfm
