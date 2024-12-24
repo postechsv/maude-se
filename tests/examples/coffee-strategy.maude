@@ -1,0 +1,178 @@
+***(
+    Coffee Machine
+    --------------
+
+    Using strategies to control that at least a dose of sugar is needed
+    It must be run with Maude SE https://maude-se.github.io/
+
+*)
+
+load smt
+load smt-check
+
+mod PTA-COFFEE is
+    pr SMT-CHECK .
+    inc NAT .
+    pr QID .
+
+    --- Fresh variables
+    subsort Nat < SMTVarId .
+    subsort Qid < SMTVarId .
+
+    --- ---------------------------
+    vars x y z     : RealExpr .
+    vars x' y' z'  : RealExpr .
+    vars p1 p2 p3  : RealExpr . 
+    var t          : RealExpr .
+    var N          : Nat .
+    vars C C'      : BooleanExpr .
+    --- ---------------------------
+
+    sorts State State' Location .
+
+    --- Global configuration
+    op <_|_|_> : Nat BooleanExpr State'  -> State .
+
+    --- Configurations
+    ops idle sugar coffee done : -> Location .
+    op <_;_;_> <_;_;_> : Location RealExpr RealExpr RealExpr RealExpr RealExpr  -> State' .
+    op [_;_;_] <_;_;_> : Location RealExpr RealExpr RealExpr RealExpr RealExpr  -> State' .
+
+    crl [press] : 
+        < N | C | < idle ; x ; y > < p1 ; p2 ; p3 > >  =>
+        < N | C' | [ sugar ; 0/1 ; 0/1 ] < p1 ; p2 ; p3 > >
+        if 
+            C' := simplify(C and 0/1 <= p2) /\
+            smtCheck(C')
+            .
+
+    crl [tick-idle] : 
+        < N     | C  | [ idle ; x ; y ] < p1 ; p2 ; p3 > > =>
+        < N + 1 | C' | < idle ; x + t ; y + t > < p1 ; p2 ; p3 > >
+        if 
+            t := r(N) /\
+            C' := simplify(C and t >= 0/1) /\
+            smtCheck(C') 
+            .
+
+    crl [sugar] :
+         < N  | C  | < sugar ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N  | C' | [ sugar ; 0/1 ; y ] < p1 ; p2 ; p3 > >
+         if
+             C' := simplify(C and x >= p1 and y <= p2)  /\
+            smtCheck(C') 
+            .
+
+    crl [tick-sugar] :
+         < N     | C  |  [ sugar ; x ; y ] < p1 ; p2 ; p3 > > =>
+         < N + 1 | C' |  < sugar ; x + t ; y + t > < p1 ; p2 ; p3 > >
+         if 
+             t := r(N) /\
+             C' := simplify(C and (y + t <= p2 and t >= 0/1)) /\
+            smtCheck(C') 
+            .
+
+    crl [cup] :
+         < N  |  C  | < sugar ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N  |  C' | [ coffee ; x ; y ] < p1 ; p2 ; p3 > >
+         if 
+             C' := simplify(C and (y === p2 and y <= p3 )) /\
+            smtCheck(C') 
+            .
+
+    crl [tick-coffee] :
+         < N     |  C  |  [ coffee ; x ; y ] < p1 ; p2 ; p3 > > =>
+         < N + 1 |  C' | < coffee ; x + t ; y + t > < p1 ; p2 ; p3 > >
+         if 
+             t := r(N) /\
+             C' := simplify(C and (t >= 0/1 and y + t <= p3)) /\
+            smtCheck(C') 
+            .
+
+    crl [coffee] :
+         < N  | C  | < coffee ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N  | C' | [ done ; 0/1 ; y ] < p1 ; p2 ; p3 > >
+         if 
+             C' := simplify(C and (y === p3 )) /\
+            smtCheck(C') 
+            .
+
+    crl [done] :
+         < N | C  | < done ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N | C' | [ idle  ; x  ; y ] < p1 ; p2 ; p3 > >
+         if 
+             C' := simplify(C and (x === 10/1 )) /\
+            smtCheck(C') 
+            .
+
+    crl [tick-done] :
+         < N      | C  | [ done ; x ; y ] < p1 ; p2 ; p3 > >  =>
+         < N + 1  | C' | < done  ; x + t  ; y + t > < p1 ; p2 ; p3 > >
+         if 
+             t := r(N) /\
+             C' := simplify(C and (t >= 0/1 and x + t  <= 10/1)) /\
+            smtCheck(C') 
+            .
+
+     rl [done] :
+         < N | C | < done ; x ; y > < p1 ; p2 ; p3 > > =>
+         < N | C | [ sugar ; 0/1 ; 0/1 ] < p1 ; p2 ; p3 > >
+         .
+
+    --- simplifyFormula can be used here instead
+    op simplify : BooleanExpr -> BooleanExpr .
+    eq simplify(C) = C .
+
+endm
+
+smod COFFEE-STR is 
+    protecting PTA-COFFEE . 
+    
+    strat sugar-str : Nat @ State .
+    strat sugar-str' @ State .
+    strat add-sugar : Nat @ State .
+    strat n-coffees : Nat @ State .
+    strat $n-coffees : Nat @ State .
+
+    --- ---------------------------
+    vars x y z     : RealExpr .
+    vars x' y' z'  : RealExpr .
+    vars p1 p2 p3  : RealExpr . 
+    var t          : RealExpr .
+    var N          : Nat .
+    vars C C'      : BooleanExpr .
+    --- ---------------------------
+
+    op validity : BooleanExpr -> SmtCheckResult .
+    eq validity(C) = smtCheck(not C) == false .
+
+    vars S  : Nat . 
+
+    --- Adding S times sugar 
+    sd sugar-str(S) := (match < N | C | [ done ; x ; y ] < p1 ; p2 ; p3 > > ) or-else --- end
+                       ( 
+                         (match < N | C | < sugar ; x ; y > < p1 ; p2 ; p3 > > ) ; add-sugar(S) ;  cup ; sugar-str(S)
+                       ) or-else --- adding sugar and delivering coffee 
+                       all ; sugar-str(S) .
+
+    --- an alternative version using smt calls. Sugar is added only once (when  x == y in state sugar)
+    sd sugar-str' := (match < N | C | [ done ; x ; y ] < p1 ; p2 ; p3 > > ) or-else --- end
+                       ( 
+                         (match < N | C | < sugar ; x ; y > < p1 ; p2 ; p3 > >  s.t. validity( C implies x === y)) ; add-sugar(1) ;  cup ; sugar-str'
+                       ) or-else --- adding sugar and delivering coffee 
+                       all ; sugar-str' .
+
+ensm
+
+
+--- With 1 sugar, besides p2 <= p3, it must be also the case that p1 <= p2 
+srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
+using sugar-str(1) .
+
+srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
+using sugar-str' .
+
+srew [1] < 0 | (r('p1) >= 0/1 and r('p2) >= 0/1 and r('p3) >= 0/1  ) | [ idle ; 0/1 ; 0/1 ]   < r('p1) ; r('p2); r('p3) >  > 
+using n-coffees(2) .
+
+quit .

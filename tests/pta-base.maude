@@ -1,0 +1,39 @@
+***(
+    pta-base.maude
+*)
+
+load smt .
+--- load smt-check . --- MaudeSE
+
+mod MODEL-BASE is
+
+    --- States 
+    sorts State DState NState  .
+    subsort DState NState < State .
+    
+    --- Locations
+    sort Location .
+
+    --- Constrained terms 
+    sort CTerm DCTerm NCTerm .
+    subsort DCTerm NCTerm < CTerm .
+
+    --- Lists of constrained terms 
+    sort SCTerm .
+    subsort CTerm < SCTerm .
+
+    op error : -> SCTerm .  --- For meta-level operations
+
+    --- Constrained terms 
+    op _|_ : DState  Boolean -> DCTerm [prec 99 format(n d d d )].
+    op _|_ : NState  Boolean -> NCTerm [prec 99 format(n d d d )].
+
+    --- This symbol is only used to build the final solution (from meta-term
+    --- to terms in the sort CTerm (see ./meta-pta.maude)
+    op _;;_ : SCTerm SCTerm -> SCTerm [ctor assoc ] .
+
+    --- This operation must be implemented by the PTA at hand
+    --- it is only needed for the new command reachability 
+    op get-location : State -> Location .
+endm
+

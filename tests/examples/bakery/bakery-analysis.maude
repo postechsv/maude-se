@@ -1,0 +1,37 @@
+load ../tool2 .
+load bakery .
+
+mod MODEL is
+  pr BAKERY .
+  inc SATISFACTION .
+  inc OBSERVATION .
+
+  subsort Conf < State .
+
+  var S : State .
+  var PS : ProcSet .  vars N N' M M' : Nat . 
+
+  --- Defining State Propositions ---
+  op twoCrits : -> Prop [ctor] . --- goal
+  eq N ; M ; [crit(N')] [crit(M')] PS |= twoCrits = true .
+  eq S |= twoCrits = false [owise] .
+
+  op wakeLHS : -> Prop [ctor] .
+  eq N ; M ; [idle] PS |= wakeLHS = true .
+  eq S |= wakeLHS = false [owise] .
+
+  op critLHS : -> Prop [ctor] .
+  eq N ; M ; [wait(M)] PS |= critLHS = true .
+  eq S |= critLHS = false [owise] .
+
+  op exitLHS : -> Prop [ctor] .
+  eq N ; M ; [crit(M)] PS |= exitLHS = true .
+  eq S |= exitLHS = false [owise] .
+
+  --- Defining Observations ---
+  eq obs(S) = < obsUpto(S, wakeLHS ; critLHS ; exitLHS ; twoCrits) > .
+  eq reward(< FV:FeatVec , (twoCrits : true) , FV':FeatVec >) = 1.0 .
+  eq reward(MS:MDPState) = 0.0 [owise] .
+  var P : Prop . var B : Bool .
+  eq < FV:FeatVec , (P : B) , FV':FeatVec > |= P = B . --- TODO: this may be default
+endm

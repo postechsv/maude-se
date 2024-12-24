@@ -1,0 +1,70 @@
+
+***(
+    Coffee Machine
+    --------------
+
+*)
+
+load pta-base .
+
+mod MODEL is
+    inc MODEL-BASE .
+    pr REAL .
+
+    --- --------------------
+    vars X1 X2        : Real .
+    vars X1' X2'      : Real .
+    vars P1 P2 P3     : Real .
+    var  T            : Real . 
+    --- --------------------
+
+    ops idle sugar coffee done error : -> Location .
+
+    op <_:_;_> <_;_;_> : Location Real Real Real Real Real -> NState .
+    op [_:_;_] <_;_;_> : Location Real Real Real Real Real -> DState .
+
+    crl [idle-sugar] : < idle : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                       [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 > 
+                       if (0/1 <= P2) = true [nonexec] .
+    crl [tick-idle] : [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < idle : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1) = true [nonexec] .
+    crl [done-idle] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ idle : X1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X1 === 10/1) = true [nonexec] .
+
+    crl [sugar-sugar] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ sugar : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X2 <= P2 and X1 >= P1) = true [nonexec] .
+
+    crl [sugar-coffee] : < sugar : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (X2 <= P3 and X2 === P2) = true .
+
+    crl [tick-sugar] : [ sugar : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < sugar : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X2 + T <= P2) = true [nonexec] .
+
+    crl [coffee-done] : < coffee : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ done : 0/1 ; X2 ] < P1 ; P2 ; P3 > 
+                      if (0/1 <= 10/1 and X2 === P3) = true [nonexec] .
+
+    crl [tick-coffee] : [ coffee : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < coffee : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X2 + T <= P3) = true [nonexec] .
+
+    crl [done-sugar] : < done : X1 ; X2 > < P1 ; P2 ; P3 > =>
+                      [ sugar : 0/1 ; 0/1 ] < P1 ; P2 ; P3 >  
+                      if (0/1 <= P2) = true [nonexec] .
+
+    crl [tick-done] : [ done : X1 ; X2 ] < P1 ; P2 ; P3 > =>
+                      < done : X1 + T ; X2 + T > < P1 ; P2 ; P3 > 
+                      if (T >= 0/1 and X1 + T <= 10/1) = true [nonexec] .
+
+endm
+
+smt-search [1] < idle : X1 ; X2 >   < P1 ; P2 ; P3 >  =>*
+               < done : X1' ; X2' > < P1 ; P2 ; P3 > 
+               such that (X1 === X2 and X1 >= 0/1 and 
+               P1 >= 0/1 and P2 >= 0/1 and P3 >= 0/1 ) = true .
+

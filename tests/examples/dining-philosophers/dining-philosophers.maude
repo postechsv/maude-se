@@ -1,0 +1,44 @@
+fmod DINING-PHILOSOPHERS-BASE is
+  protecting NAT .
+  sorts Status .    
+  ops think hungry single eat : -> Status [ctor] .
+
+  op #N : ~> Nat .  --- total number of philosophers
+  vars I J : Nat .  
+
+  ops lc rc : Nat ~> Nat .    
+  eq lc(I) = I .    
+  ceq rc(I) = s(I) if (s(I) < #N) = true .
+  ceq rc(I) = 0 if (s(I) == #N) = true .
+
+  op adj : Nat Nat ~> Bool .
+  eq adj(I,J) = (J == lc(I)) or (J == rc(I)) .
+
+  sorts Conf Phil Chop .
+  subsorts Phil Chop < Conf .   
+
+  op p : Nat Status -> Phil [ctor] .
+  op c : Nat -> Chop [ctor] .    
+
+  op none : -> Conf [ctor] .
+  op _||_ : Conf Conf -> Conf [ctor comm assoc id: none] .
+endfm
+
+mod N-DINING-PHILOSOPHERS is
+  including DINING-PHILOSOPHERS-BASE .
+  vars I J : Nat .	var C : Conf .
+
+  *** defining the system behavior with localized fairness
+  *** NOTE: rule attributes also declare the simplified version of
+  *** spatial action patterns, e.g., wake(I) = {'wake : 'I \ I}
+
+  rl [th]: p(I,think) => p(I,hungry) .
+
+  rl [hs]: p(I,hungry) || c(J) => p(I,single) 
+    if adj(I,J) = true .
+
+  rl [se]: p(I,single) || c(J) => p(I,eat) 
+    if adj(I,J) = true .
+
+  rl [et]: p(I,eat) => p(I,think) || c(lc(I)) || c(rc(I)) .
+endm
