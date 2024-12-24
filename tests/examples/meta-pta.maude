@@ -1,0 +1,265 @@
+***(
+    META-PTA
+*)
+
+
+mod META-PTA is
+    pr MODEL .
+    pr META-LEVEL .
+
+    --- Global state with the set of reachable states together with a natural
+    --- indicating the last SMT variable created
+    sort GlobalState .
+    op {{_},_} : TermList Nat -> GlobalState .
+    --- The first parameters is the already visited stated
+    --- The second parameters is the frontier 
+    op {{_},{_},_} : TermList TermList Nat -> GlobalState .
+    --- The extra parameter is the location we are looking for
+    op {_,{_},{_},_} : Location TermList TermList Nat -> GlobalState .
+    op error : -> GlobalState .
+
+    --- The module defining the PTA (whose name must be MODEL)
+    op pta-module : -> Module [memo] .
+    eq pta-module = toConstrained-rules(upModule('MODEL, false)) .
+   
+    --- Module including the meta-definitions
+    op meta-module : -> Module [memo] .
+    eq meta-module = upModule('META-PTA, false) .
+    --- TODO: upModule parameter
+
+
+    --- ----------------------------
+    vars T T'               : Term .
+    vars T1 T2              : Term .
+    vars LT LT'             : TermList .
+    vars GT GT'             : TermList .
+    vars X Y                : Term .
+    var S                   : Substitution .
+    var S?                  : Substitution? .
+    vars n m count k        : Nat .
+    vars C1 C2              : Term .
+    var SR                  : SmtResult? .
+    var Loc                 : Term .
+    var St                  : State .
+    var B B'                : Boolean .
+    var SCt                 : SCTerm .
+    var Ct                  : CTerm .
+    var M                   : Module .
+    vars R R'               : Rule .
+    var RS RS'              : RuleSet .
+    vars t t'               : Term .
+    var tc tc'              : Term .
+    var Ats                 : AttrSet .
+    var Cond                : Condition .
+    vars GS GS'             : GlobalState . 
+    var l                   : Location .
+    --- ----------------------------
+
+
+
+    --- Transforming a module with conditional rules to a one with constrained terms
+    op toConstrained-rules : Module -> Module [memo] . 
+    eq toConstrained-rules(M) 
+      =  (mod 'MOD-COND is
+	         getImports(M)
+             sorts getSorts(M) .
+             getSubsorts(M) 
+             getOps(M)
+             getMbs(M) 
+             none --- No equations are allowed to perform smt-search
+             transform-rules(getRls(M))
+          endm) .
+
+    op transform-rules : RuleSet -> RuleSet .
+    op transform-rules : RuleSet RuleSet -> RuleSet .
+    eq transform-rules(RS) = transform-rules(RS, none) .
+    eq transform-rules(none, RS') = RS' .
+    eq transform-rules( R RS, RS' ) = transform-rules(RS, transform-rule(R) RS') .
+
+    --- From l = > r if phi   to  C | t -> C and phi | r
+    op transform-rule : Rule -> Rule .
+    eq transform-rule(rl t => t' [ Ats ] . )
+      = (rl '_|_[t, 'C:Boolean] => '_|_[t', 'C:Boolean] [ Ats ] .) .
+
+    --- All the conditions are assumed to be of the form C = true 
+    eq transform-rule(crl t => t' if (tc = 'true.Boolean) [ Ats ] . )
+      = (rl '_|_[t, 'C:Boolean] => '_|_[t', '_and_['C:Boolean, tc]] [ Ats ] .) .
+
+    --- A generic goal for the metaSearch procedue
+    op fresh-goal : -> Term .
+    eq fresh-goal = '$NS:DCTerm . 
+
+
+    --- A unique rule adding new states when they are not already subsumed by
+    --- another state
+
+    crl [step] : {{LT}, {LT'}, m} => 
+                 {{LT, LT'}, {GT'}, k}
+        if  LT' =/= empty /\ 
+            {{GT}, k}:= next-frontier(LT', fresh-goal, m) /\ --- one step
+            GT' := subsumesL( (LT, LT'), GT) /\ --- filtering 
+            GT' =/= empty --- the result is not empty
+        .
+
+    --- A similar rule when we are looking for a location l
+    crl [step] : {l, {LT}, {LT'}, m} => 
+                 if location-in(l, (GT', LT')) 
+                   then {l, {LT, LT', GT'}, {empty}, k} --- location found
+                   else {l, {LT, LT'}, {GT'}, k}
+                 fi 
+        if  LT' =/= empty /\ 
+            {{GT}, k}:= next-frontier(LT', fresh-goal, m) /\ --- one step
+            GT' := subsumesL( (LT, LT'), GT) /\ --- filtering 
+            GT' =/= empty 
+        .
+
+    --- Checking if a location is in the new frontier
+    op location-in : Location TermList -> Bool .
+    eq location-in(l, empty) = false .
+    eq location-in( l, (T, LT)) = l == get-location(downTerm(T, error)) 
+                                  or-else location-in(l, LT) .
+
+    op get-location : CTerm -> Location .
+    eq get-location( (S:State | B:Boolean) ) = get-location(S:State) .
+
+
+    --- Subsumption procedure 
+
+    --- Checking if the new state (T1) is subsumed by the already present T2
+    --- n is used to range over all possible mathches
+    ceq subsumes('_|_[T1, C1], '_|_[T2, C2], n) = 
+        if S? == noMatch 
+         then false
+         else 
+             checkImplication(C1, applySubstitution(pta-module, C2, S?))
+             or-else subsumes('_|_[T1, C1], '_|_[T2, C2], n + 1 )
+        fi
+        if 
+            S? := metaMatch(pta-module, T2, T1, nil, n)  --- Matching the terms
+        .
+
+    --- Checking the subsubtion relation between two states (represented as terms)
+    op subsumes : Term Term -> Bool .
+    op subsumes : Term Term Nat -> Bool .
+    eq subsumes(T1, T2) =  subsumes(T1, T2, 0) .
+
+    --- Lifting the previous definition to list of constrained terms
+    op subsumesL : TermList TermList -> TermList .
+    eq subsumesL(LT, empty) = empty .
+    eq subsumesL(LT, (T1, GT)) = 
+         if $subsumesL(LT, T1) == false
+         then (T1, subsumesL(LT, GT))
+         else subsumesL(LT, GT)
+         fi
+         .
+
+    op $subsumesL : TermList Term -> Bool .
+    eq $subsumesL(empty, T1) = false .
+    eq $subsumesL((T2, LT), T1) = subsumes(T1, T2) or-else $subsumesL(LT, T1) .
+
+    --- Checking the implication on constraints 
+    op checkImplication : Term Term -> Bool .
+    eq checkImplication(C1, C2) = 
+        metaSmtCheck(pta-module, 'not_['_implies_[C1, C2]],'QF_LRA, false) == false .
+
+    --- Checking if the constraint in a (constrained) term is sat
+    op check-constraint : Term -> Bool .
+    eq check-constraint('_|_[T1, C1]) =
+         metaSmtCheck(pta-module, C1, 'QF_LRA, false) .
+
+    --- One step of computation in the PTA 
+    op step : Term Term Nat Nat  -> SmtResult? .
+    eq step(T, T' , m, count  ) = metaSmtSearch(pta-module, 
+                  T,
+                  T',
+                  nil,
+                  '+,
+                  m,
+                  2, --- allowing one transition plus the tick
+                  count) .
+
+
+    --- One step of computation generating all the successor states
+    op next-frontier : TermList Term Nat -> GlobalState . 
+    op next-frontier : TermList Term Nat GlobalState -> GlobalState . 
+
+    eq next-frontier(LT, T2, n) = next-frontier(LT, T2, n, {{empty}, n}) .
+    eq next-frontier(empty, T2, n, GS') = GS' .
+
+    ceq next-frontier((T1, LT), T2, n, GS') = 
+     next-frontier(LT, T2, m, {{ GT}, m})
+    if { {GT}, m} := steps(T1,T2, 0, GS') .
+
+    op steps : Term Term Nat GlobalState -> GlobalState . 
+    ceq steps(T1, T2,  count, {{LT},n}) = 
+        if check-constraint(T')
+          then steps(T1, T2, count + 1 , {{ LT, T'},m})
+          else steps(T1, T2, count + 1, {{ LT}, m})
+        fi
+    if { T' , S , Y  , m } := step(T1, T2, n , count) . 
+
+    eq steps(T, T', count, {{LT}, n}) = {{LT}, n} [owise] .
+
+
+    --- Defining the reachability commands
+
+    --- Unbounded reachability (until fixpoint)
+    op reachability : CTerm -> SCTerm .
+    --- Reachability with a given location
+    op reachability : Location CTerm -> SCTerm .
+    --- Computing n steps in the reachability analysis
+    op reachability : CTerm Nat -> SCTerm .
+
+    ceq reachability(C:CTerm, n) =
+        to-constrainted-terms(( GT, LT))
+    if {{GT}, { LT}, m} := $reachability(C:CTerm, n) .
+
+    ceq reachability(C:CTerm) =
+        to-constrainted-terms(( GT, LT))
+    if {{GT}, { LT}, m} := $reachability(C:CTerm, unbounded) .
+
+    ceq reachability(l, C:CTerm) =
+        to-constrainted-terms(( GT, LT))
+    if {l, {GT}, { LT}, m} := $reachability(l, C:CTerm ) .
+
+    op $reachability : CTerm Bound -> GlobalState .
+    op $reachability : Location CTerm -> GlobalState .
+    ceq $reachability( C:CTerm , b:Bound) = downTerm(T:Term , error)
+    if
+        {T:Term , Ty:Type} := metaRewrite(
+                                meta-module,
+                                upTerm({{empty}, {upTerm(C:CTerm)},0}),
+                                b:Bound) .
+    ceq $reachability(l,  C:CTerm ) = downTerm(T:Term , error)
+    if
+        {T:Term , Ty:Type} := metaRewrite(
+                                meta-module,
+                                upTerm({l, {empty}, {upTerm(C:CTerm)},0}),
+                                unbounded) .
+        
+
+    --- From meta-level terms to constrained-terms
+    op to-constrainted-terms : TermList -> SCTerm .
+    eq to-constrainted-terms( T1) = downTerm(T1, error) .
+    ceq to-constrainted-terms( (T1, LT) ) = to-constrainted-terms(T1) ;; to-constrainted-terms(LT)
+     if LT =/= empty .
+
+    --- simplifying constraints (only on Maude-SE)
+    --- op simplify : SCTerm -> SCTerm .
+    --- eq simplify(< St | B >) = < St | simplifyFormula(B) > .
+    --- eq simplify( Ct ;; SCt) = simplify(Ct) ;; simplify(SCt) .
+
+    *** utility function (don't needed in Maude 3.2)
+  --- op applySubstitution : Module Term Substitution -> Term .
+  --- eq applySubstitution(M:Module, T:Term, S:Substitution) =
+  ---   getTerm(metaNormalize(M:Module, $applySubstitution(T:Term, S:Substitution))) .
+
+  --- op $applySubstitution : NeTermList Substitution -> Term .
+  --- eq $applySubstitution(V:Variable, (V:Variable <- T:Term ; S:Substitution)) = T:Term .
+  --- eq $applySubstitution(Q:Qid[TL:NeTermList], S:Substitution) =
+  ---   Q:Qid[$applySubstitution(TL:NeTermList, S:Substitution)] .
+  --- eq $applySubstitution((T:Term, TL:NeTermList), S:Substitution) =
+  ---   $applySubstitution(T:Term, S:Substitution), $applySubstitution(TL:NeTermList, S:Substitution) .
+  --- eq $applySubstitution(Q:Qid, S:Substitution) = Q:Qid [owise] .
+
+endm

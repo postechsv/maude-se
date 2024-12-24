@@ -1,0 +1,30 @@
+--- Peterson's Mutex algorithm for N process in Maude
+--- from The Art of Multiprocessor Programming (Herlihy), p.28
+
+fmod FILTER-SYNTAX is
+  protecting NAT .
+
+  sort Mode . --- idle wait(L) where L : current level
+  ops on wait crit : -> Mode .
+
+  sorts Proc ProcSet .
+  subsort Proc < ProcSet .
+  op proc : Nat Nat Mode -> Proc [ctor] . --- proc(PID, level, Mode)
+  op __ : ProcSet ProcSet -> ProcSet [assoc comm] .
+
+  sort Vict VictSet .
+  subsort Vict < VictSet .
+  op vict : Nat Nat -> Vict [ctor] . --- level, PID
+  op __ : VictSet VictSet -> VictSet [assoc comm] .
+
+  sort Conf .
+  op _;_ : VictSet ProcSet -> Conf .
+
+  vars I J LI LJ : Nat .
+  var PS : ProcSet . var VS : VictSet . var M : Mode .
+
+  op conflict : Nat Nat Conf -> Bool .
+  ceq conflict(I, LI, VS ; proc(J, LJ, M) PS) = true if I =/= J and LJ > LI .
+  ceq conflict(I, LI, vict(LI, I) VS ; proc(J, LI, M) PS) = true if I =/= J .
+  eq conflict(I, LI, VS ; PS) = false [owise] .
+endfm

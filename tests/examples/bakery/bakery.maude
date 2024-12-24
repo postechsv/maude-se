@@ -1,0 +1,38 @@
+--- Lamport's Bakery protocol in Maude.
+--- From: All About Maude - A High-Performance Logical Framework. 
+fmod BAKERY-SYNTAX is 
+  pr NAT .
+  sorts ModeIdle ModeWait ModeCrit Mode . 
+  subsorts ModeIdle ModeWait ModeCrit < Mode . 
+  sorts ProcIdle ProcWait Proc ProcIdleSet ProcWaitSet ProcSet . 
+  subsorts ProcIdle < ProcIdleSet . 
+  subsorts ProcWait < ProcWaitSet . 
+  subsorts ProcIdle ProcWait < Proc < ProcSet . 
+  subsorts ProcIdleSet < ProcWaitSet < ProcSet . 
+
+  op idle : -> ModeIdle . 
+  op wait : Nat -> ModeWait . 
+  op crit : Nat -> ModeCrit . 
+  op `[_`] : ModeIdle -> ProcIdle . 
+  op `[_`] : ModeWait -> ProcWait . 
+  op `[_`] : Mode -> Proc . 
+  op none : -> ProcIdleSet . 
+  op __ : ProcIdleSet ProcIdleSet -> ProcIdleSet [assoc comm id: none] . 
+  op __ : ProcWaitSet ProcWaitSet -> ProcWaitSet [assoc comm id: none] .
+  op __ : ProcSet ProcSet -> ProcSet [assoc comm id: none] .
+
+  sort Conf . 
+  op _;_;_ : Nat Nat ProcSet -> Conf .
+
+endfm
+
+mod BAKERY is
+  protecting BAKERY-SYNTAX . 
+
+  op @K : -> Nat .
+  var PS : ProcSet .  vars N M : Nat . 
+
+  rl [wake] : N ; M ; [idle] PS    => s N rem @K ; M ; [wait(N)] PS .
+  rl [crit] : N ; M ; [wait(M)] PS => N ; M ; [crit(M)] PS .
+  rl [exit] : N ; M ; [crit(M)] PS => N ; s M rem @K ; [idle] PS .
+endm
