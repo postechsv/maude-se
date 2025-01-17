@@ -110,7 +110,7 @@ bool TacticApplySymbol::eqRewrite(DagNode *subject, RewritingContext &context) {
 
     try{
         if(MixfixModule* m = dynamic_cast<MixfixModule*>(this->getModule())) {
-            SmtManager smtManager(m->getSMT_Info());
+            VariableGenerator smtManager(m->getSMT_Info());
             resultDag = smtManager.applyTactic(newContext->root(), f->getArgument(1),
                                                shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
             if (resultDag == nullptr) {

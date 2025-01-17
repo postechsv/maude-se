@@ -6,8 +6,8 @@
 
 #include "Python.h"
 #include "easyTerm.hh"
-#include "smtInterface.hh"
 #include "smtManager.hh"
+#include "extGlobal.hh"
 
 class PyDataConatiner {
     PyObject* data;
@@ -140,13 +140,13 @@ public:
     inline DagNode* term2dag(SmtTerm* term){
         if (PySmtTerm* t = static_cast<PySmtTerm*>(term)){
             // this is handled by Python
-            EasyTerm* result = pyTerm2dag(t);
-            DagNode* dag = result->getDag();
-            // delete result;
-            return dag;
+            if(EasyTerm* result = pyTerm2dag(t)){
+                DagNode* dag = result->getDag();
+                // delete result;
+                return dag;
+            }
         }
         return nullptr;
-        // return nullptr;
     };
 
     // inline SmtTerm* dag2term(DagNode* dag) { 
@@ -255,10 +255,19 @@ public:
     virtual PyConnector* py_createConnector() = 0;
 
 public:
-    SmtManager* create(const SMT_Info& smtInfo){
+    VariableGenerator* create(const SMT_Info& smtInfo){
         PyConnector* conn = py_createConnector();
-        return new SmtManager(smtInfo, conn);
+        return new VariableGenerator(smtInfo, conn);
     }
+};
+
+
+class PySmtManagerFactorySetter
+{
+public:
+    void setSmtManagerFactory(PySmtManagerFactory* pySmtManagerFactory){
+        smtManagerFactory = pySmtManagerFactory;
+    };
 };
 
 #endif

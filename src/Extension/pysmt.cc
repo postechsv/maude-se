@@ -30,39 +30,56 @@
 
 #include "pysmt.hh"
 
-SmtManager::SmtManager(const SMT_Info& smtInfo)
-  : SmtManagerAux(smtInfo), VariableGenerator(smtInfo), conn(nullptr){
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo)
+  : SmtEngineWrapperEx(smtInfo), conn(nullptr){
     Verbose("PySmt init");
   }
 
-SmtManager::SmtManager(const SMT_Info& smtInfo, Connector* conn)
-  : SmtManagerAux(smtInfo), VariableGenerator(smtInfo), conn(conn) {
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
+  : SmtEngineWrapperEx(smtInfo), conn(conn), conv(conn->get_converter()) {
     Verbose("PySmt init");
   }
 
-SmtManager::~SmtManager(){}
+VariableGenerator::~VariableGenerator(){}
 
-SmtManager::Result
-SmtManager::assertDag(DagNode* dag)
+VariableGenerator::Result
+VariableGenerator::assertDag(DagNode* dag)
 {
   IssueWarning("PySmt currently does not implement checkSat function - giving up.");
   return SAT_UNKNOWN;
 }
 
-SmtManager::Result
-SmtManager::checkDag(DagNode* dag)
+VariableGenerator::Result
+VariableGenerator::checkDag(DagNode* dag)
 {
-  IssueWarning("PySmt currently does not implement checkSat function - giving up.");
-  return SAT_UNKNOWN;
+  // IssueWarning("PySmt currently does not implement checkSat function - giving up.");
+  // cout << dag << endl;
+  SmtTerm* o = conv->dag2term(dag);
+  std::vector<SmtTerm*> formulas;
+  formulas.push_back(conv->dag2term(dag));
+
+  if(conn->check_sat(formulas)){
+    return SAT;
+  }
+  return UNSAT;
 }
 
 inline void
-SmtManager::clearAssertions(){}
+VariableGenerator::clearAssertions(){}
 
 inline void
-SmtManager::push(){}
+VariableGenerator::push(){}
 
 inline void
-SmtManager::pop(){}
+VariableGenerator::pop(){}
 
-SmtManagerFactory::SmtManagerFactory(){}
+SmtModel* VariableGenerator::getModel(){
+  return conn->get_model();
+}
+
+inline void 
+VariableGenerator::setLogic(const char* logic){
+  conn->set_logic(logic);
+}
+
+// SmtManagerFactory::SmtManagerFactory(){}

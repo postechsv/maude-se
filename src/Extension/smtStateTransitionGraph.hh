@@ -6,6 +6,7 @@
 #include <set>
 #include <map>
 #include "SMT_Info.hh"
+#include "ext.hh"
 #include "hashConsSet.hh"
 #include "rewritingContext.hh"
 // #include "narrowingFolder.hh"

@@ -52,7 +52,7 @@ public:
      */
     Result assertDag(DagNode *dag);
     Result checkDag(DagNode *dag);
-    SmtResult checkDagContextFree(DagNode *dag, ExtensionSymbol* extensionSymbol);
+    Result checkDagContextFree(DagNode *dag, ExtensionSymbol* extensionSymbol);
     VariableDagNode *makeFreshVariable(Term *baseVariable, const mpz_class &number);
     void clearAssertions();
     void push();

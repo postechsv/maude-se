@@ -11,6 +11,8 @@
 class EasyTerm;
 class VisibleModule;
 class DagNode;
+class VariableGenerator;
+class SMT_Info;
 
 class SmtTerm{
 public:
@@ -65,5 +67,17 @@ public:
 
     virtual Converter* get_converter() = 0;
 };
+
+class SmtManagerFactory
+{
+public:
+    virtual VariableGenerator* create(const SMT_Info& smtInfo) = 0;
+};
+
+// class SmtManagerFactorySetter
+// {
+// public:
+//     virtual void setSmtManagerFactory(SmtManagerFactory* smtManagerFactory) = 0;
+// };
 
 #endif

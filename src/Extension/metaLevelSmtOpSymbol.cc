@@ -81,9 +81,9 @@
 #include "mixfixParser.hh"
 
 //	our stuff
-#include "metaSmtSearch.cc"
-// #include "metaSmtCheck.cc"
 #include "metaLevelOpSymbol.hh"
+#include "metaSmtSearch.cc"
+#include "metaSmtCheck.cc"
 
 
 MetaLevelSmtOpSymbol::MetaLevelSmtOpSymbol(int id, int nrArgs, const Vector<int> &strategy)

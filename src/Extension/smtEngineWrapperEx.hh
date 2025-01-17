@@ -36,11 +36,13 @@
 #include "SMT_Symbol.hh"
 #include "SMT_NumberSymbol.hh"
 #include "SMT_NumberDagNode.hh"
+#include "SMT_EngineWrapper.hh"
 
 
 #include "extensionSymbol.hh"
 #include "smtCheckSymbol.hh"
 #include "tacticApplySymbol.hh"
+#include "smtInterface.hh"
 #include <map>
 
 class SmtCheckerSymbol;
@@ -67,7 +69,7 @@ public:
  * V is type data structure.
  */
 template <typename T, typename U>
-class SmtManagerAux
+class SmtEngineWrapperEx : virtual public SMT_EngineWrapper
 {
 public:
     enum MulType {
@@ -86,13 +88,6 @@ public:
         INT,
         REAL,
         BUILTIN,
-    };
-
-    enum SmtResult {
-        SMT_BAD_DAG = -2,
-        SMT_SAT_UNKNOWN = -1,
-        SMT_UNSAT = 0,
-        SMT_SAT = 1
     };
 
 protected:
@@ -134,10 +129,10 @@ protected:
 
 public:
 
-    SmtManagerAux(const SMT_Info& smtInfo):
+    SmtEngineWrapperEx(const SMT_Info& smtInfo):
     smtInfo(smtInfo), formulaSize(0) {}
 
-    virtual ~SmtManagerAux(){
+    virtual ~SmtEngineWrapperEx(){
         smtManagerVariableMap.clear();
     }
 
@@ -150,11 +145,13 @@ public:
      */
     virtual DagNode* Term2Dag(T exp, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv) noexcept(false) = 0;
     virtual T Dag2Term(DagNode* dag, ExtensionSymbol* extensionSymbol) noexcept(false) = 0;
-    virtual DagNode* generateAssignment(DagNode* dagNode, SmtCheckerSymbol* smtCheckerSymbol) = 0;
+    virtual DagNode* generateAssignment(DagNode* dagNode,ExtensionSymbol* extensionSymbol) = 0;
     virtual DagNode* simplifyDag(DagNode* dagNode, ExtensionSymbol* extensionSymbol)= 0;
     virtual DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol) = 0;
     virtual T variableGenerator(DagNode* dag, ExprType exprType) = 0;
-    virtual SmtResult checkDagContextFree(DagNode* dag, ExtensionSymbol* extensionSymbol) = 0;
+    virtual Connector* getConnector() = 0;
+    virtual Converter* getConverter() = 0;
+    // virtual Result checkDagContextFree(DagNode* dag, ExtensionSymbol* extensionSymbol) = 0;
 
 protected:
 

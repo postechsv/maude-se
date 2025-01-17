@@ -202,7 +202,7 @@ bool SmtCheckerSymbol::eqRewrite(DagNode* subject, RewritingContext& context){
 
     try {
         if(MixfixModule* m = dynamic_cast<MixfixModule*>(this->getModule())) {
-            SmtManager smtManager(m->getSMT_Info());
+            VariableGenerator smtManager(m->getSMT_Info());
             bool isMakeAssignment = false;
             if (f->getArgument(1)->symbol() == this->builtinTrueTerm.getDag()->symbol()) {
                 isMakeAssignment = true;
@@ -210,15 +210,15 @@ bool SmtCheckerSymbol::eqRewrite(DagNode* subject, RewritingContext& context){
             DagNode *newRoot = newContext->root();
 
             // smtManager.push();
-            SmtManager::SmtResult checkResult = smtManager.checkDagContextFree(newRoot, this);
+            VariableGenerator::Result checkResult = smtManager.checkDagContextFree(newRoot, this);
 
             switch (checkResult) {
-                case SmtManager::SMT_BAD_DAG:
+                case VariableGenerator::BAD_DAG:
                     throw ExtensionException("bad dag!");
-                case SmtManager::SMT_UNSAT:
+                case VariableGenerator::UNSAT:
                     resultDag = this->builtinFalseTerm.getDag();
                     break;
-                case SmtManager::SMT_SAT:
+                case VariableGenerator::SAT:
                     if (isMakeAssignment) {
                         try {
                             resultDag = smtManager.generateAssignment(newRoot, this);
@@ -230,7 +230,7 @@ bool SmtCheckerSymbol::eqRewrite(DagNode* subject, RewritingContext& context){
                         resultDag = this->builtinTrueTerm.getDag();
                     }
                     break;
-                case SmtManager::SMT_SAT_UNKNOWN:
+                case VariableGenerator::SAT_UNKNOWN:
                     resultDag = this->unknownResultSymbol->makeDagNode();
                     break;
             }

@@ -64,7 +64,7 @@ bool SimplifyFormulaSymbol::eqRewrite(DagNode *subject, RewritingContext &contex
 
     try{
         if(MixfixModule* m = dynamic_cast<MixfixModule*>(this->getModule())) {
-            SmtManager smtManager(m->getSMT_Info());
+            VariableGenerator smtManager(m->getSMT_Info());
             resultDag = smtManager.simplifyDag(newContext->root(),
                                                shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
             if (resultDag == nullptr) {

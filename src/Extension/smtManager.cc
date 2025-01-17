@@ -25,6 +25,9 @@
 #include "SMT_NumberDagNode.hh"
 #include "smtManager.hh"
 
+//	front end class definitions
+#include "token.hh"
+
 #ifdef USE_CVC4
 #include "cvc4.cc"
 #elif defined(USE_YICES2)
@@ -36,33 +39,58 @@
 #else
 
 // no SMT support case.
-SmtManager::SmtManager(const SMT_Info& smtInfo) : VariableGenerator(smtInfo){
+VariableGenerator::VariableGenerator(const SMT_Info &smtInfo)
+{
     IssueWarning("No SMT solver linked at compile time.");
 }
 
-SmtManager::SmtManager(const SMT_Info& smtInfo, Connector* conn) 
-    : VariableGenerator(smtInfo) {
+VariableGenerator::VariableGenerator(const SMT_Info &smtInfo, Connector *conn)
+{
     IssueWarning("No SMT solver linked at compile time.");
 }
 
-SmtManager::~SmtManager(){}
+VariableGenerator::~VariableGenerator() {}
 
-SmtManager::Result SmtManager::assertDag(DagNode* dag){
+VariableGenerator::Result VariableGenerator::assertDag(DagNode *dag)
+{
     return SAT_UNKNOWN;
 }
 
-SmtManager::Result SmtManager::checkDag(DagNode* dag){
+VariableGenerator::Result VariableGenerator::checkDag(DagNode *dag)
+{
     return SAT_UNKNOWN;
 }
 
-SmtManager::Result SmtManager::checkDagWithResult(DagNode *dag){
-    return SAT_UNKNOWN;
-}
+void VariableGenerator::push() {}
 
-void SmtManager::push(){}
+void VariableGenerator::pop() {}
 
-void SmtManager::pop(){}
+void VariableGenerator::clearAssertions() {}
 
-void SmtManager::clearAssertions(){}
+SmtModel *VariableGenerator::getModel() {}
+
+void VariableGenerator::setLogic(const char *logic) {}
 
 #endif
+
+//
+//	Common code
+//
+
+VariableDagNode *
+VariableGenerator::makeFreshVariable(Term *baseVariable, const mpz_class &number)
+{
+    Symbol *s = baseVariable->symbol();
+    VariableTerm *vt = safeCast(VariableTerm *, baseVariable);
+    int id = vt->id();
+
+    string newNameString = "#";
+    char *name = mpz_get_str(0, 10, number.get_mpz_t());
+    newNameString += name;
+    free(name);
+    newNameString += "-";
+    newNameString += Token::name(id);
+    int newId = Token::encode(newNameString.c_str());
+
+    return new VariableDagNode(s, newId, NONE);
+}
