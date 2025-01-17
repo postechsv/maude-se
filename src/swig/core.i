@@ -1,12 +1,14 @@
 %module(directors="1") maudeSE
 
 %{
-#include "smt_wrapper.hh"
+#include "pysmtWrapper.hh"
+#include "extGlobal.hh"
 %}
 
 %include std_vector.i
 %include std_pair.i
 %include std_map.i
+%include std_except.i
 
 namespace std {
   %template (SmtTermVector) vector<SmtTerm*>;
@@ -17,7 +19,17 @@ namespace std {
 	%template (SmtModelPairVector) vector<pair<SmtTerm*, SmtTerm*>>;
 }
 
+%feature("director:except") {
+    if ($error != NULL) {
+      cout << "i throw" << endl;
+        throw Swig::DirectorMethodException();
+    }
+}
 
+%exception {
+    try { $action }
+    catch (Swig::DirectorException &e) { SWIG_fail; }
+}
 
 // %template
 // %template (PySmtModel) Model<PySmtTerm*>;
@@ -57,32 +69,32 @@ public:
 };
 
 
-class Converter
-{
-public:
-  // %newobject dag2term;
-  // %newobject dag2term;
+// class Converter
+// {
+// public:
+//   // %newobject dag2term;
+//   // %newobject dag2term;
 
-	virtual ~Converter() {};
-  virtual PyObject* prepareFor(VisibleModule* module) = 0;
-  // virtual SmtTerm* dag2term(DagNode* dag) = 0;
-  // virtual DagNode* term2dag(SmtTerm* term) = 0;
-  virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
-  virtual PyObject* getSymbol(PyObject* dag) = 0;
-};
+// 	virtual ~Converter() {};
+//   virtual PyObject* prepareFor(VisibleModule* module) = 0;
+//   // virtual SmtTerm* dag2term(DagNode* dag) = 0;
+//   // virtual DagNode* term2dag(SmtTerm* term) = 0;
+//   virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
+//   virtual PyObject* getSymbol(PyObject* dag) = 0;
+// };
 
 %rename (term2dag) pyTerm2dag;
 %rename (dag2term) pyDag2term;
 
 %feature("director") PyConverter;
-class PyConverter : public Converter
+class PyConverter
 {
 public:
   %newobject pyDag2term;
   %newobject pyTerm2dag;
 
   virtual ~PyConverter() {};
-  virtual PyObject* prepareFor(VisibleModule* module) = 0;
+  virtual void prepareFor(VisibleModule* module) = 0;
   virtual PySmtTerm* pyDag2term(EasyTerm* dag) = 0;
   virtual EasyTerm* pyTerm2dag(PySmtTerm* term) = 0;
   virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
@@ -166,6 +178,7 @@ public:
 %rename(check_sat) py_check_sat;
 // %rename(mk_subst) py_mk_subst;
 %rename(subsume) py_subsume;
+%rename(get_converter) py_get_converter;
 
 %feature("director") PyConnector;
 class PyConnector : public Connector
@@ -188,30 +201,24 @@ public:
   virtual PySmtModel* py_get_model() = 0;
   virtual void print_model() = 0;
   virtual void set_logic(const char* logic) = 0;
+  virtual PyConverter* py_get_converter() = 0;
 };
 
-%rename(createConverter) py_createConverter;
 %rename(createConnector) py_createConnector;
 
-// class WrapperFactory
-// {
-// public:
-//     %newobject py_createConverter;
-//     %newobject py_createConnector;
-
-//     virtual ~WrapperFactory() {};
-//     virtual Converter* py_createConverter() = 0;
-//     virtual Connector* py_createConnector() = 0;
-// };
-
-%feature("director") PyWrapperFactory;
-class PyWrapperFactory
+%feature("director") PySmtManagerFactory;
+class PySmtManagerFactory
 {
 public:
-  %newobject py_createConverter;
   %newobject py_createConnector;
 
-  virtual ~PyWrapperFactory() {};
-  virtual Converter* py_createConverter() = 0;
-  virtual Connector* py_createConnector() = 0;
+  virtual ~PySmtManagerFactory() {};
+  virtual PyConnector* py_createConnector() = 0;
+};
+
+%rename(SmtManagerFactorySetter) PySmtManagerFactorySetter;
+class PySmtManagerFactorySetter
+{
+public:
+    void setSmtManagerFactory(PySmtManagerFactory* pySmtManagerFactory);
 };

@@ -1,9 +1,3 @@
-%newobject dag2term;
-%newobject term2dag;
-
-EasyTerm* dag2term(PyObject* capsuleObj);
-PyObject* term2dag(EasyTerm* term);
-
 //
 //	Interface to Maude terms and operations
 //
