@@ -61,6 +61,8 @@ public:
     // virtual PyObject* merge(PyObject* subst, PyObject* prev_const, std::vector<SmtTerm*> target_consts) = 0;
     virtual SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur) = 0;
     virtual SmtModel* get_model() = 0;
+    virtual void push() = 0;
+    virtual void pop() = 0;
 
     virtual void print_model() = 0;
     virtual void set_logic(const char* logic) = 0;

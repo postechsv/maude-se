@@ -184,6 +184,8 @@ public:
     virtual void print_model() = 0;
     virtual void set_logic(const char* logic) = 0;
     virtual PyConverter* py_get_converter() = 0;
+    virtual void push() = 0;
+    virtual void pop() = 0;
 
 public:
     inline SmtModel* get_model(){

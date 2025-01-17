@@ -29,8 +29,6 @@ class Cvc5Connector(PyConnector):
         self._m = None
     
     def check_sat(self, consts):
-        self._s.push()
-
         for const in consts:
             c, _, _ = const.data()
             self._s.assertFormula(c)
@@ -38,16 +36,17 @@ class Cvc5Connector(PyConnector):
         r = self._s.checkSat()
 
         if r.isSat():
-            # store model
-            self._m = self._make_model()
-            self._s.pop()
             return True
         elif r.isUnsat():
-            self._s.pop()
             return False
         else:
-            self._s.pop()
             raise Exception("failed to handle check sat (solver give-up)")
+        
+    def push(self):
+        self._s.push()
+
+    def pop(self):
+        self._s.pop()
 
     def _make_model(self):
         _vars = self._get_vars()
@@ -146,7 +145,7 @@ class Cvc5Connector(PyConnector):
     #     return TermSubst(subst)
 
     def get_model(self):
-        return self._m
+        return self._make_model()
     
     def print_model(self):
         for v in self._m:
@@ -157,8 +156,6 @@ class Cvc5Connector(PyConnector):
         self._s = cvc5.Solver()
         self._s.setOption("produce-models", "true")
         self._s.setLogic(logic)
-
-        self._m = None
 
     def get_converter(self):
         return self._c

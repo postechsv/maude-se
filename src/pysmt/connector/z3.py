@@ -21,11 +21,8 @@ class Z3Connector(PyConnector):
 
         # set solver
         self._s = z3.SolverFor(_logic)
-        self._m = None
     
     def check_sat(self, consts):
-        self._s.push()
-
         for const in consts:
             c, _, _ = const.data()
             self._s.add(c)
@@ -33,16 +30,17 @@ class Z3Connector(PyConnector):
         r = self._s.check()
 
         if r == z3.sat:
-            # store model
-            self._m = self._s.model()
-            self._s.pop()
             return True
         elif r == z3.unsat:
-            self._s.pop()
             return False
         else:
-            self._s.pop()
             raise Exception("failed to handle check sat (solver give-up)")
+
+    def push(self):
+        self._s.push()
+
+    def pop(self):
+        self._s.pop()
 
     def add_const(self, acc, cur):
         # initial case
@@ -142,42 +140,15 @@ class Z3Connector(PyConnector):
     #         subst[v] = val
     #     return PyTermSubst(subst)
 
-    # def get_model(self):
     def get_model(self):
-        # model_dict = dict()
-        # for d in self._m.decls():
-        #     model[PySmtTerm([d, None, None])] = PySmtTerm([self._m[d], None, None])
-
-        # return model_dict
-        # m = SmtModel()
-        # for d in self._m.decls():
-        #     k, v = PySmtTerm([d, None, None]), PySmtTerm([self._m[d], None, None])
-        #     print(k, v)
-        #     print(d, self._m[d])
-        #     m.set(k, v)
-        #     g = m.get(k)
-        #     print("get test -- ", k, g)
-        # print(m)
-        # print("--------")
-        # for a in m.keys():
-        #     print(a)
-        # print("---------")
-        # m = dict()
+        raw_m = self._s.model()
+        
         m = PySmtModel()
-        for d in self._m.decls():
-            k, v = [d, None, None], [self._m[d], None, None]
-            # print(d, self._m[d])
+        for d in raw_m.decls():
+            k, v = [d, None, None], [raw_m[d], None, None]
             m.set(k, v)
-            # g = m.get(k)
-            # print("get test -- ", k, g)
-        # print(m)
-        # print("--------")
-        # for a in m.keys():
-        #     print("", a, "-->", m.get(a))
-        # print("---------")
         return m
 
-    
     def print_model(self):
         print(self._m)
 

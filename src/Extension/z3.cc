@@ -29,19 +29,19 @@
 
 // front end class definitions
 #include "token.hh"
-#include "z3_Extension.hh"
+#include "z3.hh"
 
-SmtManager::SmtManager(const SMT_Info &smtInfo) : AbstractSmtManager(smtInfo) {
+VariableGenerator::VariableGenerator(const SMT_Info &smtInfo) : SmtEngineWrapperEx(smtInfo) {
     pushCount = 0;
     s = new solver(ctx);
     hasVariable = false;
 }
 
-SmtManager::~SmtManager() {
+VariableGenerator::~VariableGenerator() {
     delete s;
 }
 
-SmtManager::Result SmtManager::assertDag(DagNode *dag) {
+VariableGenerator::Result VariableGenerator::assertDag(DagNode *dag) {
     expr ex = makeExpr(dag, nullptr, true);
     s->add(ex);
 
@@ -58,7 +58,7 @@ SmtManager::Result SmtManager::assertDag(DagNode *dag) {
     return SAT_UNKNOWN;
 }
 
-SmtManager::Result SmtManager::checkDag(DagNode *dag) {
+VariableGenerator::Result VariableGenerator::checkDag(DagNode *dag) {
     try {
         expr e = makeExpr(dag, nullptr, true);
         s->add(e);
@@ -78,7 +78,7 @@ SmtManager::Result SmtManager::checkDag(DagNode *dag) {
     }
 }
 
-SmtManager::SmtResult SmtManager::checkDagContextFree(DagNode *dag,
+VariableGenerator::Result VariableGenerator::checkDagContextFree(DagNode *dag,
                                                       ExtensionSymbol *extensionSymbol) {
     try {
         resetFormulaSize();
@@ -103,23 +103,23 @@ SmtManager::SmtResult SmtManager::checkDagContextFree(DagNode *dag,
     }
 }
 
-void SmtManager::push() {
+void VariableGenerator::push() {
     s->push();
     ++pushCount;
 }
 
-void SmtManager::pop() {
+void VariableGenerator::pop() {
     Assert(pushCount > 0, "bad pop");
     s->pop();
     --pushCount;
 }
 
-void SmtManager::clearAssertions() {
+void VariableGenerator::clearAssertions() {
     pushCount = 0;
     s->reset();
 }
 
-expr SmtManager::Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol) {
+expr VariableGenerator::Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol) {
     if (SMT_NumberDagNode * n = dynamic_cast<SMT_NumberDagNode *>(dag)) {
         incrFormulaSize();
         mpq_class value = n->getValue();
@@ -304,7 +304,7 @@ expr SmtManager::Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol) {
     }
 }
 
-expr SmtManager::variableGenerator(DagNode *dag, ExprType exprType) {
+expr VariableGenerator::variableGenerator(DagNode *dag, ExprType exprType) {
     hasVariable = true;
 
     // Two dag nodes are the same
@@ -380,7 +380,7 @@ expr SmtManager::variableGenerator(DagNode *dag, ExprType exprType) {
     return newVariable;
 }
 
-DagNode* SmtManager::Term2Dag(expr e, ExtensionSymbol* extensionSymbol,
+DagNode* VariableGenerator::Term2Dag(expr e, ExtensionSymbol* extensionSymbol,
                               ReverseSmtManagerVariableMap* rsv){
     if(rsv != nullptr){
         ReverseSmtManagerVariableMap::const_iterator it = rsv->find(e);
@@ -816,7 +816,7 @@ DagNode* SmtManager::Term2Dag(expr e, ExtensionSymbol* extensionSymbol,
     throw ExtensionException("no matching case");
 }
 
-DagNode* SmtManager::generateAssignment(DagNode *dagNode,
+DagNode* VariableGenerator::generateAssignment(DagNode *dagNode,
                                         SmtCheckerSymbol* smtCheckerSymbol) {
 
     Vector < DagNode * > dv;
@@ -882,7 +882,7 @@ DagNode* SmtManager::generateAssignment(DagNode *dagNode,
     throw ExtensionException("the context is sat but cannot generate model");
 }
 
-DagNode* SmtManager::GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtCheckerSymbol,
+DagNode* VariableGenerator::GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtCheckerSymbol,
                                  ReverseSmtManagerVariableMap* rsv) {
     try {
         Vector < DagNode * > args(2);
@@ -929,7 +929,7 @@ DagNode* SmtManager::GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtChecke
     }
 }
 
-DagNode* SmtManager::simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol){
+DagNode* VariableGenerator::simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol){
     try {
         resetFormulaSize();
         expr e = makeExpr(dagNode, extensionSymbol, false);
@@ -950,7 +950,7 @@ DagNode* SmtManager::simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSym
     }
 }
 
-DagNode* SmtManager::applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol){
+DagNode* VariableGenerator::applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol){
     if (TacticApplySymbol* tacticApplySymbol = dynamic_cast<TacticApplySymbol*>(extensionSymbol)){
         goal g(ctx);
         expr e = makeExpr(dagNode, extensionSymbol, false);
@@ -983,7 +983,7 @@ DagNode* SmtManager::applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, E
     }
 }
 
-tactic SmtManager::Dag2Tactic(TacticApplySymbol* tacticApplySymbol, DagNode* tacticTypeDagNode){
+tactic VariableGenerator::Dag2Tactic(TacticApplySymbol* tacticApplySymbol, DagNode* tacticTypeDagNode){
     TacticApplySymbol::TacticType tacticType = tacticApplySymbol->getTacticType(tacticTypeDagNode);
 
     if (tacticType == TacticApplySymbol::NONE){

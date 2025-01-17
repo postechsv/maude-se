@@ -25,8 +25,7 @@
 //
 #ifndef _z3_EngineWrapper_hh_
 #define _z3_EngineWrapper_hh_
-#include "abstractSmtManager.hh"
-#include "SMT_EngineWrapper.hh"
+#include "smtEngineWrapperEx.hh"
 #include "z3++.h"
 #include <vector>
 #include <sstream>
@@ -40,11 +39,11 @@ struct cmpExprById{
     }
 };
 
-class SmtManager : public SMT_EngineWrapper, public AbstractSmtManager<expr, cmpExprById> {
-    NO_COPYING(SmtManager);
+class VariableGenerator : public SmtEngineWrapperEx<expr, cmpExprById> {
+    NO_COPYING(VariableGenerator);
 public:
-    SmtManager(const SMT_Info &smtInfo);
-    ~SmtManager();
+    VariableGenerator(const SMT_Info &smtInfo);
+    ~VariableGenerator();
 
 
     /*
@@ -58,34 +57,33 @@ public:
     void push();
     void pop();
 
-    // for smtChecker symbol.
-    DagNode *generateAssignment(DagNode *dagNode, SmtCheckerSymbol* extensionSymbol);
+public:
 
-    // for simplify symbol.
-    DagNode *simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol);
-    DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol);
+    virtual Connector* getConnector() = 0;
+    virtual Converter* getConverter() = 0;
 
-protected:
-
-    context ctx;
-    solver *s;
-
-    int pushCount;
 
     /*
      * SmtManager class interface implementation
      */
     expr Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol);
-    DagNode *Term2Dag(expr e, ExtensionSymbol* extensionSymbol,
-                      ReverseSmtManagerVariableMap* rsv = nullptr);
-
+    DagNode* Term2Dag(expr e, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv = nullptr);
+    DagNode* generateAssignment(DagNode *dagNode, SmtCheckerSymbol* extensionSymbol);
+    DagNode* simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol);
+    DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol);
     expr variableGenerator(DagNode *dag, ExprType exprType);
-    DagNode *GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtCheckerSymbol, ReverseSmtManagerVariableMap* rsv);
+
 
 private:
+    context ctx;
+    solver *s;
+
+    int pushCount;
+
     DagNode* InferTerm2Dag(expr e, DagNode* dagNode, ExtensionSymbol* extensionSymbol);
     tactic Dag2Tactic(TacticApplySymbol* tacticApplySymbol, DagNode* dagNode);
 
+    DagNode* GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtCheckerSymbol, ReverseSmtManagerVariableMap* rsv);
 };
 
 

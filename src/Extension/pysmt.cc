@@ -29,18 +29,29 @@
 #include "SMT_NumberDagNode.hh"
 
 #include "pysmt.hh"
+#include "extGlobal.hh"
 
 VariableGenerator::VariableGenerator(const SMT_Info& smtInfo)
   : SmtEngineWrapperEx(smtInfo), conn(nullptr){
     Verbose("PySmt init");
+
+    vg = smtManagerFactory->create(smtInfo);
+    conn = vg->getConnector();
+    conv = vg->getConverter();
   }
 
 VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
-  : SmtEngineWrapperEx(smtInfo), conn(conn), conv(conn->get_converter()) {
+  : SmtEngineWrapperEx(smtInfo), conn(conn), conv(conn->get_converter()), vg(nullptr) {
     Verbose("PySmt init");
   }
 
-VariableGenerator::~VariableGenerator(){}
+VariableGenerator::~VariableGenerator(){
+  if (vg) delete vg;
+  else {
+    delete conn;
+    delete conv;
+  }
+}
 
 VariableGenerator::Result
 VariableGenerator::assertDag(DagNode* dag)

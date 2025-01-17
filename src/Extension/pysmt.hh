@@ -47,6 +47,7 @@ public:
 private:
   Connector* conn;
   Converter* conv;
+  VariableGenerator* vg;
 };
 
 // class SmtManagerFactory : public SmtManagerFactoryInterface

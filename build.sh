@@ -41,13 +41,12 @@ build_deps() {
 patch_src() {
   progress "Apply patchings"
   maude_src_dir="$top_dir/maude-bindings"
-  patch_src_dir="$top_dir/src/patch"
+  patch_src_dir="$top_dir/src/build"
 
   cp "$patch_src_dir/CMakeLists.txt" "$maude_src_dir"
   cp "$patch_src_dir/setup.py" "$maude_src_dir"
   cp "$patch_src_dir/meson_options.txt" "$maude_src_dir/subprojects/maudesmc/"
   cp "$patch_src_dir/meson.build" "$maude_src_dir/subprojects/maudesmc/"
-  cp "$patch_src_dir/maude/variableGenerator.hh" "$maude_src_dir/Mixfix"
 }
 
 prepare() {

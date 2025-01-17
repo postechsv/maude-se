@@ -215,7 +215,7 @@ if (${LANGUAGE} STREQUAL python)
 	# The SWIG_SUPPORT_FILES property is only accurate for Python
 	get_property(wrapper_file TARGET _maude PROPERTY SWIG_SUPPORT_FILES)
 	install(FILES "${wrapper_file}" RENAME __init__.py DESTINATION maudeSE/maude)
-	file(GLOB DEPLOY_FILES_AND_DIRS "../src/py/*")
+	file(GLOB DEPLOY_FILES_AND_DIRS "../src/pysmt/*")
 	foreach(ITEM ${DEPLOY_FILES_AND_DIRS})
 	IF( IS_DIRECTORY "${ITEM}" )
 		LIST( APPEND DIRS_TO_DEPLOY "${ITEM}" )
