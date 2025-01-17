@@ -28,7 +28,7 @@ public:
 
   SmtStateTransitionGraph(RewritingContext *initial,
                           const SMT_Info &smtInfo, SMT_EngineWrapper *engine,
-                          FreshVariableGenerator *freshVariableGenerator, Connector *connector, Converter *converter, 
+                          FreshVariableGenerator *freshVariableGenerator, 
                           bool fold, bool merge,
                           const mpz_class &avoidVariableNumber = 0);
   ~SmtStateTransitionGraph();
@@ -117,7 +117,7 @@ protected:
   void printStateConst(int depth);
 
 protected:
-  Converter *termConverter;
+  Converter *conv;
   Connector *connector;
 
   //
@@ -234,8 +234,8 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
   std::vector<SmtTerm*>* ks = ct->model->keys();
 
   for (auto &elem : *ks){
-    DagNode* t = termConverter->term2dag(elem);
-    DagNode* v = termConverter->term2dag(ct->model->get(elem));
+    DagNode* t = conv->term2dag(elem);
+    DagNode* v = conv->term2dag(ct->model->get(elem));
 
     t->computeTrueSort(*initial);
     v->computeTrueSort(*initial);
@@ -284,7 +284,7 @@ inline SmtTerm *SmtStateTransitionGraph::convDag2Term(DagNode *dag)
   // PyObject *maudeTerm = dag2maudeTerm(dag);
 
   clock_t loop_s = clock();
-  SmtTerm *term = termConverter->dag2term(dag);
+  SmtTerm *term = conv->dag2term(dag);
   clock_t loop_e = clock();
   elseTime += (double)(loop_e - loop_s);
 

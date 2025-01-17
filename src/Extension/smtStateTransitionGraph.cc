@@ -28,13 +28,14 @@
 #include "smtStateTransitionGraph.hh"
 #include "freshVariableGenerator.hh"
 #include "token.hh"
+#include "smtManager.hh"
 
 SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 												 const SMT_Info &smtInfo, SMT_EngineWrapper *engine,
-												 FreshVariableGenerator *freshVariableGenerator, Connector *connector, Converter *converter,
+												 FreshVariableGenerator *freshVariableGenerator,
 												 bool fold, bool merge,
 												 const mpz_class &avoidVariableNumber)
-	: initial(initial), smtInfo(smtInfo), engine(engine), fold(fold), merge(merge), connector(connector), termConverter(converter),
+	: initial(initial), smtInfo(smtInfo), engine(engine), fold(fold), merge(merge),
 	  freshVariableGenerator(freshVariableGenerator), stateCollection(fold)
 {
 	if (fold)
@@ -59,6 +60,10 @@ SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 
 	nextTime = 0.0;
 	rewriteTime = 0.0;
+
+	VariableGenerator* vg = dynamic_cast<VariableGenerator*>(engine);
+	connector = vg->getConnector();
+	conv = vg->getConverter();
 }
 
 SmtStateTransitionGraph::~SmtStateTransitionGraph()
@@ -211,14 +216,17 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			// Py_XINCREF(acc);
 
 			// PyObject *result = PyObject_CallMethodObjArgs(connector, check_sat, acc, cur, NULL);
+			connector->push();
 			std::vector<SmtTerm*> ll;
 			ll.push_back(acc);
 			ll.push_back(cur);
 
 			if (!connector->check_sat(ll)){
 				Verbose("constraint is unsatisfiable ... continue");
+				connector->pop();
 				continue;
 			}
+			connector->pop();
 
 			int nextState;
 			int index2;
@@ -310,7 +318,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 					{
 						Verbose("  check folding from " << c1 << " to " << constTerm->dag);
 						// check the conjunt dag is subsumed by an older one
-						bool isMatch = constTerm->findMatching(c1, termConverter, connector);
+						bool isMatch = constTerm->findMatching(c1, conv, connector);
 
 						if (!isMatch)
 						{
@@ -437,7 +445,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 				// 	int ctIdx = 0;
 				// 	for (auto constTerm : consTermSeen[constTermState->hashConsIndex])
 				// 	{
-				// 		bool isMatch = t->findMatching(constTerm->dag, termConverter, connector);
+				// 		bool isMatch = t->findMatching(constTerm->dag, conv, connector);
 				// 		Verbose("  check matching for merging from ");
 				// 		Verbose("  " << t->dag);
 				// 		Verbose("  " << constTerm->dag);

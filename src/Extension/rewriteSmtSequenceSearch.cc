@@ -36,11 +36,10 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
                                                    const SMT_Info &smtInfo,
                                                    SMT_EngineWrapper *engine,
                                                    FreshVariableGenerator *freshVariableGenerator,
-                                                   Connector *connector, Converter *converter,
                                                    bool fold, bool merge,
                                                    int maxDepth,
                                                    const mpz_class &avoidVariableNumber)
-    : SmtStateTransitionGraph(initial, smtInfo, engine, freshVariableGenerator, connector, converter, fold, merge, avoidVariableNumber),
+    : SmtStateTransitionGraph(initial, smtInfo, engine, freshVariableGenerator, fold, merge, avoidVariableNumber),
       goal(goal), smtGoal(smtGoal),
       maxDepth((searchType == ONE_STEP) ? 1 : maxDepth)
 {
@@ -350,15 +349,17 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
     ll.push_back(matchTerm);
   } 
 
+  connector->push();
   if (!connector->check_sat(ll))
   {
+    connector->pop();
     return false;
   }
   else 
   {
     // get a model
     constrained->model = connector->get_model();
-
+    connector->pop();
     // update acc const if matching term exists
     if (matchTerm){
       constrained->constraint = connector->add_const(constrained->constraint, matchTerm);

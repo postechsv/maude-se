@@ -67,7 +67,6 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                                                             smtInfo,
                                                             vg, // pass responsibility for deletion
                                                             new FreshVariableSource(m),
-                                                            conn, conv,
                                                             fold, merge,
                                                             maxDepth,
                                                             varNumber);

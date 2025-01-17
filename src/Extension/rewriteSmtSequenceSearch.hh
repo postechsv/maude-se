@@ -21,7 +21,6 @@ public:
                            const SMT_Info &smtInfo,
                            SMT_EngineWrapper *engine,
                            FreshVariableGenerator *freshVariableGenerator,
-                           Connector *connector, Converter *converter,
                            bool fold = true, bool merge = false,
                            int maxDepth = -1,
                            const mpz_class &avoidVariableNumber = 0);
@@ -108,7 +107,7 @@ RewriteSmtSequenceSearch::getFinalConstraint()
 {
   // TODO
   SmtTerm* finalConstTerm = this->getStateConst(stateNr);
-  DagNode* finalConst = termConverter->term2dag(finalConstTerm);
+  DagNode* finalConst = conv->term2dag(finalConstTerm);
 
   finalConst->computeTrueSort(*initial);
   return finalConst;
