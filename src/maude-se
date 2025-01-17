@@ -24,21 +24,18 @@ if __name__ == '__main__':
     try:
         # instantiate our interface
         factory = Factory()
-        factory.create(args.s)
+        factory.set_solver(args.s)
+        factorySetter = maudeSE.maude.SmtManagerFactorySetter()
+        factorySetter.setSmtManagerFactory(factory)
 
         # initialize Maude interpreter
+        maudeSE.maude.init(advise=False)
 
-        maudeSE.maude.init(advise=False, factory=factory)
-
-        conn, conv = factory.createConnector(), factory.createConverter()
+        # conv = factory.createConverter()
+        conn = factory.createConnector()
+        conv = conn.get_converter()
 
         # register special hooks
-        hook = CheckHook(conn, conv)
-        maudeSE.maude.connectEqHook('SmtCheckerSymbol', hook)
-
-        searchHook = SearchHook(conn, conv, path=False)
-        maudeSE.maude.connectEqHook('SmtSearchSymbol', searchHook)
-
         searchPathHook = SearchHook(conn, conv, path=True)
         maudeSE.maude.connectEqHook('SmtSearchPathSymbol', searchPathHook)
 
@@ -58,6 +55,4 @@ if __name__ == '__main__':
             maudeSE.maude.load('maude-se-meta.maude')
 
     except Exception as err:
-        import traceback
-        print(traceback.print_exc())
         print("error: {}".format(err))

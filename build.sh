@@ -43,29 +43,11 @@ patch_src() {
   maude_src_dir="$top_dir/maude-bindings"
   patch_src_dir="$top_dir/src/patch"
 
-  patch "$maude_src_dir/subprojects/maudesmc/src/Mixfix/commands.yy" < "$patch_src_dir/maude/mixfix-commands-yy.patch"
-  patch "$maude_src_dir/subprojects/maudesmc/src/Mixfix/interpreter.hh" < "$patch_src_dir/maude/mixfix-interpreter-hh.patch"
-  patch "$maude_src_dir/subprojects/maudesmc/src/Mixfix/lexer.ll" < "$patch_src_dir/maude/mixfix-lexer-ll.patch"
-  patch "$maude_src_dir/subprojects/maudesmc/src/Mixfix/search.cc" < "$patch_src_dir/maude/mixfix-search-cc.patch"
-  patch "$maude_src_dir/subprojects/maudesmc/src/Mixfix/top.yy" < "$patch_src_dir/maude/mixfix-top-yy.patch"
-  patch "$maude_src_dir/subprojects/maudesmc/src/SMT/SMT.hh" < "$patch_src_dir/maude/smt-SMT-hh.patch"
-  patch "$maude_src_dir/swig/maude.i" < "$patch_src_dir/swig/maude-i.patch"
-  patch "$maude_src_dir/swig/term.i" < "$patch_src_dir/swig/term-i.patch"
-  patch "$maude_src_dir/src/easyTerm.cc" < "$patch_src_dir/bindings/easyTerm-cc.patch"
-  patch "$maude_src_dir/src/easyTerm.hh" < "$patch_src_dir/bindings/easyTerm-hh.patch"
-
   cp "$patch_src_dir/CMakeLists.txt" "$maude_src_dir"
   cp "$patch_src_dir/setup.py" "$maude_src_dir"
   cp "$patch_src_dir/meson_options.txt" "$maude_src_dir/subprojects/maudesmc/"
   cp "$patch_src_dir/meson.build" "$maude_src_dir/subprojects/maudesmc/"
-  cp "$patch_src_dir/maude/SMT_EngineWrapper.hh" "$maude_src_dir/SMT"
   cp "$patch_src_dir/maude/variableGenerator.hh" "$maude_src_dir/Mixfix"
-  cp "$patch_src_dir/maude/variableGenerator.hh" "$maude_src_dir/Mixfix"
-  cp "$patch_src_dir/maude/interpreter.hh" "$maude_src_dir/Mixfix"
-  # cp "$src_dir/maude/metaLevelOpSymbol.hh" "$maude_src_dir/Meta"
-  # cp "$src_dir/maude/metaLevelOpSymbol.cc" "$maude_src_dir/Meta"
-  # cp "$src_dir/maude/descentSignature.cc" "$maude_src_dir/Meta"
-  # cp "$src_dir/maude/metaLevelSignature.cc" "$maude_src_dir/Meta"
 }
 
 prepare() {
@@ -77,57 +59,9 @@ prepare() {
   git submodule update --init && rm -rf .git && rm -rf .github
 }
 
-
-build_src() {
-  maude_src_dir="$top_dir/maude-bindings/subprojects/maudesmc/src"
-  swig_src_dir="$top_dir/maude-bindings/swig"
-  
-  cp "$src_dir/core/smt_wrapper_interface.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/folder.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/folder.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearchState.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearchState.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSequenceSearch.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSequenceSearch.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/smtStateTransitionGraph.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/smtStateTransitionGraph.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearch.cc" "$maude_src_dir/Mixfix"
-  cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
-  cp "$src_dir/swig/module.i" "$swig_src_dir"
-  cp "$src_dir/swig/core.i"   "$swig_src_dir"
-  cp "$src_dir/swig/python.i" "$swig_src_dir/specific"
-
-  cd maude-bindings 
-  (
-    rm -rf dist/ maude.egg-info/ _skbuild/ dist/
-    python setup.py bdist_wheel -DBUILD_LIBMAUDE=OFF
-  )
-
-  cd ..
-  rm -rf ./out
-  cp -r ./maude-bindings/dist ./out
-}
-
 build_maude_lib() {
   maude_src_dir="$top_dir/maude-bindings/subprojects/maudesmc/src"
-
-  cp "$src_dir/core/smt_wrapper_interface.hh" "$maude_src_dir/SMT" 
-  cp "$src_dir/maude/folder.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/folder.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearchState.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearchState.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSequenceSearch.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSequenceSearch.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/smtStateTransitionGraph.cc" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/smtStateTransitionGraph.hh" "$maude_src_dir/SMT"
-  cp "$src_dir/maude/rewriteSmtSearch.cc" "$maude_src_dir/Mixfix"
-  cp "$src_dir/maude/pysmt.hh" "$maude_src_dir/Mixfix"
-  cp "$src_dir/maude/pysmt.cc" "$maude_src_dir/Mixfix" 
-  cp "$src_dir/maude/metaSmtSearch.cc" "$maude_src_dir/Meta"
-  cp "$src_dir/maude/metaLevelSmtOpSymbol.hh" "$maude_src_dir/Meta"
-  cp "$src_dir/maude/metaLevelSmtOpSymbol.cc" "$maude_src_dir/Meta"
-  cp "$src_dir/maude/descentSmtSignature.cc" "$maude_src_dir/Meta"
-  cp "$src_dir/maude/metaLevelSmtSignature.cc" "$maude_src_dir/Meta"
+  cp -r "$src_dir/Extension" "$maude_src_dir"
 
   cd maude-bindings/subprojects/maudesmc
   (
@@ -172,10 +106,8 @@ build_maude_se() {
   cp $maudesmc_dir/release/libmaude.dylib $maudesmc_dir/installdir/lib
 
   cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
-  cp "$src_dir/swig/module.i" "$swig_src_dir"
   cp "$src_dir/swig/core.i"   "$swig_src_dir"
-  cp "$src_dir/swig/python.i" "$swig_src_dir/specific"
-  cp "$src_dir/core/smt_wrapper.hh" "$top_dir/maude-bindings/src" 
+  cp "$src_dir/Extension/pysmtWrapper.hh" "$top_dir/maude-bindings/src" 
 
   cd maude-bindings 
   (

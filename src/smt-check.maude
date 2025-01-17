@@ -27,17 +27,14 @@ fmod META-SMT-CHECK is
   eq metaSmtCheck(M:Module, TERM:Term, LOGIC:Qid) = metaSmtCheck(M:Module, TERM:Term, LOGIC:Qid, false) .
 
   op metaSmtCheck : Module Term Qid Bool -> SmtCheckResult
-  [special (id-hook SpecialHubSymbol                   (SmtCheckerSymbol)
-            op-hook unknownResultSymbol                (unknown : ~> SmtCheckResult)
-            op-hook smtAssnResultSymbol                ({_} : SatAssignmentSet ~> SmtCheckResult)
-            op-hook emptySatAssignmentSetSymbol        (empty : ~> SatAssignmentSet)
-            op-hook concatSatAssignmentSetSymbol       (_,_ : SatAssignmentSet SatAssignmentSet ~> SatAssignmentSet)
-            op-hook assnPairSymbol                     (_|->_ : Term Term ~> SatAssignment)
-            op-hook assnUnsupModelSymbol               ({_|->_} : String String ~> SatAssignment)
-
-            term-hook builtinTrueTerm                  ((true).Bool)
-            term-hook builtinFalseTerm                 ((false).Bool)
-    )] .
+  [special (id-hook MetaLevelSmtOpSymbol    (metaSmtCheck)
+            op-hook unknownResultSymbol     (unknown : ~> SmtCheckResult)
+            op-hook satAssnSetSymbol        ({_} : SatAssignmentSet ~> SmtCheckResult)
+            op-hook emptySatAssnSetSymbol   (empty : ~> SatAssignmentSet)
+            op-hook concatSatAssnSetSymbol  (_,_ : SatAssignmentSet SatAssignmentSet ~> SatAssignmentSet)
+            op-hook satAssnSymbol           (_|->_ : Term Term ~> SatAssignment)
+            op-hook satAssnAnySymbol        ({_|->_} : String String ~> SatAssignment)
+            op-hook shareWith               (metaReduce : Module Term ~> ResultPair))] .
 
 --- Will be supported later.
     --- op simplifyFormula : BooleanExpr -> BooleanExpr
@@ -125,16 +122,18 @@ fmod ABST-BUILTIN is
 
   op abst : Module TermList Nat -> TermAbstraction [format (r! o)] .
 
-  eq abst(M, V, N) = {V, empty, 0} .
+  --- eq abst(M, V, N) = {V, empty, 0} .
 
-  ceq abst(M, C, N) = {C, empty, 0}
-  if TY := leastSort(M, C)
-  /\ not TY in ('Boolean ; 'Integer ; 'Real) .
+  --- ceq abst(M, C, N) = {C, empty, 0}
+  --- if TY := leastSort(M, C)
+  --- /\ not TY in ('Boolean ; 'Integer ; 'Real) .
 
   ceq abst(M, T, N) = {NV, '_===_[NV, T], 1}
-  if not T :: Variable
-  /\ not T :: Constant
-  /\ TY := leastSort(M,T)
+  if 
+  --- not T :: Variable
+  --- not T :: Constant
+  --- /\ 
+  TY := leastSort(M,T)
   /\ TY in ('Boolean ; 'Integer ; 'Real)
   /\ NV := auxVarGen(N, TY) . 
 
@@ -266,15 +265,15 @@ fmod TRANSFORMATION is
 	    (op '`[_|_`] : '$constTerm 'Boolean -> '$constTerm [ctor] . 
        op '`[_`] : TY -> '$constTerm [ctor] . OPDS) MAS EQS RLS' endm .
 
-  op transform : Module -> Module .
-  ceq transform(M) = replaceRule(M, RS', TY)
+  op transform : Module Nat -> Module .
+  ceq transform(M, N) = replaceRule(M, RS', TY)
   if RS := getRls(M) 
   /\ TYS := leastRuleSort(M, RS)
   /\ TY := maxRuleSort(M, TYS)
-  /\ RS' := tr(M, RS, 0) .
+  /\ RS' := tr(M, RS, N) .
 
-  op makeConstTerm : Term -> Term .
-  eq makeConstTerm(T) = '`[_`][T] .
+  op makeConstTerm : TermList -> Term .
+  eq makeConstTerm(TL) = '`[_`][TL] .
 
 endfm
 
@@ -330,12 +329,13 @@ fmod META-SMT-SEARCH2 is
   pr TRANSFORMATION .
 
   var M : Module .
-  vars T T' SMT : Term .
+  vars AT AT' T T' SMT : Term .
+  vars CD CD' : TermList .
   vars COND : Condition .
   vars CND CND' : Condition .
   vars STEP LOGIC : Qid .
   var B : Bound .
-  vars N VN : Nat .
+  vars N N' N'' VN : Nat .
   vars FOLD MERGE : Bool .
 
   sorts SmtResult2 SmtResult2? .
@@ -346,8 +346,9 @@ fmod META-SMT-SEARCH2 is
 
   op  metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> SmtResult2? .
   ceq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
-    = metaSmtSearch(transform(M), makeConstTerm(T), makeConstTerm(T'), CND, SMT, STEP, 0, B, N, LOGIC, FOLD, MERGE) --- testing
-  if {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
+    = metaSmtSearch(transform(M, VN + N'), makeConstTerm(AT), makeConstTerm(AT'), CND, conj((CD, CD', SMT)), STEP, 0, B, N, LOGIC, FOLD, MERGE) --- testing
+  if {AT, CD, VN} := abst(M, T, 0) /\ {AT', CD', N'} := abst(M, T', VN)
+  /\ {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
   op metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid ~> SmtResult2? .
   eq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC)
@@ -382,8 +383,9 @@ fmod META-SMT-SEARCH2 is
 
   op  metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> Trace2Result? .
   ceq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
-    = metaSmtSearchPathInternal(transform(M), makeConstTerm(T), makeConstTerm(T'), CND, CND', STEP, B, N, LOGIC, FOLD, MERGE) 
-  if {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
+    = metaSmtSearchPathInternal(transform(M, VN + N'), makeConstTerm(AT), makeConstTerm(AT'), CND, CND', STEP, B, N, LOGIC, FOLD, MERGE) 
+  if {AT, CD, VN} := abst(M, T, 0) /\ {AT', CD', N'} := abst(M, T', VN)
+  /\ {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
   op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid -> Trace2Result? .
   eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC)
