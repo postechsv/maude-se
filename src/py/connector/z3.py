@@ -3,7 +3,7 @@ import time
 
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector, PySmtTerm, PySmtModel, PyTermSubst
+from maudeSE.maude import *
 
 class Z3Connector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
@@ -184,3 +184,6 @@ class Z3Connector(PyConnector):
     def set_logic(self, logic):
         # will recreate solver
         self._s = z3.SolverFor(logic)
+    
+    def get_converter(self):
+        return self._c

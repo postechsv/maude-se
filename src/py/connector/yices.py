@@ -3,7 +3,7 @@ import time
 from yices import *
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector
+from maudeSE.maude import *
 
 class YicesConnector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
@@ -29,37 +29,41 @@ class YicesConnector(PyConnector):
     def check_sat(self, consts):
         self._ctx.push()
 
-        fs = list()
-        for const in consts:
-            (c, _), _, _ = const.getData()
-            fs.append(c)
+        try:
+            fs = list()
+            for const in consts:
+                (c, _), _, _ = const.data()
+                fs.append(c)
 
-        self._ctx.assert_formulas(fs)
-        r = self._ctx.check_context()
+            self._ctx.assert_formulas(fs)
+            r = self._ctx.check_context()
 
-        if r == Status.SAT:
-            # store model
-            self._m = Model.from_context(self._ctx, 1)
-            self._ctx.pop()
-            return True
-        elif r == Status.UNSAT:
-            self._ctx.pop()
-            return False
-        else:
-            self._ctx.pop()
-            raise Exception("failed to handle check sat (solver give-up)")
+            if r == Status.SAT:
+                # store model
+                self._m = Model.from_context(self._ctx, 1)
+                self._ctx.pop()
+                return True
+            elif r == Status.UNSAT:
+                self._ctx.pop()
+                return False
+            else:
+                self._ctx.pop()
+                raise Exception("failed to handle check sat (solver give-up)")
+        except:
+            import traceback
+            print(traceback.print_exc())
 
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            ((cur_t, _), _, cur_v) = cur.getData()
+            ((cur_t, _), _, cur_v) = cur.data()
             body = cur_t
 
         else:
-            ((acc_f, _), _, acc_v), ((cur_t, _), _, cur_v) = acc.getData(), cur.getData()
+            ((acc_f, _), _, acc_v), ((cur_t, _), _, cur_v) = acc.data(), cur.data()
             body = Terms.yand([acc_f, cur_t])
 
-        return SmtTerm([(body, Terms.type_of_term(body)), None, None])
+        return PySmtTerm([(body, Terms.type_of_term(body)), None, None])
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
@@ -68,8 +72,8 @@ class YicesConnector(PyConnector):
         t_v, t_l = list(), list()
         sub = subst.getSubst()
         for p in sub:
-            (src, _), _, _ = self._c.dag2term(p).getData()
-            (trg, _), _, _ = self._c.dag2term(sub[p]).getData()
+            (src, _), _, _ = self._c.dag2term(p).data()
+            (trg, _), _, _ = self._c.dag2term(sub[p]).data()
 
             t_v.append(src)
             t_l.append(trg)
@@ -78,10 +82,10 @@ class YicesConnector(PyConnector):
 
         self._dt += d_e - d_s
 
-        (prev_c, _), _, _ = prev.getData()
+        (prev_c, _), _, _ = prev.data()
 
-        (acc_c, _), _, _ = acc.getData()
-        (cur_c, _), _, _ = cur.getData()
+        (acc_c, _), _, _ = acc.data()
+        (cur_c, _), _, _ = cur.data()
     
         so_s = time.time()
         self._ctx.push()
@@ -144,11 +148,11 @@ class YicesConnector(PyConnector):
 
         return tuple([new_prev, tuple([c, None, None])])
     
-    def mkSubst(self, vars, vals):
-        subst = dict()
-        for v, val in zip(vars, vals):
-            subst[v] = val
-        return TermSubst(subst)
+    # def mkSubst(self, vars, vals):
+    #     subst = dict()
+    #     for v, val in zip(vars, vals):
+    #         subst[v] = val
+    #     return TermSubst(subst)
 
     def get_model(self):
         # hack
@@ -156,11 +160,11 @@ class YicesConnector(PyConnector):
         # for t in self._m.collect_defined_terms():
         #     try:
         #         ty = Terms.type_of_term(t)
-        #         model_dict[SmtTerm([(t, ty), None, None])] = SmtTerm([(Terms.parse_term(str(self._m.get_value(t)).lower()), ty), None, None])
+        #         model_dict[PySmtTerm([(t, ty), None, None])] = PySmtTerm([(Terms.parse_term(str(self._m.get_value(t)).lower()), ty), None, None])
         #     except:
         #         continue
         # return model_dict
-        m = SmtModel()
+        m = PySmtModel()
         for t in self._m.collect_defined_terms():
             try:
                 ty = Terms.type_of_term(t)
@@ -182,6 +186,8 @@ class YicesConnector(PyConnector):
         self._ctx: Context = Context(self._cfg)
         self._m = None
 
+    def get_converter(self):
+        return self._c
 
 
 

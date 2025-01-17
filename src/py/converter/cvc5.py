@@ -186,8 +186,11 @@ class Cvc5Converter(PyConverter):
         return self._func_dict[key]
     
     def term2dag(self, term):
-        t, _, _ = term.getData()
-        return self._module.parseTerm(self._term2dag(t))
+        try:
+            t, _, _ = term.data()
+            return self._module.parseTerm(self._term2dag(t))
+        except:
+            return None
 
     def _term2dag(self, term):
         # t, ty = term
@@ -275,7 +278,7 @@ class Cvc5Converter(PyConverter):
           an SMT solver term and its variables
         """
         term, v_set = self._dag2term(t)
-        return SmtTerm([term, None, list(v_set)])
+        return PySmtTerm([term, None, list(v_set)])
     
     def _dag2term(self, t: Term):
 

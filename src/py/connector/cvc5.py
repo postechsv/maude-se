@@ -4,7 +4,7 @@ import time
 from cvc5 import Kind as cvcKind
 from ..maude import *
 from ..util import id_gen
-from maudeSE.maude import PyConverter, PyConnector
+from maudeSE.maude import *
 
 class Cvc5Connector(PyConnector):
     def __init__(self, converter: PyConverter, logic=None):
@@ -32,7 +32,7 @@ class Cvc5Connector(PyConnector):
         self._s.push()
 
         for const in consts:
-            c, _, _ = const.getData()
+            c, _, _ = const.data()
             self._s.assertFormula(c)
         
         r = self._s.checkSat()
@@ -52,11 +52,12 @@ class Cvc5Connector(PyConnector):
     def _make_model(self):
         _vars = self._get_vars()
 
-        model_dict = dict()
+        m = PySmtModel()
         for v in _vars:
-            model_dict[SmtTerm([v, None, None])] = SmtTerm([self._s.getValue(v), None, None])
-        
-        return model_dict
+            k, v = [v, None, None], [self._s.getValue(v), None, None]
+            m.set(k, v)
+
+        return m
     
     def _get_vars(self):
         assertions = self._s.getAssertions()
@@ -76,14 +77,14 @@ class Cvc5Connector(PyConnector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            (cur_t, _, cur_v) = cur.getData()
+            (cur_t, _, cur_v) = cur.data()
             body = cur_t
 
         else:
-            (acc_f, _, acc_v), (cur_t, _, cur_v) = acc.getData(), cur.getData()
+            (acc_f, _, acc_v), (cur_t, _, cur_v) = acc.data(), cur.data()
             body = self._s.mkTerm(cvcKind.AND, acc_f, cur_t)
 
-        return SmtTerm([body, None, None])
+        return PySmtTerm([body, None, None])
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
@@ -92,8 +93,8 @@ class Cvc5Connector(PyConnector):
         t_v, t_l = list(), list()
         sub = subst.getSubst()
         for p in sub:
-            src, _, _ = self._c.dag2term(p).getData()
-            trg, _, _ = self._c.dag2term(sub[p]).getData()
+            src, _, _ = self._c.dag2term(p).data()
+            trg, _, _ = self._c.dag2term(sub[p]).data()
 
             t_v.append(src)
             t_l.append(trg)
@@ -102,10 +103,10 @@ class Cvc5Connector(PyConnector):
 
         self._dt += d_e - d_s
 
-        prev_c, _, _ = prev.getData()
+        prev_c, _, _ = prev.data()
 
-        acc_c, _, _ = acc.getData()
-        cur_c, _, _ = cur.getData()
+        acc_c, _, _ = acc.data()
+        cur_c, _, _ = cur.data()
     
         so_s = time.time()
         self._s.push()
@@ -138,11 +139,11 @@ class Cvc5Connector(PyConnector):
         # TODO
         pass
 
-    def mkSubst(self, vars, vals):
-        subst = dict()
-        for v, val in zip(vars, vals):
-            subst[v] = val
-        return TermSubst(subst)
+    # def mkSubst(self, vars, vals):
+    #     subst = dict()
+    #     for v, val in zip(vars, vals):
+    #         subst[v] = val
+    #     return TermSubst(subst)
 
     def get_model(self):
         return self._m
@@ -158,3 +159,6 @@ class Cvc5Connector(PyConnector):
         self._s.setLogic(logic)
 
         self._m = None
+
+    def get_converter(self):
+        return self._c

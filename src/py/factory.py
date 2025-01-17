@@ -1,39 +1,34 @@
 from .connector import *
 from .converter import *
-from maudeSE.maude import PyWrapperFactory
+from maudeSE.maude import PySmtManagerFactory
 
-class Factory(PyWrapperFactory):
+class Factory(PySmtManagerFactory):
     def __init__(self):
-        PyWrapperFactory.__init__(self)
+        PySmtManagerFactory.__init__(self)
         self._map = {
             "z3"       : (Z3Converter, Z3Connector),
             "yices"    : (YicesConverter, YicesConnector),
             "cvc5"     : (Cvc5Converter, Cvc5Connector),
         }
 
-        # update this...
-        self.conv = None
-        self.conn = None
+        self.solver = None
 
-    def create(self, solver: str):
+    def set_solver(self, solver: str):
         # deprecate ...
         if solver not in self._map:
             raise Exception("unsupported solver {}".format(solver))
-
-        cv_f, cn_f = self._map[solver]
-        self.conv = cv_f()
-        self.conn = cn_f(self.conv)
-
-        # return self.cur_conn, self.conv
+        self.solver = solver
     
     def createConnector(self):
-        if self.conn is None:
-            raise Exception("fail to create converter")
-    
-        return self.conn
-
-    def createConverter(self):
-        if self.conv is None:
+        if self.solver is None:
             raise Exception("fail to create connector")
 
-        return self.conv
+        cv, cn = self._map[self.solver]
+        conv = cv()
+        conn = cn(conv.__disown__())
+    
+        if conn is None:
+            raise Exception("fail to create connector")
+    
+        # must be disown in order to take over the ownership
+        return conn.__disown__()

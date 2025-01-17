@@ -1,5 +1,5 @@
 from typing import Dict
-from maudeSE.maude import PyConverter, PySmtTerm
+
 from ..util import *
 from functools import reduce
 from maudeSE.maude import *
@@ -183,8 +183,11 @@ class Z3Converter(PyConverter):
         return self._func_dict[key]
     
     def term2dag(self, term):
-        t, _, _ = term.data()
-        return self._module.parseTerm(self._term2dag(t))
+        try:
+            t, _, _ = term.data()
+            return self._module.parseTerm(self._term2dag(t))
+        except:
+            return None
 
     def _term2dag(self, term):
 
@@ -194,6 +197,10 @@ class Z3Converter(PyConverter):
         
         if z3.is_or(term):
             r = " or ".join([self._term2dag(c) for c in term.children()])
+            return f"({r})"
+        
+        if z3.is_app_of(term, z3.Z3_OP_XOR):
+            r = " xor ".join([self._term2dag(c) for c in term.children()])
             return f"({r})"
 
         if z3.is_not(term):
