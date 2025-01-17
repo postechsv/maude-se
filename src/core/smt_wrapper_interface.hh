@@ -206,12 +206,4 @@ public:
     virtual void set_logic(const char* logic) = 0;
 };
 
-class WrapperFactory
-{
-public:
-    virtual ~WrapperFactory() {};
-    virtual Converter* createConverter() = 0;
-    virtual Connector* createConnector() = 0;
-};
-
 #endif

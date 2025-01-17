@@ -5,7 +5,7 @@
 #define _smt_wrapper_h_
 
 #include "easyTerm.hh"
-#include "smt_wrapper_interface.hh"
+#include "smtInterface.hh"
 
 class PyDataConatiner {
     PyObject* data;
@@ -117,7 +117,7 @@ class PyConverter : public Converter
 {
 public:
 	virtual ~PyConverter() {};
-    virtual PyObject* prepareFor(VisibleModule* module) = 0;
+    virtual void prepareFor(VisibleModule* module) = 0;
     virtual PySmtTerm* pyDag2term(EasyTerm* dag) = 0;
     virtual EasyTerm* pyTerm2dag(PySmtTerm* term) = 0;
     virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
@@ -239,23 +239,6 @@ public:
         IssueWarning("substituion for subsumption checking is corrupted");
         return false;
     };
-};
-
-class PyWrapperFactory : public WrapperFactory
-{
-public:
-    virtual ~PyWrapperFactory() {};
-    virtual PyConverter* py_createConverter() = 0;
-    virtual PyConnector* py_createConnector() = 0;
-
-public:
-    inline Converter* createConverter(){
-        return py_createConverter();
-    }
-
-    inline Connector* createConnector(){
-        return py_createConnector();
-    }
 };
 
 #endif
