@@ -1,2 +1,0 @@
-642a643
-> 		|	KW_SMT_SEARCH2		{ $$ = Interpreter::SMT_SEARCH2; }
