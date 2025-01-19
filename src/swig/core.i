@@ -1,7 +1,7 @@
 %module(directors="1") maudeSE
 
 %{
-#include "pysmtWrapper.hh"
+#include "pysmt.hh"
 #include "extGlobal.hh"
 %}
 

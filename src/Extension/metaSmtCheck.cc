@@ -27,7 +27,7 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 			vg->getConverter()->prepareFor(m);
 			vg->getConnector()->set_logic(logic);
 
-			VariableGenerator::Result result = vg->checkDag(d);
+			VariableGenerator::Result result = vg->assertDag(d);
 			switch (result)
 			{
 			case VariableGenerator::BAD_DAG:

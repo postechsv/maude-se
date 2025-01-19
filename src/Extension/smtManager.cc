@@ -24,60 +24,71 @@
 #include "SMT_NumberSymbol.hh"
 #include "SMT_NumberDagNode.hh"
 #include "smtManager.hh"
+#include "extGlobal.hh"
 
 //	front end class definitions
 #include "token.hh"
 
-#ifdef USE_CVC4
-#include "cvc4.cc"
-#elif defined(USE_YICES2)
-#include "yices2.cc"
-#elif defined(USE_Z3)
-#include "z3.cc"
-#elif defined(USE_PYSMT)
-#include "pysmt.cc"
-#else
 
-// no SMT support case.
-VariableGenerator::VariableGenerator(const SMT_Info &smtInfo)
-{
-    IssueWarning("No SMT solver linked at compile time.");
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo)
+  : SmtEngineWrapperEx(smtInfo), conn(nullptr){
+    vg = smtManagerFactory->create(smtInfo);
+    conn = vg->getConnector();
+    conv = vg->getConverter();
+  }
+
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
+  : SmtEngineWrapperEx(smtInfo), conn(conn), conv(conn->get_converter()), vg(nullptr) {
+  }
+
+VariableGenerator::~VariableGenerator(){
+  if (vg) delete vg;
+  else {
+    delete conn;
+    delete conv;
+  }
 }
 
-VariableGenerator::VariableGenerator(const SMT_Info &smtInfo, Connector *conn)
+VariableGenerator::Result
+VariableGenerator::assertDag(DagNode* dag)
 {
-    IssueWarning("No SMT solver linked at compile time.");
+  SmtTerm* o = conv->dag2term(dag);
+  std::vector<SmtTerm*> formulas;
+  formulas.push_back(o);
+
+  if(conn->check_sat(formulas)){
+    return SAT;
+  }
+  return UNSAT;
 }
 
-VariableGenerator::~VariableGenerator() {}
-
-VariableGenerator::Result VariableGenerator::assertDag(DagNode *dag)
+VariableGenerator::Result
+VariableGenerator::checkDag(DagNode* dag)
 {
-    return SAT_UNKNOWN;
+  push();
+  Result r = assertDag(dag);
+  pop();
+
+  return r;
 }
 
-VariableGenerator::Result VariableGenerator::checkDag(DagNode *dag)
-{
-    return SAT_UNKNOWN;
+inline void
+VariableGenerator::clearAssertions(){ conn->reset(); }
+
+inline void
+VariableGenerator::push(){ conn->push(); }
+
+inline void
+VariableGenerator::pop(){ conn->pop(); }
+
+SmtModel* VariableGenerator::getModel(){
+  return conn->get_model();
 }
 
-void VariableGenerator::push() {}
-
-void VariableGenerator::pop() {}
-
-void VariableGenerator::reset() {}
-
-void VariableGenerator::clearAssertions() {}
-
-SmtModel *VariableGenerator::getModel() {}
-
-void VariableGenerator::setLogic(const char *logic) {}
-
-#endif
-
-//
-//	Common code
-//
+inline void 
+VariableGenerator::setLogic(const char* logic){
+  conn->set_logic(logic);
+}
 
 VariableDagNode *
 VariableGenerator::makeFreshVariable(Term *baseVariable, const mpz_class &number)
@@ -96,3 +107,67 @@ VariableGenerator::makeFreshVariable(Term *baseVariable, const mpz_class &number
 
     return new VariableDagNode(s, newId, NONE);
 }
+
+#ifdef USE_CVC4
+#include "cvc4.cc"
+#elif defined(USE_YICES2)
+#include "yices2.cc"
+#elif defined(USE_Z3)
+#include "z3.cc"
+#elif defined(USE_PYSMT)
+#else
+
+// dummy
+
+
+SmtTerm* DummyConverter::dag2term(DagNode* dag)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+
+DagNode* DummyConverter::term2dag(SmtTerm* term)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+
+
+bool DummyConnector::check_sat(std::vector<SmtTerm*> consts)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return false;
+}
+
+bool DummyConnector::subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return false;
+}
+  
+TermSubst* DummyConnector::mk_subst(std::map<DagNode*, DagNode*>& subst_dict)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+
+SmtTerm* DummyConnector::add_const(SmtTerm* acc, SmtTerm* cur)
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+  
+SmtModel* DummyConnector::get_model()
+{
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+
+VariableGenerator* DummySmtManagerFactory::create(const SMT_Info& smtInfo)
+{
+    DummyConnector* dummyConnector = new DummyConnector(new DummyConverter());
+    VariableGenerator* vg = new VariableGenerator(smtInfo, dummyConnector);
+    return vg;
+}
+
+#endif

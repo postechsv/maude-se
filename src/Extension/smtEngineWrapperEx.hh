@@ -61,14 +61,8 @@ public:
 };
 
 /*
- * T is expression type
- *
- * U is struct type that contains user define comparator for
- * expression object.
- *
- * V is type data structure.
+ * Extension of SMT_EngineWrapperInterface
  */
-template <typename T, typename U>
 class SmtEngineWrapperEx : virtual public SMT_EngineWrapper
 {
 public:
@@ -96,8 +90,8 @@ protected:
      * SMT_EngineWrapper class contains
      */
     const SMT_Info& smtInfo;
-    typedef map<DagNode *, T> SmtManagerVariableMap;
-    typedef map<T, DagNode *, U> ReverseSmtManagerVariableMap;
+    typedef map<DagNode*, SmtTerm*> SmtManagerVariableMap;
+    typedef map<SmtTerm*, DagNode*> ReverseSmtManagerVariableMap;
     SmtManagerVariableMap smtManagerVariableMap;
     const char* smt_null_term = "SMT_NULL_TERM";
 
@@ -143,12 +137,12 @@ public:
      * variableGenerator should know its dag parameter type before calling.
      * checkDagExtension's result is different type compare to SMT_EngineWrapper result type.
      */
-    virtual DagNode* Term2Dag(T exp, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv) noexcept(false) = 0;
-    virtual T Dag2Term(DagNode* dag, ExtensionSymbol* extensionSymbol) noexcept(false) = 0;
+    virtual DagNode* Term2Dag(SmtTerm* exp, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv) noexcept(false) = 0;
+    virtual SmtTerm* Dag2Term(DagNode* dag, ExtensionSymbol* extensionSymbol) noexcept(false) = 0;
     virtual DagNode* generateAssignment(DagNode* dagNode,ExtensionSymbol* extensionSymbol) = 0;
     virtual DagNode* simplifyDag(DagNode* dagNode, ExtensionSymbol* extensionSymbol)= 0;
     virtual DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol) = 0;
-    virtual T variableGenerator(DagNode* dag, ExprType exprType) = 0;
+    virtual SmtTerm* variableGenerator(DagNode* dag, ExprType exprType) = 0;
     virtual Connector* getConnector() = 0;
     virtual Converter* getConverter() = 0;
     // virtual Result checkDagContextFree(DagNode* dag, ExtensionSymbol* extensionSymbol) = 0;
@@ -192,7 +186,7 @@ protected:
     }
 
     // This function covers the previous makeBooleanExpr implementation.
-    T makeExpr(DagNode *dag, ExtensionSymbol* extensionSymbol, bool isBooleanExpr) noexcept(false) {
+    SmtTerm* makeExpr(DagNode *dag, ExtensionSymbol* extensionSymbol, bool isBooleanExpr) noexcept(false) {
         //	Checks if a dag actually represents a Boolean expression
         //	and convert it to a term representation.
         if (VariableDagNode * v = dynamic_cast<VariableDagNode *>(dag)) {
@@ -229,7 +223,7 @@ protected:
         }
     }
 
-    T makeExtensionVariable(DagNode *dag, ExtensionSymbol* extensionSymbol) noexcept(false) {
+    SmtTerm* makeExtensionVariable(DagNode *dag, ExtensionSymbol* extensionSymbol) noexcept(false) {
         if (extensionSymbol != nullptr) {
             if (dag->symbol() == extensionSymbol->boolVarSymbol) {
                 return variableGenerator(dag, ExprType::BOOL);

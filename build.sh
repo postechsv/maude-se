@@ -106,7 +106,7 @@ build_maude_se() {
 
   cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
   cp "$src_dir/swig/core.i"   "$swig_src_dir"
-  cp "$src_dir/Extension/pysmtWrapper.hh" "$top_dir/maude-bindings/src" 
+  cp "$src_dir/Extension/pysmt.hh" "$top_dir/maude-bindings/src" 
 
   cd maude-bindings 
   (

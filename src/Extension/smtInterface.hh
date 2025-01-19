@@ -47,8 +47,6 @@ public:
     virtual void prepareFor(VisibleModule* module) = 0;
     virtual SmtTerm* dag2term(DagNode* dag) = 0;
     virtual DagNode* term2dag(SmtTerm* term) = 0;
-    // virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
-    // virtual PyObject* getSymbol(PyObject* dag) = 0;
 };
 
 class Connector
