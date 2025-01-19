@@ -28,6 +28,7 @@ public:
   void clearAssertions();
   void push();
   void pop();
+  void reset();
   SmtModel *getModel();
   void setLogic(const char *logic);
 

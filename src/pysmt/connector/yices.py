@@ -47,6 +47,9 @@ class YicesConnector(PyConnector):
 
     def pop(self):
         self._ctx.pop()
+    
+    def reset(self):
+        self._ctx.reset_context()
 
     def add_const(self, acc, cur):
         # initial case

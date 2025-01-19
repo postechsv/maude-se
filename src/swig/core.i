@@ -204,6 +204,7 @@ public:
   virtual PyConverter* py_get_converter() = 0;
   virtual void push() = 0;
   virtual void pop() = 0;
+  virtual void reset() = 0;
 };
 
 %rename(createConnector) py_createConnector;

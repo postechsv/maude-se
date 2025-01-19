@@ -56,18 +56,9 @@ VariableGenerator::~VariableGenerator(){
 VariableGenerator::Result
 VariableGenerator::assertDag(DagNode* dag)
 {
-  IssueWarning("PySmt currently does not implement checkSat function - giving up.");
-  return SAT_UNKNOWN;
-}
-
-VariableGenerator::Result
-VariableGenerator::checkDag(DagNode* dag)
-{
-  // IssueWarning("PySmt currently does not implement checkSat function - giving up.");
-  // cout << dag << endl;
   SmtTerm* o = conv->dag2term(dag);
   std::vector<SmtTerm*> formulas;
-  formulas.push_back(conv->dag2term(dag));
+  formulas.push_back(o);
 
   if(conn->check_sat(formulas)){
     return SAT;
@@ -75,14 +66,24 @@ VariableGenerator::checkDag(DagNode* dag)
   return UNSAT;
 }
 
-inline void
-VariableGenerator::clearAssertions(){}
+VariableGenerator::Result
+VariableGenerator::checkDag(DagNode* dag)
+{
+  push();
+  Result r = assertDag(dag);
+  pop();
+
+  return r;
+}
 
 inline void
-VariableGenerator::push(){}
+VariableGenerator::clearAssertions(){ conn->reset(); }
 
 inline void
-VariableGenerator::pop(){}
+VariableGenerator::push(){ conn->push(); }
+
+inline void
+VariableGenerator::pop(){ conn->pop(); }
 
 SmtModel* VariableGenerator::getModel(){
   return conn->get_model();

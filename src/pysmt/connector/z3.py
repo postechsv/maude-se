@@ -21,6 +21,7 @@ class Z3Connector(PyConnector):
 
         # set solver
         self._s = z3.SolverFor(_logic)
+        self._ss = z3.SolverFor(_logic)
     
     def check_sat(self, consts):
         for const in consts:
@@ -41,6 +42,9 @@ class Z3Connector(PyConnector):
 
     def pop(self):
         self._s.pop()
+
+    def reset(self):
+        self._s.reset()
 
     def add_const(self, acc, cur):
         # initial case
@@ -76,11 +80,11 @@ class Z3Connector(PyConnector):
         cur_c, _, _ = cur.data()
     
         so_s = time.time()
-        self._s.push()
-        self._s.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
+        self._ss.push()
+        self._ss.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
 
-        r = self._s.check()
-        self._s.pop()
+        r = self._ss.check()
+        self._ss.pop()
         so_e = time.time()
         self._st += so_e - so_s
 
@@ -155,6 +159,7 @@ class Z3Connector(PyConnector):
     def set_logic(self, logic):
         # will recreate solver
         self._s = z3.SolverFor(logic)
+        self._ss = z3.SolverFor(logic)
     
     def get_converter(self):
         return self._c

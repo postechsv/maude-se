@@ -65,6 +65,8 @@ void VariableGenerator::push() {}
 
 void VariableGenerator::pop() {}
 
+void VariableGenerator::reset() {}
+
 void VariableGenerator::clearAssertions() {}
 
 SmtModel *VariableGenerator::getModel() {}

@@ -48,6 +48,9 @@ class Cvc5Connector(PyConnector):
     def pop(self):
         self._s.pop()
 
+    def reset(self):
+        self._s.resetAssertions()
+
     def _make_model(self):
         _vars = self._get_vars()
 

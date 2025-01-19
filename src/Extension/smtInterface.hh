@@ -66,6 +66,7 @@ public:
 
     virtual void print_model() = 0;
     virtual void set_logic(const char* logic) = 0;
+    virtual void reset() = 0;
 
     virtual Converter* get_converter() = 0;
 };
