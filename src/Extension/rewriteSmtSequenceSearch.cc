@@ -49,9 +49,10 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
 	DagNode* trueDag = smtInfo.getTrueSymbol()->makeDagNode();
 	trueDag->computeTrueSort(*initial);
 
-  SmtTerm *initRi = convDag2Term(trueDag);
+  // SmtTerm *initRi = convDag2Term(trueDag);
 
   smtGoalConst = smtGoal->getLhs()->term2Dag();
+  SmtTerm *initRi = convDag2Term(smtGoalConst);
   // SmtTerm *initRi = convDag2Term(initConst);
 
   // PyObject *next = PyObject_CallMethodObjArgs(connector, add_const, Py_None, initRi, NULL);
@@ -305,7 +306,8 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
   //
   Vector<DagNode *> args(2);
   const Substitution *substitution = matchState->getContext();
-  DagNode *matchConstraint = smtGoalConst;
+  // DagNode *matchConstraint = smtGoalConst;
+  DagNode* matchConstraint = nullptr;
   // for (auto &i : smtVarDags)
   // {
   //   Verbose("smtVarDags " << i.first << " : " << i.second);
