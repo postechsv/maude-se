@@ -210,21 +210,22 @@ bool SmtCheckerSymbol::eqRewrite(DagNode* subject, RewritingContext& context){
             DagNode *newRoot = newContext->root();
 
             // smtManager.push();
-            VariableGenerator::Result checkResult = smtManager.checkDagContextFree(newRoot, this);
+            VariableGenerator::Result checkResult ;
+            // = smtManager.checkDagContextFree(newRoot, this);
 
             switch (checkResult) {
                 case VariableGenerator::BAD_DAG:
-                    throw ExtensionException("bad dag!");
+                    throw std::runtime_error("bad dag!");
                 case VariableGenerator::UNSAT:
                     resultDag = this->builtinFalseTerm.getDag();
                     break;
                 case VariableGenerator::SAT:
                     if (isMakeAssignment) {
                         try {
-                            resultDag = smtManager.generateAssignment(newRoot, this);
-                        } catch (ExtensionException &ex) {
-                            IssueWarning("Error while smt solving : " << ex.c_str());
-                            throw ExtensionException("Error while smt solving");
+                            // resultDag = smtManager.generateAssignment(newRoot, this);
+                        } catch (std::exception &ex) {
+                            IssueWarning("Error while smt solving : " << ex.what());
+                            throw std::runtime_error("Error while smt solving");
                         }
                     } else {
                         resultDag = this->builtinTrueTerm.getDag();
@@ -240,8 +241,8 @@ bool SmtCheckerSymbol::eqRewrite(DagNode* subject, RewritingContext& context){
         } else {
             IssueWarning("Error occurred while getting a Module");
         }
-    } catch (ExtensionException& ex){
-        IssueWarning("Error while generating assignments: " << ex.c_str());
+    } catch (std::exception& ex){
+        IssueWarning("Error while generating assignments: " << ex.what());
         delete newContext;
     }
     return context.builtInReplace(subject, resultDag);

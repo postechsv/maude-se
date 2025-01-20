@@ -65,16 +65,16 @@ bool SimplifyFormulaSymbol::eqRewrite(DagNode *subject, RewritingContext &contex
     try{
         if(MixfixModule* m = dynamic_cast<MixfixModule*>(this->getModule())) {
             VariableGenerator smtManager(m->getSMT_Info());
-            resultDag = smtManager.simplifyDag(newContext->root(),
-                                               shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
+            // resultDag = smtManager.simplifyDag(newContext->root(),
+                                            //    shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
             if (resultDag == nullptr) {
                 resultDag = newContext->root();
             }
         } else {
             IssueWarning("Error occurred while getting a Module");
         }
-    } catch (ExtensionException & ex) {
-        IssueWarning("Simplify Error : " << ex.c_str());
+    } catch (std::exception & ex) {
+        IssueWarning("Simplify Error : " << ex.what());
     }
     delete newContext;
     return context.builtInReplace(subject, resultDag);

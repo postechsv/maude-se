@@ -111,16 +111,16 @@ bool TacticApplySymbol::eqRewrite(DagNode *subject, RewritingContext &context) {
     try{
         if(MixfixModule* m = dynamic_cast<MixfixModule*>(this->getModule())) {
             VariableGenerator smtManager(m->getSMT_Info());
-            resultDag = smtManager.applyTactic(newContext->root(), f->getArgument(1),
-                                               shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
+            // resultDag = smtManager.applyTactic(newContext->root(), f->getArgument(1),
+                                            //    shareWith ? static_cast<ExtensionSymbol *>(this->shareWith) : this);
             if (resultDag == nullptr) {
                 resultDag = newContext->root();
             }
         } else {
             IssueWarning("Error occurred while getting a Module");
         }
-    } catch (ExtensionException & ex) {
-        IssueWarning("tactic application error : " << ex.c_str());
+    } catch (std::exception & ex) {
+        IssueWarning("tactic application error : " << ex.what());
     }
     delete newContext;
     return context.builtInReplace(subject, resultDag);
