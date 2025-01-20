@@ -221,21 +221,32 @@ class PySmtManagerFactory : public SmtManagerFactory
 {
 public:
     virtual ~PySmtManagerFactory() {};
-    virtual PyConnector* py_createConnector() = 0;
+    virtual PyConnector* py_createConnector(PyConverter* conv) = 0;
+    virtual PyConverter* py_createConverter() = 0;
 
 public:
-    VariableGenerator* create(const SMT_Info& smtInfo){
-        PyConnector* conn = py_createConnector();
-        return new VariableGenerator(smtInfo, conn);
-    }
+    void init(){};
+    Connector* createConnector(Converter* conv){
+        PyConverter* pyconv = dynamic_cast<PyConverter*>(conv);
+        return py_createConnector(pyconv); 
+    };
+    Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){ return py_createConverter(); };
 };
 
-class PySmtManagerFactorySetter
+// class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
+// {
+// public:
+//     void set(){
+//         if (smtManagerFactory) delete smtManagerFactory;
+//         smtManagerFactory = new PySmtManagerFactory();
+//     };
+// };
+
+class SmtManagerFactorySetter
 {
 public:
-    void setSmtManagerFactory(PySmtManagerFactory* pySmtManagerFactory){
-        smtManagerFactory = pySmtManagerFactory;
-    };
+    virtual void set() = 0;
 };
+
 
 #endif

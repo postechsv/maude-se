@@ -207,6 +207,7 @@ public:
   virtual void reset() = 0;
 };
 
+%rename(createConverter) py_createConverter;
 %rename(createConnector) py_createConnector;
 
 %feature("director") PySmtManagerFactory;
@@ -216,12 +217,12 @@ public:
   %newobject py_createConnector;
 
   virtual ~PySmtManagerFactory() {};
-  virtual PyConnector* py_createConnector() = 0;
+  virtual PyConnector* py_createConnector(PyConverter* conv) = 0;
+  virtual PyConverter* py_createConverter() = 0;
 };
 
-%rename(SmtManagerFactorySetter) PySmtManagerFactorySetter;
-class PySmtManagerFactorySetter
+class SmtManagerFactorySetter
 {
 public:
-    void setSmtManagerFactory(PySmtManagerFactory* pySmtManagerFactory);
+    virtual void set() = 0;
 };

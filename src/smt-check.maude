@@ -21,6 +21,7 @@ endfm
 
 
 fmod META-SMT-CHECK is
+  pr REAL-INTEGER .
   pr SATISFYING-ASSIGNMENTS .
 
   op metaSmtCheck : Module Term Qid -> SmtCheckResult .
@@ -34,6 +35,53 @@ fmod META-SMT-CHECK is
             op-hook concatSatAssnSetSymbol  (_,_ : SatAssignmentSet SatAssignmentSet ~> SatAssignmentSet)
             op-hook satAssnSymbol           (_|->_ : Term Term ~> SatAssignment)
             op-hook satAssnAnySymbol        ({_|->_} : String String ~> SatAssignment)
+
+            op-hook integerSymbol                      (<Integers> : ~> Integer)
+            op-hook realSymbol                         (<Reals> : ~> Real)
+
+            --- term-hook trueTerm                         ((true).Boolean)
+            --- term-hook falseTerm                        ((false).Boolean)
+
+            op-hook notBoolSymbol                      (not_ : Boolean ~> Boolean)
+            op-hook andBoolSymbol                      (_and_ : Boolean Boolean ~> Boolean)
+            op-hook xorBoolSymbol                      (_xor_ : Boolean Boolean ~> Boolean)
+            op-hook orBoolSymbol                       (_or_ : Boolean Boolean ~> Boolean)
+            op-hook impliesBoolSymbol                  (_implies_ : Boolean Boolean ~> Boolean)
+            op-hook eqBoolSymbol                       (_===_ : Boolean Boolean ~> Boolean)
+            op-hook neqBoolSymbol                      (_=/==_ : Boolean Boolean ~> Boolean)
+            op-hook iteBoolSymbol                      (_?_:_ : Boolean Boolean Boolean ~> Boolean)
+
+            op-hook unaryMinusIntSymbol                (-_ : Integer ~> Integer)
+            op-hook plusIntSymbol                      (_+_ : Integer Integer ~> Integer)
+            op-hook minusIntSymbol                     (_-_ : Integer Integer ~> Integer)
+            op-hook divIntSymbol                       (_div_ : Integer Integer ~> Integer)
+            op-hook mulIntSymbol                       (_*_ : Integer Integer ~> Integer)
+            op-hook modIntSymbol                       (_mod_ : Integer Integer ~> Integer)
+            op-hook ltIntSymbol                        (_<_ : Integer Integer ~> Boolean)
+            op-hook leqIntSymbol                       (_<=_ : Integer Integer ~> Boolean)
+            op-hook gtIntSymbol                        (_>_ : Integer Integer ~> Boolean)
+            op-hook geqIntSymbol                       (_>=_ : Integer Integer ~> Boolean)
+            op-hook eqIntSymbol                        (_===_ : Integer Integer ~> Boolean)
+            op-hook neqIntSymbol                       (_=/==_ : Integer Integer ~> Boolean)
+            op-hook iteIntSymbol                       (_?_:_ : Boolean Integer Integer ~> Integer)
+            op-hook divisibleIntSymbol                 (_divisible_ : Integer Integer ~> Boolean)
+
+            op-hook unaryMinusRealSymbol               (-_ : Real ~> Real)
+            op-hook plusRealSymbol                     (_+_ : Real Real ~> Real)
+            op-hook minusRealSymbol                    (_-_ : Real Real ~> Real)
+            op-hook divRealSymbol                      (_/_ : Real Real ~> Real)
+            op-hook mulRealSymbol                      (_*_ : Real Real ~> Real)
+            op-hook ltRealSymbol                       (_<_ : Real Real ~> Boolean)
+            op-hook leqRealSymbol                      (_<=_ : Real Real ~> Boolean)
+            op-hook gtRealSymbol                       (_>_ : Real Real ~> Boolean)
+            op-hook geqRealSymbol                      (_>=_ : Real Real ~> Boolean)
+            op-hook eqRealSymbol                       (_===_ : Real Real ~> Boolean)
+            op-hook neqRealSymbol                      (_=/==_ : Real Real ~> Boolean)
+            op-hook iteRealSymbol                      (_?_:_ : Boolean Real Real ~> Real)
+            op-hook toRealSymbol                       (toReal : Integer ~> Real)
+            op-hook toIntegerSymbol                    (toInteger : Real ~> Integer)
+            op-hook isIntegerSymbol                    (isInteger : Real ~> Boolean)
+
             op-hook shareWith               (metaReduce : Module Term ~> ResultPair))] .
 
 --- Will be supported later.

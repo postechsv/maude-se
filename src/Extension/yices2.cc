@@ -26,7 +26,7 @@
 
 // front end class definitions
 #include "token.hh"
-#include "yices2_Extension.hh"
+#include "yices2.hh"
 #include <sstream>
 
 SmtManager::SmtManager(const SMT_Info &smtInfo)

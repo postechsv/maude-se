@@ -30,23 +30,31 @@
 #include "token.hh"
 
 
-VariableGenerator::VariableGenerator(const SMT_Info& smtInfo)
-  : SmtEngineWrapperEx(smtInfo), conn(nullptr){
-    vg = smtManagerFactory->create(smtInfo);
-    conn = vg->getConnector();
-    conv = vg->getConverter();
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo){
+    SmtManagerFactorySetter* smfs = new SmtManagerFactorySetter();
+    smfs->set();
+    delete smfs;
+
+    conv = smtManagerFactory->createConverter(smtInfo, nullptr);
+    conn = smtManagerFactory->createConnector(conv);
   }
 
-VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
-  : SmtEngineWrapperEx(smtInfo), conn(conn), conv(conn->get_converter()), vg(nullptr) {
+VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){
+    SmtManagerFactorySetter* smfs = new SmtManagerFactorySetter();
+    smfs->set();
+    delete smfs;
+
+    conv = smtManagerFactory->createConverter(smtInfo, extensionSymbol);
+    conn = smtManagerFactory->createConnector(conv);
   }
+
+// VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
+//   : conn(conn), conv(conn->get_converter()) {
+//   }
 
 VariableGenerator::~VariableGenerator(){
-  if (vg) delete vg;
-  else {
-    delete conn;
-    delete conv;
-  }
+  if (conn) delete conn;
+  if (conv) delete conv;
 }
 
 VariableGenerator::Result

@@ -23,68 +23,145 @@
 //
 //      Class for generating SMT variables, version for CVC4 support.
 //
-#ifndef _z3_EngineWrapper_hh_
-#define _z3_EngineWrapper_hh_
-#include "smtEngineWrapperEx.hh"
+#ifndef _z3_smt_hh_
+#define _z3_smt_hh_
 #include "z3++.h"
+#include "smtInterface.hh"
+#include "nativeSmt.hh"
+#include "extGlobal.hh"
 #include <vector>
 #include <sstream>
 #include <gmpxx.h>
 
-using namespace z3;
+class Z3SmtTerm : public SmtTerm, public z3::expr
+{
+public:
+    Z3SmtTerm(z3::expr e) : z3::expr(e) {};
+    ~Z3SmtTerm(){};
+
+// public:
+//     Z3SmtTerm(z3::expr const & z3term) : z3term(z3term) {};
+//     ~Z3SmtTerm(){};
+//     inline z3::expr getTerm(){ return z3::expr(z3term.ctx()); };
+
+// private:
+//     z3::expr const & z3term;
+// public:
+//     Z3SmtTerm(z3::context & ctx) : ctx(ctx) {};
+//     ~Z3SmtTerm(){};
+//     inline z3::expr getTerm(){ return z3::expr(ctx); };
+
+// private:
+    // z3::context & ctx;
+
+// public:
+//     Z3SmtTerm(z3::expr const & z3term) : ctx(z3term.ctx()) {};
+//     ~Z3SmtTerm(){};
+//     inline z3::expr getTerm(){ return z3::expr(ctx); };
+
+// private:
+//     z3::context & ctx;
+
+// public:
+//     Z3SmtTerm(z3::expr const & z3term) { term = & z3::expr(z3term); };
+//     ~Z3SmtTerm(){};
+//     inline z3::expr getTerm(){ return z3::expr(*term); };
+
+// private:
+//     z3::expr* term;
+};
+
+// comparator for Reverse Variable Map
+// struct rsvCmp {
+//     bool operator()(const SmtTerm* lhs, const SmtTerm* rhs) const {
+//         z3::expr a = dynamic_cast<Z3SmtTerm*>(const_cast<SmtTerm*>(lhs))->getTerm();
+//         z3::expr b = dynamic_cast<Z3SmtTerm*>(const_cast<SmtTerm*>(rhs))->getTerm();
+//         return a.id() < b.id();
+//     }
+// };
 
 struct cmpExprById{
-    bool operator( )(const expr &lhs, const expr &rhs) const {
+    bool operator( )(const z3::expr &lhs, const z3::expr &rhs) const {
         return lhs.id() < rhs.id();
     }
 };
 
-class VariableGenerator : public SmtEngineWrapperEx<expr, cmpExprById> {
-    NO_COPYING(VariableGenerator);
+
+class Z3Converter : public Converter, public NativeSmtConverter< z3::expr, cmpExprById >
+{
 public:
-    VariableGenerator(const SMT_Info &smtInfo);
-    ~VariableGenerator();
+    Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
+	~Z3Converter(){};
+    void prepareFor(VisibleModule* module){};
+    SmtTerm* dag2term(DagNode* dag){
+        z3::expr e = dag2termInternal(dag);
+        return new Z3SmtTerm(e);
+    };
+    DagNode* term2dag(SmtTerm* term){
+        Z3SmtTerm* t = dynamic_cast<Z3SmtTerm*>(term);
+        return term2dagInternal(z3::expr(*dynamic_cast<z3::expr*>(t)));
+    }
+
+public:
+    inline z3::context* getContext(){ return &ctx; };
+
+private:
+    z3::context ctx;
+
+private:
+    // override
+    z3::expr variableGenerator(DagNode *dag, ExprType exprType);
+    z3::expr makeVariable(VariableDagNode* v);
+
+    // Aux
+    z3::expr dag2termInternal(DagNode* dag);
+    DagNode* term2dagInternal(z3::expr);
+};
 
 
-    /*
-     * SMT_Engine wrapper interface implementation
-     */
-    Result assertDag(DagNode *dag);
-    Result checkDag(DagNode *dag);
-    Result checkDagContextFree(DagNode *dag, ExtensionSymbol* extensionSymbol);
-    VariableDagNode *makeFreshVariable(Term *baseVariable, const mpz_class &number);
-    void clearAssertions();
+class Z3Connector : public Connector
+{
+public:
+    Z3Connector(Z3Converter* conv);
+	~Z3Connector();
+    bool check_sat(std::vector<SmtTerm*> consts);
+    bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur){ return false; };
+    TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict){ return nullptr; };
+    SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur){ return nullptr; };
+    SmtModel* get_model(){ return nullptr; };
     void push();
     void pop();
 
-public:
+    void print_model(){};
+    void set_logic(const char* logic);
+    void reset();
 
-    virtual Connector* getConnector() = 0;
-    virtual Converter* getConverter() = 0;
-
-
-    /*
-     * SmtManager class interface implementation
-     */
-    expr Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol);
-    DagNode* Term2Dag(expr e, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv = nullptr);
-    DagNode* generateAssignment(DagNode *dagNode, SmtCheckerSymbol* extensionSymbol);
-    DagNode* simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol);
-    DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol);
-    expr variableGenerator(DagNode *dag, ExprType exprType);
-
+    Converter* get_converter(){ return conv; };
 
 private:
-    context ctx;
-    solver *s;
-
+    z3::solver *s;
     int pushCount;
-
-    DagNode* InferTerm2Dag(expr e, DagNode* dagNode, ExtensionSymbol* extensionSymbol);
-    tactic Dag2Tactic(TacticApplySymbol* tacticApplySymbol, DagNode* dagNode);
-
-    DagNode* GenerateDag(expr lhs, expr rhs, SmtCheckerSymbol* smtCheckerSymbol, ReverseSmtManagerVariableMap* rsv);
+    Z3Converter* conv;
 };
 
+class Z3SmtManagerFactory : public SmtManagerFactory
+{
+public:
+    Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){
+        return new Z3Converter(smtInfo, extensionSymbol);
+    }
+    Connector* createConnector(Converter* conv){
+        return new Z3Connector(dynamic_cast<Z3Converter*>(conv));
+    }
+};
+
+class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
+{
+public:
+    void set(){
+        if (smtManagerFactory) delete smtManagerFactory;
+        smtManagerFactory = new Z3SmtManagerFactory();
+    };
+};
 
 #endif

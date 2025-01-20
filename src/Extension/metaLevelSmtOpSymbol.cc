@@ -96,6 +96,9 @@ MetaLevelSmtOpSymbol::MetaLevelSmtOpSymbol(int id, int nrArgs, const Vector<int>
 
   metaLevel = 0;
   shareWith = 0;
+
+  trueTerm = 0;
+  falseTerm = 0;
 }
 
 MetaLevelSmtOpSymbol::~MetaLevelSmtOpSymbol()
@@ -167,6 +170,8 @@ bool MetaLevelSmtOpSymbol::attachSymbol(const char *purpose, Symbol *symbol)
 
 bool MetaLevelSmtOpSymbol::attachTerm(const char *purpose, Term *term)
 {
+  BIND_TERM(purpose, term, trueTerm);
+  BIND_TERM(purpose, term, falseTerm);
   return FreeSymbol::attachTerm(purpose, term);
 }
 
@@ -198,6 +203,9 @@ void MetaLevelSmtOpSymbol::copyAttachments(Symbol *original, SymbolMap *map)
       // metaLevel = new MetaLevel(orig->metaLevel, map);
       // shareWith = 0;
     }
+
+    COPY_TERM(orig, trueTerm, map);
+    COPY_TERM(orig, falseTerm, map);
   }
   FreeSymbol::copyAttachments(original, map);
 }
@@ -218,21 +226,30 @@ void MetaLevelSmtOpSymbol::getSymbolAttachments(Vector<const char *> &purposes,
 void MetaLevelSmtOpSymbol::getTermAttachments(Vector<const char *> &purposes,
                                            Vector<Term *> &terms)
 {
+  APPEND_TERM(purposes, terms, trueTerm);
+  APPEND_TERM(purposes, terms, falseTerm);
   FreeSymbol::getTermAttachments(purposes, terms);
 }
 
 void MetaLevelSmtOpSymbol::postInterSymbolPass()
 {
-  if (shareWith == 0)
+  if (shareWith == 0){
     metaLevel->postInterSymbolPass();
-  else
+  }
+  else {
     metaLevel = shareWith->getMetaLevel();
+  }
+PREPARE_TERM(trueTerm);
+PREPARE_TERM(falseTerm);
 }
 
 void MetaLevelSmtOpSymbol::reset()
 {
-  if (shareWith == 0 && metaLevel != 0)
+  if (shareWith == 0 && metaLevel != 0){
     metaLevel->reset();
+  }
+  trueTerm.reset();
+  falseTerm.reset();
 }
 
 bool MetaLevelSmtOpSymbol::eqRewrite(DagNode *subject, RewritingContext &context)

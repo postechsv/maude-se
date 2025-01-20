@@ -185,6 +185,13 @@ elif smtOption == 'cvc4'
 	libraries += [cvc4, cln]
 	conf.set('USE_CVC4', 1, description: 'use CVC4 SMT solver library')
 
+elif smtOption == 'z3'
+	z3 = cxx.find_library('z3',
+			static: 'z3' in staticLibs,
+			dirs: extraSearchPaths)
+	libraries += [z3]
+	conf.set('USE_Z3', 1, description: 'use Z3 SMT solver library')
+
 elif smtOption == 'pysmt'
 	conf.set('USE_PYSMT', 1, description: 'use Python SMT solver library')
 endif

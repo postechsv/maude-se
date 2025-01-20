@@ -13,6 +13,7 @@ class VisibleModule;
 class DagNode;
 class VariableGenerator;
 class SMT_Info;
+class MetaLevelSmtOpSymbol;
 
 class SmtTerm{
 public:
@@ -69,16 +70,23 @@ public:
     virtual Converter* get_converter() = 0;
 };
 
+// class SmtManagerFactory
+// {
+// public:
+//     virtual VariableGenerator* create(const SMT_Info& smtInfo) = 0;
+// };
+
 class SmtManagerFactory
 {
 public:
-    virtual VariableGenerator* create(const SMT_Info& smtInfo) = 0;
+    virtual Connector* createConnector(Converter* conv) = 0;
+    virtual Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol) = 0;
 };
 
-// class SmtManagerFactorySetter
-// {
-// public:
-//     virtual void setSmtManagerFactory(SmtManagerFactory* smtManagerFactory) = 0;
-// };
+class SmtManagerFactorySetterInterface
+{
+public:
+    virtual void set() = 0;
+};
 
 #endif

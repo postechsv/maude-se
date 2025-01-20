@@ -2,9 +2,9 @@
 import os
 import argparse
 import maudeSE.maude
-from maudeSE.factory import *
-from maudeSE.hook.check import *
-from maudeSE.hook.search import *
+# from maudeSE.factory import *
+# from maudeSE.hook.check import *
+# from maudeSE.hook.search import *
 
 if __name__ == '__main__':
     solvers = ["z3","yices","cvc5"]
@@ -23,21 +23,21 @@ if __name__ == '__main__':
 
     try:
         # instantiate our interface
-        factory = Factory()
-        factory.set_solver(args.s)
-        factorySetter = maudeSE.maude.SmtManagerFactorySetter()
-        factorySetter.setSmtManagerFactory(factory)
+        # factory = Factory()
+        # factory.set_solver(args.s)
+        # factorySetter = maudeSE.maude.SmtManagerFactorySetter()
+        # factorySetter.setSmtManagerFactory(factory)
 
         # initialize Maude interpreter
         maudeSE.maude.init(advise=False)
 
         # conv = factory.createConverter()
-        conn = factory.createConnector()
-        conv = conn.get_converter()
+        # conn = factory.createConnector()
+        # conv = conn.get_converter()
 
         # register special hooks
-        searchPathHook = SearchHook(conn, conv, path=True)
-        maudeSE.maude.connectEqHook('SmtSearchPathSymbol', searchPathHook)
+        # searchPathHook = SearchHook(conn, conv, path=True)
+        # maudeSE.maude.connectEqHook('SmtSearchPathSymbol', searchPathHook)
 
         # load preludes
 

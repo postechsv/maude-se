@@ -18,14 +18,26 @@ class Factory(PySmtManagerFactory):
         if solver not in self._map:
             raise Exception("unsupported solver {}".format(solver))
         self.solver = solver
-    
-    def createConnector(self):
+
+    def createConverter(self):
         if self.solver is None:
             raise Exception("fail to create connector")
 
-        cv, cn = self._map[self.solver]
+        cv, _ = self._map[self.solver]
         conv = cv()
-        conn = cn(conv.__disown__())
+    
+        if conv is None:
+            raise Exception("fail to create connector")
+    
+        # must be disown in order to take over the ownership
+        return conv.__disown__()
+    
+    def createConnector(self, conv):
+        if self.solver is None:
+            raise Exception("fail to create connector")
+
+        _, cn = self._map[self.solver]
+        conn = cn(conv)
     
         if conn is None:
             raise Exception("fail to create connector")

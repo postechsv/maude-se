@@ -23,7 +23,8 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 			const char* logic = downLogic(subject->getArgument(2));
 			//   VariableGenerator vg(smtInfo);
 			//   VariableGenerator::Result result = vg.checkDag(d);
-			VariableGenerator *vg = smtManagerFactory->create(smtInfo);
+			// VariableGenerator *vg = smtManagerFactory->create(smtInfo);
+			VariableGenerator* vg = new VariableGenerator(smtInfo, dynamic_cast<MetaLevelSmtOpSymbol*>(const_cast<MetaLevelSmtOpSymbol*>(this)));
 			vg->getConverter()->prepareFor(m);
 			vg->getConnector()->set_logic(logic);
 

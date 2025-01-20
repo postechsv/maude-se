@@ -3,13 +3,16 @@
 #include "smtEngineWrapperEx.hh"
 #include "smtInterface.hh"
 
+class MetaLevelSmtOpSymbol;
+
 class VariableGenerator : public SmtEngineWrapperEx
 {
   NO_COPYING(VariableGenerator);
 
 public:
   VariableGenerator(const SMT_Info &smtInfo);
-  VariableGenerator(const SMT_Info &smtInfo, Connector *conn);
+  // VariableGenerator(const SMT_Info &smtInfo, Connector *conn);
+  VariableGenerator(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
   ~VariableGenerator();
   //
   //	Virtual functions for SMT solving.
@@ -26,13 +29,13 @@ public:
 
 public:
   // legacy
-  DagNode *Term2Dag(SmtTerm *exp, ExtensionSymbol *extensionSymbol, ReverseSmtManagerVariableMap *rsv) noexcept(false) { return nullptr; };
-  SmtTerm *Dag2Term(DagNode *dag, ExtensionSymbol *extensionSymbol) noexcept(false) { return nullptr; };
-  DagNode *generateAssignment(DagNode *dagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
-  DagNode *simplifyDag(DagNode *dagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
-  DagNode *applyTactic(DagNode *dagNode, DagNode *tacticTypeDagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
-  SmtTerm *variableGenerator(DagNode *dag, ExprType exprType) { return nullptr; };
-  Result checkDagContextFree(DagNode *dag, ExtensionSymbol *extensionSymbol) { return SAT_UNKNOWN; };
+  // DagNode *Term2Dag(SmtTerm *exp, ExtensionSymbol *extensionSymbol, ReverseSmtManagerVariableMap *rsv) noexcept(false) { return nullptr; };
+  // SmtTerm *Dag2Term(DagNode *dag, ExtensionSymbol *extensionSymbol) noexcept(false) { return nullptr; };
+  // DagNode *generateAssignment(DagNode *dagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
+  // DagNode *simplifyDag(DagNode *dagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
+  // DagNode *applyTactic(DagNode *dagNode, DagNode *tacticTypeDagNode, ExtensionSymbol *extensionSymbol) { return nullptr; };
+  // SmtTerm *variableGenerator(DagNode *dag, ExprType exprType) { return nullptr; };
+  // Result checkDagContextFree(DagNode *dag, ExtensionSymbol *extensionSymbol) { return SAT_UNKNOWN; };
 
 public:
   inline Converter *getConverter() { return conv; };
@@ -41,7 +44,6 @@ public:
 private:
   Connector *conn;
   Converter *conv;
-  VariableGenerator *vg; // for backward compatibility
 };
 
 #ifdef USE_CVC4
@@ -51,6 +53,7 @@ private:
 #elif defined(USE_Z3)
 #include "z3.hh"
 #elif defined(USE_PYSMT)
+#include "pysmt.hh"
 #else
 
 // dummy

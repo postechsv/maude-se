@@ -1,7 +1,6 @@
 #include "SMT_Info.hh"
 // #include "variableGenerator.hh"
 #include "smtManager.hh"
-#include "smtManagerFactory.hh"
 #include "rewriteSmtSequenceSearch.hh"
 #include "extGlobal.hh"
 
@@ -45,7 +44,7 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         Pattern *smtGoal = new Pattern(smtGoalTerm, false);
                         const SMT_Info &smtInfo = m->getSMT_Info();
                         // SmtManager *vg = new SmtManager(smtInfo);
-                        VariableGenerator* vg = smtManagerFactory->create(smtInfo);
+                        VariableGenerator* vg = new VariableGenerator(smtInfo, dynamic_cast<MetaLevelSmtOpSymbol*>(const_cast<MetaLevelSmtOpSymbol*>(this)));
                         // SmtManagerFactory *factory = new SmtFactory();
                         // WrapperFactory *factory = m->getOwner()->getWrapperFactory();
                         // Converter *conv = factory->createConverter();

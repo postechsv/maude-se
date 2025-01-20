@@ -32,6 +32,7 @@ build_deps() {
   build_buddy
 
   # build smt solver
+  build_z3
   build_yices2
 
   rm -rf "$build_dir"/lib/*.so*
@@ -137,6 +138,24 @@ build_gmp() {
     make check
     make install
   )
+}
+
+build_z3() {
+  progress "Building z3"
+  mkdir -p $build_dir
+  mkdir -p "$third_party"
+  ( progress "Downloading Z3"
+    git clone https://github.com/Z3Prover/z3 "$third_party/z3"
+    
+    cd "$third_party/z3"
+    python scripts/mk_make.py --prefix="$build_dir" --staticlib CPPFLAGS="-O3 -fno-stack-protector" CXXFLAGS="-O3 -fno-stack-protector"
+    cd build
+    make -j4
+    make install
+  )
+
+  rm -rf $build_dir/lib/libz3*.so*
+  rm -rf $build_dir/lib/libz3*.dylib
 }
 
 build_yices2() {
