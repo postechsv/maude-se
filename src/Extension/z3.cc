@@ -17,11 +17,9 @@
 #include "mixfix.hh"
 #include "SMT.hh"
 
-
 // interface class definitions
 #include "symbol.hh"
 #include "term.hh"
-
 
 // core class definitions
 #include "rewritingContext.hh"
@@ -49,8 +47,6 @@
 #include "strategicTask.hh"
 #include "strategicExecution.hh"
 #include "strategyExpression.hh"
-
-
 
 // //      interface class definitions
 // #include "symbol.hh"
@@ -113,198 +109,253 @@
 
 #include "metaLevelSmtOpSymbol.hh"
 
-
-
-Z3Connector::Z3Connector(Z3Converter* conv) 
+Z3Connector::Z3Connector(Z3Converter *conv)
     : pushCount(0), conv(conv), s(new z3::solver(*conv->getContext())) {}
 
 Z3Connector::~Z3Connector() { delete s; }
 
-bool Z3Connector::check_sat(std::vector<SmtTerm*> consts)
+bool Z3Connector::check_sat(std::vector<SmtTerm *> consts)
 {
-    for(auto c : consts){
-        Z3SmtTerm* zt = dynamic_cast<Z3SmtTerm*>(c);
-        s->add(*dynamic_cast<z3::expr*>(zt));
+    for (auto c : consts)
+    {
+        Z3SmtTerm *zt = dynamic_cast<Z3SmtTerm *>(c);
+        s->add(*dynamic_cast<z3::expr *>(zt));
     }
 
-    switch (s->check()) {
-        case z3::unsat:
-            return false;
-        case z3::sat:
-            return true;
-        case z3::unknown:
-            IssueWarning("Z3 reported an error - giving up:");
-            return false;
+    switch (s->check())
+    {
+    case z3::unsat:
+        return false;
+    case z3::sat:
+        return true;
+    case z3::unknown:
+        IssueWarning("Z3 reported an error - giving up:");
+        return false;
     }
     IssueWarning("Z3 not able to determine satisfiability  - giving up.");
     return false;
 }
 
-SmtModel* Z3Connector::get_model(){
+SmtTerm *Z3Connector::add_const(SmtTerm *acc, SmtTerm *cur)
+{
+    if (acc == nullptr)
+    {
+        return cur;
+    }
+    else
+    {
+        Z3SmtTerm *z3Acc = dynamic_cast<Z3SmtTerm *>(acc);
+        Z3SmtTerm *z3Cur = dynamic_cast<Z3SmtTerm *>(cur);
+        return new Z3SmtTerm(z3::expr(*z3Acc->to_z3_expr()) && z3::expr(*z3Cur->to_z3_expr()));
+    }
+}
+
+SmtModel *Z3Connector::get_model()
+{
     return new Z3SmtModel(s->get_model());
 }
 
-void Z3Connector::push() {
+void Z3Connector::push()
+{
     s->push();
     ++pushCount;
 }
 
-void Z3Connector::pop() {
+void Z3Connector::pop()
+{
     Assert(pushCount > 0, "bad pop");
     s->pop();
     --pushCount;
 }
 
-void Z3Connector::reset() {
+void Z3Connector::reset()
+{
     pushCount = 0;
     s->reset();
 }
 
-void Z3Connector::set_logic(const char* logic)
+void Z3Connector::set_logic(const char *logic)
 {
     delete s;
     s = new z3::solver(*conv->getContext(), logic);
 }
 
-Z3Converter::Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol) 
+Z3Converter::Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol *extensionSymbol)
     : NativeSmtConverter(smtInfo, extensionSymbol) {}
 
-z3::expr Z3Converter::dag2termInternal(DagNode* dag)
+z3::expr Z3Converter::dag2termInternal(DagNode *dag)
 {
-    if (SMT_NumberDagNode * n = dynamic_cast<SMT_NumberDagNode *>(dag)) {
+    if (SMT_NumberDagNode *n = dynamic_cast<SMT_NumberDagNode *>(dag))
+    {
         mpq_class value = n->getValue();
         Sort *sort = n->symbol()->getRangeSort();
-        if(smtInfo.getType(sort) == SMT_Info::INTEGER){
+        if (smtInfo.getType(sort) == SMT_Info::INTEGER)
+        {
             return ctx.int_val(value.get_str().c_str());
-        } else if (smtInfo.getType(sort) == SMT_Info::REAL){
+        }
+        else if (smtInfo.getType(sort) == SMT_Info::REAL)
+        {
             return ctx.real_val(value.get_str().c_str());
         }
     }
 
-    if (VariableDagNode* v = dynamic_cast<VariableDagNode*>(dag)){
+    if (VariableDagNode *v = dynamic_cast<VariableDagNode *>(dag))
+    {
         return makeVariable(v);
     }
 
     int nrArgs = dag->symbol()->arity();
 
     // need to be initialized with original ctx.
-    std::vector <z3::expr> exprs;
+    std::vector<z3::expr> exprs;
 
-    FreeDagNode *f = safeCast(FreeDagNode * , dag);
-    for (int i = 0; i < nrArgs; ++i) {
+    FreeDagNode *f = safeCast(FreeDagNode *, dag);
+    for (int i = 0; i < nrArgs; ++i)
+    {
         exprs.push_back(dag2termInternal(f->getArgument(i)));
     }
 
-    if (SMT_Symbol * s = dynamic_cast<SMT_Symbol *>(dag->symbol())) {
-        switch (s->getOperator()) {
-            //
-            //	Boolean stuff.
-            //
-            case SMT_Symbol::CONST_TRUE: {
-                return ctx.bool_val(true);
-            }
-            case SMT_Symbol::CONST_FALSE: {
-                return ctx.bool_val(false);
-            }
-            case SMT_Symbol::NOT: {
-                return !exprs[0];
-            }
-
-            case SMT_Symbol::AND: {
-                return exprs[0] && exprs[1];
-            }
-            case SMT_Symbol::OR: {
-                return exprs[0] || exprs[1];
-            }
-            case SMT_Symbol::XOR: {
-                // there is no xor operation for c++ api
-                return z3::expr(ctx, Z3_mk_xor(ctx, exprs[0], exprs[1]));
-            }
-            case SMT_Symbol::IMPLIES: {
-                return implies(exprs[0], exprs[1]);
-            }
-                //
-                //	Polymorphic Boolean stuff.
-                //
-            case SMT_Symbol::EQUALS: {
-                return exprs[0] == exprs[1];
-            }
-            case SMT_Symbol::NOT_EQUALS: {
-                return exprs[0] != exprs[1];
-            }
-            case SMT_Symbol::ITE: {
-                return ite(exprs[0], exprs[1], exprs[2]);
-            }
-                //
-                //	Integer stuff.
-                //
-            case SMT_Symbol::UNARY_MINUS: {
-                return -exprs[0];
-            }
-            case SMT_Symbol::MINUS: {
-                return exprs[0] - exprs[1];
-            }
-            case SMT_Symbol::PLUS: {
-                return exprs[0] + exprs[1];
-            }
-            case SMT_Symbol::MULT: {
-                return exprs[0] * exprs[1];
-            }
-            case SMT_Symbol::DIV: {
-                return exprs[0] / exprs[1];
-            }
-            case SMT_Symbol::MOD: {
-                return mod(exprs[0], exprs[1]);
-            }
-                //
-                //	Integer tests.
-                //
-
-            case SMT_Symbol::LT: {
-                return exprs[0] < exprs[1];
-            }
-            case SMT_Symbol::LEQ: {
-                return exprs[0] <= exprs[1];
-            }
-            case SMT_Symbol::GT: {
-                return exprs[0] > exprs[1];
-            }
-            case SMT_Symbol::GEQ: {
-                return exprs[0] >= exprs[1];
-            }
-
-            case SMT_Symbol::DIVISIBLE: {
-                //
-                //	Second argument must be a positive constant.
-                //	Typing ensures it is an integer.
-                //
-                DagNode *a = f->getArgument(1);
-                if (SMT_NumberDagNode * n = dynamic_cast<SMT_NumberDagNode *>(a)) {
-                    const mpq_class &rat = n->getValue();
-                    if (rat > 0) {
-                        return exprs[1] / exprs[0];
-                    }
-                }
-                IssueWarning("bad divisor in " << QUOTE(dag) << ".");
-                goto fail;
-            }
-                //
-                //	Stuff that is extra to reals.
-                //
-            case SMT_Symbol::REAL_DIVISION: {
-                return exprs[0] / exprs[1];
-            }
-            case SMT_Symbol::TO_REAL: {
-                return z3::expr(ctx, Z3_mk_int2real(ctx, exprs[0]));
-            }
-            case SMT_Symbol::TO_INTEGER: {
-                return z3::expr(ctx, Z3_mk_real2int(ctx, exprs[0]));
-            }
-            case SMT_Symbol::IS_INTEGER: {
-                return z3::expr(ctx, Z3_mk_is_int(ctx, exprs[0]));
-            }
+    if (SMT_Symbol *s = dynamic_cast<SMT_Symbol *>(dag->symbol()))
+    {
+        switch (s->getOperator())
+        {
+        //
+        //	Boolean stuff.
+        //
+        case SMT_Symbol::CONST_TRUE:
+        {
+            return ctx.bool_val(true);
         }
-    } else {
+        case SMT_Symbol::CONST_FALSE:
+        {
+            return ctx.bool_val(false);
+        }
+        case SMT_Symbol::NOT:
+        {
+            return !exprs[0];
+        }
+
+        case SMT_Symbol::AND:
+        {
+            return exprs[0] && exprs[1];
+        }
+        case SMT_Symbol::OR:
+        {
+            return exprs[0] || exprs[1];
+        }
+        case SMT_Symbol::XOR:
+        {
+            // there is no xor operation for c++ api
+            return z3::expr(ctx, Z3_mk_xor(ctx, exprs[0], exprs[1]));
+        }
+        case SMT_Symbol::IMPLIES:
+        {
+            return implies(exprs[0], exprs[1]);
+        }
+            //
+            //	Polymorphic Boolean stuff.
+            //
+        case SMT_Symbol::EQUALS:
+        {
+            return exprs[0] == exprs[1];
+        }
+        case SMT_Symbol::NOT_EQUALS:
+        {
+            return exprs[0] != exprs[1];
+        }
+        case SMT_Symbol::ITE:
+        {
+            return ite(exprs[0], exprs[1], exprs[2]);
+        }
+            //
+            //	Integer stuff.
+            //
+        case SMT_Symbol::UNARY_MINUS:
+        {
+            return -exprs[0];
+        }
+        case SMT_Symbol::MINUS:
+        {
+            return exprs[0] - exprs[1];
+        }
+        case SMT_Symbol::PLUS:
+        {
+            return exprs[0] + exprs[1];
+        }
+        case SMT_Symbol::MULT:
+        {
+            return exprs[0] * exprs[1];
+        }
+        case SMT_Symbol::DIV:
+        {
+            return exprs[0] / exprs[1];
+        }
+        case SMT_Symbol::MOD:
+        {
+            return mod(exprs[0], exprs[1]);
+        }
+            //
+            //	Integer tests.
+            //
+
+        case SMT_Symbol::LT:
+        {
+            return exprs[0] < exprs[1];
+        }
+        case SMT_Symbol::LEQ:
+        {
+            return exprs[0] <= exprs[1];
+        }
+        case SMT_Symbol::GT:
+        {
+            return exprs[0] > exprs[1];
+        }
+        case SMT_Symbol::GEQ:
+        {
+            return exprs[0] >= exprs[1];
+        }
+
+        case SMT_Symbol::DIVISIBLE:
+        {
+            //
+            //	Second argument must be a positive constant.
+            //	Typing ensures it is an integer.
+            //
+            DagNode *a = f->getArgument(1);
+            if (SMT_NumberDagNode *n = dynamic_cast<SMT_NumberDagNode *>(a))
+            {
+                const mpq_class &rat = n->getValue();
+                if (rat > 0)
+                {
+                    return exprs[1] / exprs[0];
+                }
+            }
+            IssueWarning("bad divisor in " << QUOTE(dag) << ".");
+            goto fail;
+        }
+            //
+            //	Stuff that is extra to reals.
+            //
+        case SMT_Symbol::REAL_DIVISION:
+        {
+            return exprs[0] / exprs[1];
+        }
+        case SMT_Symbol::TO_REAL:
+        {
+            return z3::expr(ctx, Z3_mk_int2real(ctx, exprs[0]));
+        }
+        case SMT_Symbol::TO_INTEGER:
+        {
+            return z3::expr(ctx, Z3_mk_real2int(ctx, exprs[0]));
+        }
+        case SMT_Symbol::IS_INTEGER:
+        {
+            return z3::expr(ctx, Z3_mk_is_int(ctx, exprs[0]));
+        }
+        }
+    }
+    else
+    {
         // if(dag->symbol() == extensionSymbol->forallBoolSymbol ||
         //     dag->symbol() == extensionSymbol->forallIntSymbol ||
         //     dag->symbol() == extensionSymbol->forallRealSymbol){
@@ -318,11 +369,12 @@ z3::expr Z3Converter::dag2termInternal(DagNode* dag)
         // }
     }
     IssueWarning("term " << QUOTE(dag) << " is not a valid SMT term.");
-    fail:
+fail:
     throw std::runtime_error("not a valid term, return original term instead");
 }
 
-z3::expr Z3Converter::variableGenerator(DagNode *dag, ExprType exprType) {
+z3::expr Z3Converter::variableGenerator(DagNode *dag, ExprType exprType)
+{
     hasVariable = true;
 
     // Two dag nodes are the same
@@ -331,8 +383,10 @@ z3::expr Z3Converter::variableGenerator(DagNode *dag, ExprType exprType) {
         return it->second;
 
     // Two dag nodes are different while they both point to the same symbol
-    for(auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++){
-        if(dag->equal(it->first)){
+    for (auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++)
+    {
+        if (dag->equal(it->first))
+        {
             smtManagerVariableMap.insert(SmtManagerVariableMap::value_type(dag, it->second));
             return it->second;
         }
@@ -341,55 +395,66 @@ z3::expr Z3Converter::variableGenerator(DagNode *dag, ExprType exprType) {
     z3::sort type(ctx);
     string name;
 
-    if (VariableDagNode* v = dynamic_cast<VariableDagNode*>(dag)){
+    if (VariableDagNode *v = dynamic_cast<VariableDagNode *>(dag))
+    {
         Symbol *s = v->symbol();
 
         Sort *sort = s->getRangeSort();
         int id = v->id();
         name = Token::name(id);
 
-        switch (smtInfo.getType(sort)) {
-            case SMT_Info::NOT_SMT: {
-                IssueWarning("Variable " << QUOTE(static_cast<DagNode *>(v)) << " does not belong to an SMT sort.");
-                throw std::runtime_error("failed to generate SMT variable");
-            }
-            case SMT_Info::BOOLEAN: {
-                type = ctx.bool_sort();
-                name = name + "_" + string("Boolean");
-                break;
-            }
-            case SMT_Info::INTEGER: {
-                type = ctx.int_sort();
-                name = name + "_" + string("Integer");
-                break;
-            }
-            case SMT_Info::REAL: {
-                type = ctx.real_sort();
-                name = name + "_" + string("Real");
-                break;
-            }
+        switch (smtInfo.getType(sort))
+        {
+        case SMT_Info::NOT_SMT:
+        {
+            IssueWarning("Variable " << QUOTE(static_cast<DagNode *>(v)) << " does not belong to an SMT sort.");
+            throw std::runtime_error("failed to generate SMT variable");
         }
-    } else if(exprType != ExprType::BUILTIN) {
-        switch (exprType){
-            case BOOL:
-                type = ctx.bool_sort();
-                name = "b_";
-                break;
-            case INT:
-                type = ctx.int_sort();
-                name = "i_";
-                break;
-            case REAL:
-                type = ctx.real_sort();
-                name = "r_";
-                break;
+        case SMT_Info::BOOLEAN:
+        {
+            type = ctx.bool_sort();
+            name = name + "_" + string("Boolean");
+            break;
         }
-        const void * address = static_cast<const void*>(dag);
+        case SMT_Info::INTEGER:
+        {
+            type = ctx.int_sort();
+            name = name + "_" + string("Integer");
+            break;
+        }
+        case SMT_Info::REAL:
+        {
+            type = ctx.real_sort();
+            name = name + "_" + string("Real");
+            break;
+        }
+        }
+    }
+    else if (exprType != ExprType::BUILTIN)
+    {
+        switch (exprType)
+        {
+        case BOOL:
+            type = ctx.bool_sort();
+            name = "b_";
+            break;
+        case INT:
+            type = ctx.int_sort();
+            name = "i_";
+            break;
+        case REAL:
+            type = ctx.real_sort();
+            name = "r_";
+            break;
+        }
+        const void *address = static_cast<const void *>(dag);
         std::stringstream ss;
         ss << address;
         string varId = ss.str();
         name += varId;
-    } else {
+    }
+    else
+    {
         throw std::runtime_error("failed to generate SMT variable");
     }
 
@@ -398,7 +463,8 @@ z3::expr Z3Converter::variableGenerator(DagNode *dag, ExprType exprType) {
     return newVar;
 }
 
-z3::expr Z3Converter::makeVariable(VariableDagNode* v){
+z3::expr Z3Converter::makeVariable(VariableDagNode *v)
+{
 
     // Two dag nodes are the same
     auto it = smtManagerVariableMap.find(v);
@@ -406,8 +472,10 @@ z3::expr Z3Converter::makeVariable(VariableDagNode* v){
         return it->second;
 
     // Two dag nodes are different while they both point to the same symbol
-    for(auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++){
-        if(v->equal(it->first)){
+    for (auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++)
+    {
+        if (v->equal(it->first))
+        {
             smtManagerVariableMap.insert(SmtManagerVariableMap::value_type(v, it->second));
             return it->second;
         }
@@ -422,29 +490,35 @@ z3::expr Z3Converter::makeVariable(VariableDagNode* v){
     int id = v->id();
     name = Token::name(id);
 
-    switch (smtInfo.getType(sort)) {
-        case SMT_Info::NOT_SMT: {
-            IssueWarning("Variable " << QUOTE(static_cast<DagNode *>(v)) << " does not belong to an SMT sort.");
-            throw std::runtime_error("failed to generate SMT variable");
-        }
-        case SMT_Info::BOOLEAN: {
-            type = ctx.bool_sort();
-            // name = name + "_" + string("Boolean");
-            break;
-        }
-        case SMT_Info::INTEGER: {
-            type = ctx.int_sort();
-            // name = name + "_" + string("Integer");
-            break;
-        }
-        case SMT_Info::REAL: {
-            type = ctx.real_sort();
-            // name = name + "_" + string("Real");
-            break;
-        }
-        default: {
-            throw std::runtime_error("failed to generate SMT variable");
-        }
+    switch (smtInfo.getType(sort))
+    {
+    case SMT_Info::NOT_SMT:
+    {
+        IssueWarning("Variable " << QUOTE(static_cast<DagNode *>(v)) << " does not belong to an SMT sort.");
+        throw std::runtime_error("failed to generate SMT variable");
+    }
+    case SMT_Info::BOOLEAN:
+    {
+        type = ctx.bool_sort();
+        // name = name + "_" + string("Boolean");
+        break;
+    }
+    case SMT_Info::INTEGER:
+    {
+        type = ctx.int_sort();
+        // name = name + "_" + string("Integer");
+        break;
+    }
+    case SMT_Info::REAL:
+    {
+        type = ctx.real_sort();
+        // name = name + "_" + string("Real");
+        break;
+    }
+    default:
+    {
+        throw std::runtime_error("failed to generate SMT variable");
+    }
     }
 
     z3::expr newVar = ctx.constant(name.c_str(), type);
@@ -452,32 +526,38 @@ z3::expr Z3Converter::makeVariable(VariableDagNode* v){
     return newVar;
 }
 
-DagNode* Z3Converter::term2dagInternal(z3::expr e)
+DagNode *Z3Converter::term2dagInternal(z3::expr e)
 {
-    ReverseSmtManagerVariableMap* rsv = generateReverseVariableMap();
-    if(rsv != nullptr){
+    ReverseSmtManagerVariableMap *rsv = generateReverseVariableMap();
+    if (rsv != nullptr)
+    {
         auto it = rsv->find(e);
-        if (it != rsv->end()) {
+        if (it != rsv->end())
+        {
             return it->second;
         }
     }
 
     // z3::expr e = dynamic_cast<Z3SmtTerm*>(term)->getTerm();
 
-    if (e.is_true()) {
+    if (e.is_true())
+    {
         return extensionSymbol->trueTerm.getDag();
     }
 
-    if (e.is_false()) {
+    if (e.is_false())
+    {
         return extensionSymbol->falseTerm.getDag();
     }
 
-    if (e.is_forall()) {
+    if (e.is_forall())
+    {
         unsigned num = Z3_get_quantifier_num_bound(ctx, e);
-        DagNode* prev = nullptr;
-        for (unsigned i = 0; i < num; i++) {
-            DagNode* q_var = nullptr;
-            Symbol* symbol = nullptr;
+        DagNode *prev = nullptr;
+        for (unsigned i = 0; i < num; i++)
+        {
+            DagNode *q_var = nullptr;
+            Symbol *symbol = nullptr;
 
             unsigned at = (num - i) - 1;
             Z3_sort_kind type = Z3_get_sort_kind(ctx, Z3_get_quantifier_bound_sort(ctx, e, at));
@@ -492,9 +572,9 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
             mpq_init(total);
             mpq_set_str(total, varId.c_str(), 10);
             mpq_canonicalize(total);
-            mpq_class mpNum (total);
+            mpq_class mpNum(total);
 
-            Vector < DagNode * > id_args(1);
+            Vector<DagNode *> id_args(1);
             id_args[0] = new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
             // if (type == Z3_BOOL_SORT){
             //     q_var = extensionSymbol->freshBoolVarSymbol->makeDagNode(id_args);
@@ -509,35 +589,42 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
             //     // raise error
             // }
 
-            if (q_var == nullptr || symbol == nullptr){
+            if (q_var == nullptr || symbol == nullptr)
+            {
                 // raise error
             }
 
-            Vector < DagNode* > arg(2);
+            Vector<DagNode *> arg(2);
             arg[0] = q_var;
 
-            if (prev == nullptr){
+            if (prev == nullptr)
+            {
                 arg[1] = term2dagInternal(e.body());
                 prev = symbol->makeDagNode(arg);
-            } else {
+            }
+            else
+            {
                 arg[1] = prev;
                 prev = symbol->makeDagNode(arg);
             }
         }
 
-        if (prev == nullptr){
+        if (prev == nullptr)
+        {
             // raise error
         }
 
         return prev;
     }
 
-    if (e.is_exists()) {
+    if (e.is_exists())
+    {
         unsigned num = Z3_get_quantifier_num_bound(ctx, e);
-        DagNode* prev = nullptr;
-        for (unsigned i = 0; i < num; i++) {
-            DagNode* q_var = nullptr;
-            Symbol* symbol = nullptr;
+        DagNode *prev = nullptr;
+        for (unsigned i = 0; i < num; i++)
+        {
+            DagNode *q_var = nullptr;
+            Symbol *symbol = nullptr;
 
             unsigned at = (num - i) - 1;
             Z3_sort_kind type = Z3_get_sort_kind(ctx, Z3_get_quantifier_bound_sort(ctx, e, at));
@@ -552,9 +639,9 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
             mpq_init(total);
             mpq_set_str(total, varId.c_str(), 10);
             mpq_canonicalize(total);
-            mpq_class mpNum (total);
+            mpq_class mpNum(total);
 
-            Vector < DagNode * > id_args(1);
+            Vector<DagNode *> id_args(1);
             id_args[0] = new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
             // if (type == Z3_BOOL_SORT){
             //     q_var = extensionSymbol->freshBoolVarSymbol->makeDagNode(id_args);
@@ -569,68 +656,85 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
             //     // raise error
             // }
 
-            if (q_var == nullptr || symbol == nullptr){
+            if (q_var == nullptr || symbol == nullptr)
+            {
                 // raise error
             }
 
-            Vector < DagNode* > arg(2);
+            Vector<DagNode *> arg(2);
             arg[0] = q_var;
 
-            if (prev == nullptr){
+            if (prev == nullptr)
+            {
                 arg[1] = term2dagInternal(e.body());
                 prev = symbol->makeDagNode(arg);
-            } else {
+            }
+            else
+            {
                 arg[1] = prev;
                 prev = symbol->makeDagNode(arg);
             }
         }
 
-        if (prev == nullptr){
+        if (prev == nullptr)
+        {
             // raise error
         }
 
         return prev;
     }
 
-    if (e.is_not()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_not())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
         return extensionSymbol->notBoolSymbol->makeDagNode(arg);
     }
 
-    if (e.is_and()) {
+    if (e.is_and())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::AND);
+        return extensionSymbol->andBoolSymbol->makeDagNode(arg);
     }
 
-    if (e.is_or()) {
+    if (e.is_or())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::OR);
+        return extensionSymbol->orBoolSymbol->makeDagNode(arg);
     }
 
-    if (e.is_xor()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_xor())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
         return extensionSymbol->xorBoolSymbol->makeDagNode(arg);
     }
 
-    if (e.is_implies()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_implies())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
         return extensionSymbol->impliesBoolSymbol->makeDagNode(arg);
     }
 
-    if (e.is_eq()) {
+    if (e.is_eq())
+    {
         z3::expr e1 = e.arg(0);
         z3::expr e2 = e.arg(1);
 
@@ -640,22 +744,28 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
 
         Assert(check_bool_eq && check_int_eq && check_real_eq, "lhs and rhs should have the same type");
 
-        Vector < DagNode * > arg(2);
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e1);
         arg[1] = term2dagInternal(e2);
 
-        if (e1.is_bool()){
+        if (e1.is_bool())
+        {
             return extensionSymbol->eqBoolSymbol->makeDagNode(arg);
-        } else if (e1.is_int()){
+        }
+        else if (e1.is_int())
+        {
             return extensionSymbol->eqIntSymbol->makeDagNode(arg);
-        } else if (e1.is_real()){
+        }
+        else if (e1.is_real())
+        {
             return extensionSymbol->eqRealSymbol->makeDagNode(arg);
         }
     }
 
     // boolean
-    if (e.is_ite()) {
-        Vector < DagNode * > arg(3);
+    if (e.is_ite())
+    {
+        Vector<DagNode *> arg(3);
 
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
@@ -669,66 +779,87 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
     }
 
     // boolean type
-    if (e.is_app() && Z3_OP_LT == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_app() && Z3_OP_LT == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
-        if (e.arg(0).is_int()) {
+        if (e.arg(0).is_int())
+        {
             return extensionSymbol->ltIntSymbol->makeDagNode(arg);
-        } else {
+        }
+        else
+        {
             return extensionSymbol->ltRealSymbol->makeDagNode(arg);
         }
     }
 
-    if (e.is_app() && Z3_OP_LE == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_app() && Z3_OP_LE == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
-        if (e.arg(0).is_int()) {
+        if (e.arg(0).is_int())
+        {
             return extensionSymbol->leqIntSymbol->makeDagNode(arg);
-        } else {
+        }
+        else
+        {
             return extensionSymbol->leqRealSymbol->makeDagNode(arg);
         }
     }
 
-    if (e.is_app() && Z3_OP_GT == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_app() && Z3_OP_GT == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        if (e.arg(0).is_int()) {
+        if (e.arg(0).is_int())
+        {
             return extensionSymbol->gtIntSymbol->makeDagNode(arg);
-        } else {
+        }
+        else
+        {
             return extensionSymbol->gtRealSymbol->makeDagNode(arg);
         }
     }
 
-    if (e.is_app() && Z3_OP_GE == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_app() && Z3_OP_GE == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        if (e.arg(0).is_int()) {
+        if (e.arg(0).is_int())
+        {
             return extensionSymbol->geqIntSymbol->makeDagNode(arg);
-        } else {
+        }
+        else
+        {
             return extensionSymbol->geqRealSymbol->makeDagNode(arg);
         }
     }
 
-    if (e.is_app() && Z3_OP_EQ == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_app() && Z3_OP_EQ == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
-        
-        if (e.arg(0).is_int()) {
+
+        if (e.arg(0).is_int())
+        {
             return extensionSymbol->eqIntSymbol->makeDagNode(arg);
-        } else {
+        }
+        else
+        {
             return extensionSymbol->eqRealSymbol->makeDagNode(arg);
         }
     }
 
-    if (e.is_app() && Z3_OP_IS_INT == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_app() && Z3_OP_IS_INT == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
         return extensionSymbol->isIntegerSymbol->makeDagNode(arg);
@@ -737,147 +868,180 @@ DagNode* Z3Converter::term2dagInternal(z3::expr e)
     /**
      * Integer operation
      */
-    if (e.is_app() && Z3_OP_TO_INT == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_app() && Z3_OP_TO_INT == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
         return extensionSymbol->toIntegerSymbol->makeDagNode(arg);
     }
-    if (e.is_int() && e.is_app() && Z3_OP_UMINUS == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_int() && e.is_app() && Z3_OP_UMINUS == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
         return extensionSymbol->unaryMinusIntSymbol->makeDagNode(arg);
     }
 
-    if (e.is_int() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind()) {
+    if (e.is_int() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++) {
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::INT_ADD);
+        return extensionSymbol->plusIntSymbol->makeDagNode(arg);
     }
 
-    if (e.is_int() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind()) {
+    if (e.is_int() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::INT_SUB);
+        return extensionSymbol->minusIntSymbol->makeDagNode(arg);
     }
 
-    if (e.is_int() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind()) {
+    if (e.is_int() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++) {
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::INT_MUL);
+        return extensionSymbol->mulIntSymbol->makeDagNode(arg);
     }
 
-    if (e.is_int() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_int() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
         return extensionSymbol->divIntSymbol->makeDagNode(arg);
     }
 
-
-    if (e.is_int() && e.is_app() && Z3_OP_MOD == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_int() && e.is_app() && Z3_OP_MOD == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
         return extensionSymbol->modIntSymbol->makeDagNode(arg);
     }
 
-    if (e.is_int() && e.is_numeral()) {
+    if (e.is_int() && e.is_numeral())
+    {
         mpq_t total;
         mpq_init(total);
         mpq_set_str(total, e.get_decimal_string(0).c_str(), 10);
         mpq_canonicalize(total);
-        mpq_class mpNum (total);
+        mpq_class mpNum(total);
         return new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
     }
 
     /**
      * Real type
      */
-    if (e.is_app() && Z3_OP_TO_REAL == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_app() && Z3_OP_TO_REAL == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
         return extensionSymbol->toRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_app() && Z3_OP_UMINUS == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(1);
+    if (e.is_real() && e.is_app() && Z3_OP_UMINUS == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
         return extensionSymbol->unaryMinusRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind()) {
+    if (e.is_real() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::REAL_ADD);
+        return extensionSymbol->plusRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind()) {
+    if (e.is_real() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::REAL_SUB);
+        return extensionSymbol->plusRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind()) {
+    if (e.is_real() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind())
+    {
         unsigned child_num = e.num_args();
-        Vector < DagNode* > arg(child_num);
-        for (unsigned i = 0; i < child_num; i++){
+        Assert(child_num == 2, "wrong children");
+
+        Vector<DagNode *> arg(child_num);
+        for (unsigned i = 0; i < child_num; i++)
+        {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return multipleGen(&arg, 0, MulType::REAL_MUL);
+        return extensionSymbol->mulRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind()) {
-        Vector < DagNode * > arg(2);
+    if (e.is_real() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind())
+    {
+        Vector<DagNode *> arg(2);
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
         return extensionSymbol->divRealSymbol->makeDagNode(arg);
     }
 
-    if (e.is_real() && e.is_numeral()) {
+    if (e.is_real() && e.is_numeral())
+    {
         mpq_t total;
         mpq_init(total);
         string newNum(e.numerator().get_decimal_string(0) + "/" + e.denominator().get_decimal_string(0));
         mpq_set_str(total, newNum.c_str(), 10);
         mpq_canonicalize(total);
-        mpq_class mpNum (total);
+        mpq_class mpNum(total);
         return new SMT_NumberDagNode(extensionSymbol->realSymbol, mpNum);
     }
 
     // for fresh quantified variable
-    if (e.is_var()){
+    if (e.is_var())
+    {
         unsigned index = Z3_get_index_value(ctx, e);
 
         std::stringstream ss;
         ss << index;
         string varId = ss.str();
 
-        Vector< DagNode* > arg(1);
+        Vector<DagNode *> arg(1);
 
         mpq_t total;
         mpq_init(total);
         mpq_set_str(total, varId.c_str(), 10);
         mpq_canonicalize(total);
-        mpq_class mpNum (total);
+        mpq_class mpNum(total);
         arg[0] = new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
 
         // if (e.is_int()){

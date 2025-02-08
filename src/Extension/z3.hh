@@ -39,6 +39,10 @@ public:
     Z3SmtTerm(z3::expr e) : z3::expr(e) {};
     ~Z3SmtTerm(){};
 
+    inline z3::expr* to_z3_expr(){
+        return dynamic_cast<z3::expr*>(this);
+    };
+
 // public:
 //     Z3SmtTerm(z3::expr const & z3term) : z3term(z3term) {};
 //     ~Z3SmtTerm(){};
@@ -180,7 +184,7 @@ public:
     bool check_sat(std::vector<SmtTerm*> consts);
     bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur){ return false; };
     TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict){ return nullptr; };
-    SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur){ return nullptr; };
+    SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur);
     SmtModel* get_model();
     void push();
     void pop();
