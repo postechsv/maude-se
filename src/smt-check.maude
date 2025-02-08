@@ -39,8 +39,8 @@ fmod META-SMT-CHECK is
             op-hook integerSymbol                      (<Integers> : ~> Integer)
             op-hook realSymbol                         (<Reals> : ~> Real)
 
-            --- term-hook trueTerm                         ((true).Boolean)
-            --- term-hook falseTerm                        ((false).Boolean)
+            term-hook trueTerm                         ((true).Boolean)
+            term-hook falseTerm                        ((false).Boolean)
 
             op-hook notBoolSymbol                      (not_ : Boolean ~> Boolean)
             op-hook andBoolSymbol                      (_and_ : Boolean Boolean ~> Boolean)
