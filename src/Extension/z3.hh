@@ -80,6 +80,59 @@ public:
 //     }
 // };
 
+class Z3SmtModel : public SmtModel, public z3::model
+{
+public:
+    Z3SmtModel(z3::model m) : z3::model(m) {
+        // cout << "z3 model gen" << endl;
+        int num = m.num_consts();
+
+        for(int i = 0; i < num; i++){
+            z3::func_decl c = m.get_const_decl(i);
+            z3::expr r = m.get_const_interp(c);
+
+            // cout << "  lhs: " << c() << endl;
+            // cout << "  rhs: " << r << endl;
+
+            Z3SmtTerm* lhs = new Z3SmtTerm(c());
+            Z3SmtTerm* rhs = new Z3SmtTerm(r);
+
+            model.insert(std::pair<Z3SmtTerm*, Z3SmtTerm*>(lhs, rhs));
+        }
+
+    };
+
+    ~Z3SmtModel(){        
+        // cout << "z3 model del" << endl;
+        for (auto &i : model){
+            delete i.first;
+            delete i.second;
+        }
+    };
+
+    SmtTerm* get(SmtTerm* k){
+        if (Z3SmtTerm* t = static_cast<Z3SmtTerm*>(k)){
+            auto it = model.find(t);
+            if (it != model.end()){
+                return it->second;
+            }
+        }
+        return nullptr;
+    };
+
+    std::vector<SmtTerm*>* keys(){
+        std::vector<SmtTerm*>* ks = new std::vector<SmtTerm*>();
+        for (auto &i : model){
+            ks->push_back(i.first);
+        }
+        return ks;
+    };
+
+private:
+    // std::vector<PyObject*> refs;
+    std::map<Z3SmtTerm*, Z3SmtTerm*> model;
+};
+
 struct cmpExprById{
     bool operator( )(const z3::expr &lhs, const z3::expr &rhs) const {
         return lhs.id() < rhs.id();
@@ -128,7 +181,7 @@ public:
     bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur){ return false; };
     TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict){ return nullptr; };
     SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur){ return nullptr; };
-    SmtModel* get_model(){ return nullptr; };
+    SmtModel* get_model();
     void push();
     void pop();
 

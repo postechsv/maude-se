@@ -140,6 +140,10 @@ bool Z3Connector::check_sat(std::vector<SmtTerm*> consts)
     return false;
 }
 
+SmtModel* Z3Connector::get_model(){
+    return new Z3SmtModel(s->get_model());
+}
+
 void Z3Connector::push() {
     s->push();
     ++pushCount;
