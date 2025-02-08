@@ -1,3 +1,5 @@
+import maudeSE.maude
+
 from .connector import *
 from .converter import *
 from maudeSE.maude import PySmtManagerFactory
@@ -11,32 +13,31 @@ class Factory(PySmtManagerFactory):
             "cvc5"     : (Cvc5Converter, Cvc5Connector),
         }
 
-        self.solver = None
-
-    def set_solver(self, solver: str):
+    def check_solver(self, solver: str):
         # deprecate ...
         if solver not in self._map:
             raise Exception("unsupported solver {}".format(solver))
-        self.solver = solver
 
     def createConverter(self):
-        if self.solver is None:
-            raise Exception("fail to create connector")
+        solver = maudeSE.maude.cvar.smtSolver
 
-        cv, _ = self._map[self.solver]
+        self.check_solver(solver)
+ 
+        cv, _ = self._map[solver]
         conv = cv()
     
         if conv is None:
-            raise Exception("fail to create connector")
+            raise Exception("fail to create converter")
     
         # must be disown in order to take over the ownership
         return conv.__disown__()
     
     def createConnector(self, conv):
-        if self.solver is None:
-            raise Exception("fail to create connector")
+        solver = maudeSE.maude.cvar.smtSolver
 
-        _, cn = self._map[self.solver]
+        self.check_solver(solver)
+
+        _, cn = self._map[solver]
         conn = cn(conv)
     
         if conn is None:

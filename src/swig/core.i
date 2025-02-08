@@ -5,6 +5,8 @@
 #include "extGlobal.hh"
 %}
 
+%include "extGlobal.hh"
+
 %include std_vector.i
 %include std_pair.i
 %include std_map.i
@@ -211,9 +213,10 @@ public:
 %rename(createConnector) py_createConnector;
 
 %feature("director") PySmtManagerFactory;
-class PySmtManagerFactory
+class PySmtManagerFactory : public SmtManagerFactory
 {
 public:
+  %newobject py_createConverter;
   %newobject py_createConnector;
 
   virtual ~PySmtManagerFactory() {};
@@ -221,8 +224,3 @@ public:
   virtual PyConverter* py_createConverter() = 0;
 };
 
-class SmtManagerFactorySetter
-{
-public:
-    virtual void set() = 0;
-};

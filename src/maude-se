@@ -2,7 +2,7 @@
 import os
 import argparse
 import maudeSE.maude
-# from maudeSE.factory import *
+from maudeSE.factory import Factory
 # from maudeSE.hook.check import *
 # from maudeSE.hook.search import *
 
@@ -27,6 +27,9 @@ if __name__ == '__main__':
         # factory.set_solver(args.s)
         # factorySetter = maudeSE.maude.SmtManagerFactorySetter()
         # factorySetter.setSmtManagerFactory(factory)
+        maudeSE.maude.setSmtSolver(args.s)
+        # maudeSE.maude.cvar.smtManagerFactory = Factory()
+        maudeSE.maude.setSmtManagerFactory(Factory().__disown__())
 
         # initialize Maude interpreter
         maudeSE.maude.init(advise=False)
@@ -55,4 +58,6 @@ if __name__ == '__main__':
             maudeSE.maude.load('maude-se-meta.maude')
 
     except Exception as err:
+        import traceback
+        print(traceback.print_exc())
         print("error: {}".format(err))

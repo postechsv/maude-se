@@ -7,7 +7,6 @@
 #include "Python.h"
 #include "easyTerm.hh"
 #include "smtManager.hh"
-#include "extGlobal.hh"
 
 class PyDataConatiner {
     PyObject* data;
@@ -225,7 +224,6 @@ public:
     virtual PyConverter* py_createConverter() = 0;
 
 public:
-    void init(){};
     Connector* createConnector(Converter* conv){
         PyConverter* pyconv = dynamic_cast<PyConverter*>(conv);
         return py_createConnector(pyconv); 
@@ -233,20 +231,14 @@ public:
     Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){ return py_createConverter(); };
 };
 
-// class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
-// {
-// public:
-//     void set(){
-//         if (smtManagerFactory) delete smtManagerFactory;
-//         smtManagerFactory = new PySmtManagerFactory();
-//     };
-// };
-
-class SmtManagerFactorySetter
+#ifdef USE_PYSMT
+class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
-    virtual void set() = 0;
+    void set(){};
 };
+#else
+#endif
 
 
 #endif
