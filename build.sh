@@ -78,7 +78,7 @@ build_maude_lib() {
             -Dwith-simaude=disabled \
             -Dc_args='-mno-thumb' \
             -Dc_link_args="-Wl,--export-dynamic" \
-            -Dcpp_link_args="-mmacosx-version-min=14.0 -Wl,-x -u ___gmpz_get_d -L"$build_dir"/lib -lgmp"
+            -Dcpp_link_args="-mmacosx-version-min=15.0 -Wl,-x -u ___gmpz_get_d -L"$build_dir"/lib -lgmp"
     else
       meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
             -Dextra-lib-dirs="$build_dir/lib" \
