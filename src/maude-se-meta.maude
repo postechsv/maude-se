@@ -107,6 +107,7 @@ omod MAUDE-SE-META-INTERPRETER is
   var TR : Trace2 .
   var SRES : SmtResult2 .
   var SR : SearchResult? .
+  var RL-ATTRS : AttrSet .
 
   op o : -> Oid .
 
@@ -272,7 +273,7 @@ omod MAUDE-SE-META-INTERPRETER is
 
   op smtResult2str : Module Nat SmtResult2? -> String .
   eq smtResult2str(MO, C, failure) = "No more solutions.\n\n" .
-  ceq smtResult2str(MO, C, {T, SUBS, T', SUBS', N}) = printTokens(
+  ceq smtResult2str(MO, C, {T, SUBS, T', SUBS', N', N}) = printTokens(
     'Solution qid(string(C, 10) + " ") '\s '`( 'state qid(" " + string(N, 10)) '`) '\n
     'Symbolic 'state: metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '\n
     'Constraint: metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '\n 
@@ -297,13 +298,13 @@ omod MAUDE-SE-META-INTERPRETER is
 ---------------------------------------
 
   rl < O : MaudeSE | state : 6, mi : MI, mn : MN, search-info : (NT, MT, T, T', T''), logic : LO, search-fold : B > processInput(O, 'show`smt-path`concrete_.['bubble[PT]])
-  => < O : MaudeSE | state : 30 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = upTerm((true).Bool), '=>*, getNum(MT), getNum(PT), LO, B))) .
+  => < O : MaudeSE | state : 30 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(getNum(PT)), LO, B))) .
 
   rl < O : MaudeSE | state : 30, mi : MI, mn : MN > reducedTerm(O, MI, C, T, TY)
   => < O : MaudeSE | state : 2 > getLine(stdin, O, ctrace2str(upModule(MN, false), downTerm(T, (failure).Trace2Result?)) + "\n" + "MaudeSE> ") .
 
   rl < O : MaudeSE | state : 6, mi : MI, mn : MN, search-info : (NT, MT, T, T', T''), logic : LO, search-fold : B > processInput(O, 'show`smt-path`symbolic_.['bubble[PT]])
-  => < O : MaudeSE | state : 35 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = upTerm((true).Bool), '=>*, getNum(MT), getNum(PT), LO, B))) .
+  => < O : MaudeSE | state : 35 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(getNum(PT)), LO, B))) .
 
   rl < O : MaudeSE | state : 35, mi : MI, mn : MN > reducedTerm(O, MI, C, T, TY)
   => < O : MaudeSE | state : 2 > getLine(stdin, O, trace2str(upModule(MN, false), downTerm(T, (failure).Trace2Result?)) + "\n" + "MaudeSE> ") .
@@ -337,8 +338,8 @@ omod MAUDE-SE-META-INTERPRETER is
   op printRule : Module Rule -> QidList .
   --- eq printRule(MO, rl T => T' [label(QI)] .) = 'rl '`[ QI '`] ': metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '=> metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) .
   --- eq printRule(MO, crl T => T' if CD [label(QI)] .) = 'crl '`[ QI '`] ': metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '=> metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) 'if printCond(MO, CD) .
-  eq printRule(MO, rl T => T' [label(QI)] .) = QI .
-  eq printRule(MO, crl T => T' if CD [label(QI)] .) = QI .
+  eq printRule(MO, rl T => T' [RL-ATTRS label(QI)] .) = QI .
+  eq printRule(MO, crl T => T' if CD [RL-ATTRS label(QI)] .) = QI .
 
   op printCond : Module Condition -> QidList .
   eq printCond(MO, nil) = nil .

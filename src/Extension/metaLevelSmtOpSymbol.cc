@@ -278,6 +278,26 @@ MetaLevelSmtOpSymbol::term2RewritingContext(Term* term, RewritingContext& contex
   return context.makeSubcontext(d, UserLevelRewritingContext::META_EVAL);
 }
 
+DagNode* MetaLevelSmtOpSymbol::upSmtAssn(MixfixModule* m, std::map<DagNode *, DagNode *> *model, PointerMap &qidMap, PointerMap &dagNodeMap){
+  DagNode* smtAssn = emptySubstitutionSymbol->makeDagNode();
+  for(auto &ij : *model){
+    // cout << ij.first << " --> " << ij.second << endl;
+    Vector<DagNode*> assnArgs(2);
+    assnArgs[0] = metaLevel->upDagNode(ij.first, m, qidMap, dagNodeMap);
+    assnArgs[1] = metaLevel->upDagNode(ij.second, m, qidMap, dagNodeMap);
+    DagNode* assn = assignmentSymbol->makeDagNode(assnArgs);
+
+    Vector<DagNode*> tmp(2);
+    tmp[0] = assn;
+    tmp[1] = smtAssn;
+
+    smtAssn = substitutionSymbol->makeDagNode(tmp);
+  }
+
+  delete model;
+  return smtAssn;
+}
+
 DagNode*
 MetaLevelSmtOpSymbol::upSmtResult(
     DagNode* state,
@@ -286,6 +306,7 @@ MetaLevelSmtOpSymbol::upSmtResult(
     const NatSet& smtVariables,
     DagNode* constraint,
     const mpz_class& variableNumber,
+    int stateNr,
     MixfixModule* m,
     std::map<DagNode*, DagNode*>* model)
 {
@@ -298,29 +319,14 @@ MetaLevelSmtOpSymbol::upSmtResult(
 
   FreeDagNode* r = static_cast<FreeDagNode*>(tmp);
 
-  DagNode* lastElem = emptySubstitutionSymbol->makeDagNode();
+  // DagNode* lastElem = 
+  // emptySubstitutionSymbol->makeDagNode();
 
   PointerMap qidMap;
   PointerMap dagNodeMap;
 
   // TODO: this is inefficent because we don't use the pointer map of upSmtResult.
   DagNode* matching = metaLevel->upSubstitution(substitution, variableInfo, m, qidMap, dagNodeMap);
-
-  for(auto &ij : *model){
-    // cout << ij.first << " --> " << ij.second << endl;
-    Vector<DagNode*> assnArgs(2);
-    assnArgs[0] = metaLevel->upDagNode(ij.first, m, qidMap, dagNodeMap);
-    assnArgs[1] = metaLevel->upDagNode(ij.second, m, qidMap, dagNodeMap);
-    DagNode* assn = assignmentSymbol->makeDagNode(assnArgs);
-
-    Vector<DagNode*> tmp(2);
-    tmp[0] = assn;
-    tmp[1] = lastElem;
-
-    lastElem = substitutionSymbol->makeDagNode(tmp);
-  }
-
-  delete model;
   
   if (FreeDagNode* stateDag = static_cast<FreeDagNode*>(r->getArgument(0))){
     Vector<DagNode*> args(5);
@@ -329,8 +335,9 @@ MetaLevelSmtOpSymbol::upSmtResult(
     // args[1] = r->getArgument(1);
     args[1] = matching;
     args[2] = r->getArgument(2);
-    args[3] = lastElem;
+    args[3] = upSmtAssn(m, model, qidMap, dagNodeMap);
     args[4] = r->getArgument(3);
+    args[5] = metaLevel->succSymbol->makeNatDag(stateNr);
     return smtResultSymbol->makeDagNode(args);
   } 
   
@@ -347,4 +354,85 @@ MetaLevelSmtOpSymbol::downLogic(DagNode* arg) const
       return Token::name(qid);
     }
   return nullptr;
+}
+
+DagNode*
+MetaLevelSmtOpSymbol::upTrace(RewriteSmtSequenceSearch& state, MixfixModule* m, int stateNr)
+{
+  if (stateNr < 0){
+    stateNr = state.getStateNr();
+  }
+
+  Vector<int> steps;
+  for (int i = stateNr; i != 0; i = state.getStateParent(i))
+    steps.append(i);
+
+  int nrSteps = steps.size();   
+  if (nrSteps == 0)
+    return nilTraceSymbol->makeDagNode();
+
+  Vector<DagNode*> args(nrSteps + 1);
+  PointerMap qidMap;
+  PointerMap dagNodeMap;
+  int j = 0;
+  for (int i = nrSteps - 1; i >= 0; --i, ++j)
+    args[j] = upTraceStep(state, steps[i], m, qidMap, dagNodeMap);
+  
+  args[nrSteps] = upTraceStepFinal(state, stateNr, m, qidMap, dagNodeMap); // this is non-standard
+
+  Vector<DagNode*> r_args(2);
+  r_args[0] = (nrSteps == 1) ? args[0] : traceSymbol->makeDagNode(args);
+  // r_args[1] = metaLevel->upSubstitution(*state.getSubstitution(), *state.getVariableInfo(), m, qidMap, dagNodeMap);
+  r_args[1] = upSmtAssn(m, state.getStateModel(stateNr), qidMap, dagNodeMap);
+
+  return traceResultSymbol->makeDagNode(r_args);
+}
+
+DagNode*
+MetaLevelSmtOpSymbol::upTraceStep(RewriteSmtSequenceSearch& state,
+		       int stateNr,
+		       MixfixModule* m,
+		       PointerMap& qidMap,
+		       PointerMap& dagNodeMap)
+{
+  static Vector<DagNode*> args(4);
+  int parentNr = state.getStateParent(stateNr);
+  DagNode* dagNode = state.getStateDag(parentNr);
+  DagNode* constDagNode = state.getStateConstDag(parentNr);
+  
+  // remove top state constructor
+  FreeDagNode *d = safeCast(FreeDagNode *, dagNode);
+
+  args[0] = metaLevel->upDagNode(d->getArgument(0), m, qidMap, dagNodeMap);
+  args[1] = metaLevel->upDagNode(constDagNode, m, qidMap, dagNodeMap);
+  args[2] = metaLevel->upType(dagNode->getSort(), qidMap);
+  args[3] = metaLevel->upRl(state.getStateRule(stateNr), m, qidMap);
+  return traceStepSymbol->makeDagNode(args);
+}
+
+// this is non-standard
+DagNode*
+MetaLevelSmtOpSymbol::upTraceStepFinal(RewriteSmtSequenceSearch& state,
+		       int stateNr,
+		       MixfixModule* m,
+		       PointerMap& qidMap,
+		       PointerMap& dagNodeMap)
+{
+  static Vector<DagNode*> args(3);
+  DagNode* dagNode = state.getStateDag(stateNr);
+  DagNode* constDagNode = state.getStateConstDag(stateNr);
+  
+  // remove top state constructor
+  FreeDagNode *d = safeCast(FreeDagNode *, dagNode);
+
+  args[0] = metaLevel->upDagNode(d->getArgument(0), m, qidMap, dagNodeMap);
+  args[1] = metaLevel->upDagNode(constDagNode, m, qidMap, dagNodeMap);
+  args[2] = metaLevel->upType(dagNode->getSort(), qidMap);
+  return traceStepNoRlSymbol->makeDagNode(args);
+}
+
+DagNode*
+MetaLevelSmtOpSymbol::upFailureTrace()
+{
+  return failureTraceSymbol->makeDagNode();
 }

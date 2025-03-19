@@ -6,3 +6,4 @@
 
 MACRO(metaSmtCheck, 4)
 MACRO(metaSmtSearch, 12)
+MACRO(metaSmtSearchPath, 12)

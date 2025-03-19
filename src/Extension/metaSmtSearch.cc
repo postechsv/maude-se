@@ -18,13 +18,13 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
     if (metaLevel->isNat(metaVarNumber) &&
         metaLevel->downSearchType(subject->getArgument(5), searchType) &&
         searchType != SequenceSearch::NORMAL_FORM &&
-        metaLevel->downBound(subject->getArgument(7), maxDepth) && 
+        metaLevel->downBound(subject->getArgument(7), maxDepth) &&
         metaLevel->downBool(subject->getArgument(10), fold) && metaLevel->downBool(subject->getArgument(11), merge))
     {
         Term *startTerm;
         Term *target;
         Term *smtGoalTerm = metaLevel->downTerm(subject->getArgument(4), m);
-        const char* logic = downLogic(subject->getArgument(9));
+        const char *logic = downLogic(subject->getArgument(9));
         if (metaLevel->downTermPair(subject->getArgument(1), subject->getArgument(2), startTerm, target, m))
         {
             if (m->findSMT_Symbol(target) == 0) // target shouldn't have SMT operators
@@ -44,7 +44,7 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         Pattern *smtGoal = new Pattern(smtGoalTerm, false);
                         const SMT_Info &smtInfo = m->getSMT_Info();
                         // SmtManager *vg = new SmtManager(smtInfo);
-                        VariableGenerator* vg = new VariableGenerator(smtInfo, dynamic_cast<MetaLevelSmtOpSymbol*>(const_cast<MetaLevelSmtOpSymbol*>(this)));
+                        VariableGenerator *vg = new VariableGenerator(smtInfo, dynamic_cast<MetaLevelSmtOpSymbol *>(const_cast<MetaLevelSmtOpSymbol *>(this)));
                         // SmtManagerFactory *factory = new SmtFactory();
                         // WrapperFactory *factory = m->getOwner()->getWrapperFactory();
                         // Converter *conv = factory->createConverter();
@@ -119,19 +119,71 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                 }
                 m->insert(subject, smtState, solutionNr);
                 result = upSmtResult(smtState->getStateDag(smtState->getStateNr()),
-                                                *(smtState->getSubstitution()),
-                                                // *smtState->getVariableInfo(smtState->getStateNr()),
-                                                *(smtState->getVariableInfo()),
-                                                smtState->getSMT_VarIndices(),
-                                                smtState->getFinalConstraint(),
-                                                smtState->getMaxVariableNumber(),
-                                                m, 
-                                                smtState->getStateModel(smtState->getStateNr()) // should delete this
-                                                );
+                                     *(smtState->getSubstitution()),
+                                     // *smtState->getVariableInfo(smtState->getStateNr()),
+                                     *(smtState->getVariableInfo()),
+                                     smtState->getSMT_VarIndices(),
+                                     smtState->getFinalConstraint(),
+                                     smtState->getMaxVariableNumber(),
+                                     smtState->getStateNr(),
+                                     m,
+                                     smtState->getStateModel(smtState->getStateNr()) // should delete this
+                );
             fail:
                 (void)m->unprotect();
                 return context.builtInReplace(subject, result);
             }
+        }
+    }
+    return false;
+}
+
+
+bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingContext &context)
+{
+    //
+    // op metaSmtSearchPath : Module Term Term Condition Term Qid Nat Bound Nat Qid Bool Bool -> Trace2Result?
+    //
+    if (MetaModule *m = metaLevel->downModule(subject->getArgument(0)))
+    {
+        Int64 solutionNr;
+        if (metaLevel->downSaturate64(subject->getArgument(8), solutionNr) &&
+            solutionNr >= 0)
+        {
+            RewriteSmtSequenceSearch *smtState;
+            Int64 lastSolutionNr;
+            if (m->getCachedStateObject(subject, context, solutionNr, smtState, lastSolutionNr))
+                m->protect(); // Use cached state
+            else if ((smtState = make_RewriteSmtSequenceSearch(m, subject, context)))
+                lastSolutionNr = -1;
+            else
+                return false;
+
+            DagNode *result;
+            while (lastSolutionNr < solutionNr)
+            {
+                bool success = smtState->findNextMatch();
+                smtState->transferCountTo(context);
+                Verbose("metaSearchPath: visited " << smtState->getNrStates() << " states.");
+                if (!success)
+                {
+                    delete smtState;
+                    result = upFailureTrace();
+                    goto fail;
+                }
+                ++lastSolutionNr;
+            }
+            m->insert(subject, smtState, solutionNr);
+            result = upTrace(*smtState, m);
+            // Int64 stateNr;
+            // if (metaLevel->downSaturate64(subject->getArgument(12), stateNr) && 
+            //     stateNr >= 0 && stateNr < smtState->getNrStates()){
+            //     result = upTrace(*smtState, m, stateNr);
+            // }
+
+        fail:
+            (void)m->unprotect();
+            return context.builtInReplace(subject, result);
         }
     }
     return false;

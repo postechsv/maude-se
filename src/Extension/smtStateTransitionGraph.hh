@@ -36,6 +36,7 @@ public:
   int getNrStates() const;
   int getNextState(int stateNr, int index);
   DagNode *getStateDag(int stateNr);
+  DagNode *getStateConstDag(int stateNr);
   SmtTerm* getStateConst(int stateNr);
   std::map<DagNode*, DagNode*>* getStateModel(int stateNr);
   int getStateDepth(int stateNr) const;
@@ -189,6 +190,17 @@ SmtStateTransitionGraph::getStateConst(int stateNr)
   }
   ConstrainedTerm *ct = consTermSeen[state->hashConsIndex][state->constTermIndex];
   return ct->constraint;
+}
+
+inline DagNode *
+SmtStateTransitionGraph::getStateConstDag(int stateNr)
+{
+  // TODO
+  SmtTerm* constTerm = getStateConst(stateNr);
+  DagNode* constDag = conv->term2dag(constTerm);
+
+  constDag->computeTrueSort(*initial);
+  return constDag;
 }
 
 // inline VariableInfo*

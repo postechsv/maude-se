@@ -390,7 +390,7 @@ fmod META-SMT-SEARCH2 is
   sorts SmtResult2 SmtResult2? .
   subsort SmtResult2 < SmtResult2? .
 
-  op {_,_,_,_,_} : Term Substitution Term Substitution Nat -> SmtResult2 [ctor] . 
+  op {_,_,_,_,_,_} : Term Substitution Term Substitution Nat Nat -> SmtResult2 [ctor] . --- last one is the state number
   op failure : -> SmtResult2? [ctor] .
 
   op  metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> SmtResult2? .
@@ -410,7 +410,7 @@ fmod META-SMT-SEARCH2 is
   op metaSmtSearch : Module Term Term Condition Term Qid Nat Bound Nat Qid Bool Bool ~> SmtResult2?
     [special (id-hook MetaLevelSmtOpSymbol     (metaSmtSearch)
               op-hook smtFailureSymbol         (failure : ~> SmtResult2?)
-              op-hook smtResultSymbol          ({_,_,_,_,_} : Term Substitution Term Substitution Nat ~> SmtResult2)
+              op-hook smtResultSymbol          ({_,_,_,_,_,_} : Term Substitution Term Substitution Nat Nat ~> SmtResult2)
               op-hook assignmentSymbol         (_<-_ : Qid Term ~> Assignment)
               op-hook substitutionSymbol       (_;_ : Substitution Substitution ~> Substitution)
               op-hook emptySubstitutionSymbol  (none : ~> Substitution)
@@ -477,29 +477,33 @@ fmod META-SMT-SEARCH2 is
   op {_,_} : Trace2 Substitution -> Trace2Result [ctor] .
   op failure : -> Trace2Result? [ctor] .
 
-  op  metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool -> Trace2Result? .
+  op  metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> Trace2Result? .
   ceq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
-    = metaSmtSearchPathInternal(transform(M, VN + N'), makeConstTerm(AT), makeConstTerm(AT'), CND, CND', STEP, B, N, LOGIC, FOLD, MERGE) 
+    = metaSmtSearchPath(transform(M, VN + N'), makeConstTerm(AT), makeConstTerm(AT'), CND, conj((CD, CD', SMT)), STEP, 0, B, N, LOGIC, FOLD, MERGE) --- testing
   if {AT, CD, VN} := abst(M, T, 0) /\ {AT', CD', N'} := abst(M, T', VN)
   /\ {CND, CND'} := sep(COND) /\ SMT := $getSmt(CND') .
 
-  op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid -> Trace2Result? .
+  op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid ~> Trace2Result? .
   eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC)
    = metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, false, false) .
 
-  op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool -> Trace2Result? .
+  op metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool ~> Trace2Result? .
   eq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD)
    = metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, false) .
 
-  op metaSmtSearchPathInternal : Module Term Term Condition Condition Qid Bound Nat Qid Bool Bool -> Trace2Result?
-    [special (id-hook SpecialHubSymbol      (SmtSearchPathSymbol)
-              op-hook traceStepSymbol       ({_||_,_,_} : Term Term Type Rule ~> TraceStep2)
-              op-hook traceStepRootSymbol   ({_||_,_} : Term Term Type ~> TraceStep2)
-              op-hook nilTraceSymbol        (nil : ~> Trace2)
-              op-hook traceSymbol           (__ : Trace2 Trace2 ~> Trace2)
-              op-hook failureSymbol         (failure : ~> Trace2Result?)
-              op-hook traceResultSymbol     ({_,_} : Trace2 Substitution ~> Trace2Result)
-              op-hook getOrigRuleSymbol     (getOrigRule : Rule ~> Rule)
-              op-hook getOrigTermSymbol     (getOrigTerm : Term ~> Term))] .
+  op metaSmtSearchPath : Module Term Term Condition Term Qid Nat Bound Nat Qid Bool Bool ~> Trace2Result?
+    [special (id-hook MetaLevelSmtOpSymbol  (metaSmtSearchPath)
+              op-hook traceStepSymbol           ({_||_,_,_} : Term Term Type Rule ~> TraceStep2)
+              op-hook traceStepNoRlSymbol       ({_||_,_} : Term Term Type ~> TraceStep2)
+              op-hook nilTraceSymbol            (nil : ~> Trace2)
+              op-hook traceSymbol               (__ : Trace2 Trace2 ~> Trace2)
+              op-hook failureTraceSymbol        (failure : ~> Trace2Result?)
+              op-hook traceResultSymbol         ({_,_} : Trace2 Substitution ~> Trace2Result)
+
+              op-hook assignmentSymbol          (_<-_ : Qid Term ~> Assignment)
+              op-hook substitutionSymbol        (_;_ : Substitution Substitution ~> Substitution)
+              op-hook emptySubstitutionSymbol   (none : ~> Substitution)
+              op-hook shareWith                 (metaReduce : Module Term ~> ResultPair)
+              )] .
 
 endfm
