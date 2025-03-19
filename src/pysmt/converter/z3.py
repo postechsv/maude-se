@@ -212,39 +212,43 @@ class Z3Converter(PyConverter):
 
         if z3.is_gt(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} > {r}"
+            return f"({l} > {r})"
 
         if z3.is_ge(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} >= {r}"
+            return f"({l} >= {r})"
 
         if z3.is_lt(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} < {r}"
+            return f"({l} < {r})"
 
         if z3.is_le(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} <= {r}"
+            return f"({l} <= {r})"
         
         if z3.is_add(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} + {r}"
+            return f"({l} + {r})"
 
         if z3.is_sub(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} - {r}"
+            return f"({l} - {r})"
 
         if z3.is_mul(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
-            return f"{l} * {r}"
+            return f"({l} * {r})"
 
         if z3.is_div(term):
             l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1))
 
             if term.is_int():
-                return f"{l} div {r}"
+                return f"({l} div {r})"
             else:
-                return f"{l} / {r}"
+                return f"({l} / {r})"
+            
+        if z3.is_app_of(term, z3.Z3_OP_ITE):
+            c, l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1)), self._term2dag(term.arg(2))
+            return f"({c} ? {l} : {r})"
         
         # variable or function
         if isinstance(term, z3.z3.FuncDeclRef):

@@ -266,67 +266,47 @@ class YicesConverter(PyConverter):
             if Terms.type_of_term(ts[0]) == real_type or Terms.type_of_term(ts[1]) == real_type:
                 l = self._term2dag((ts[0], real_type))
                 r = self._term2dag((ts[1], real_type))
-                return f"{l} === {r}"
+                return f"({l} === {r})"
             elif Terms.type_of_term(ts[0]) == int_type and Terms.type_of_term(ts[1]) == int_type:
                 l = self._term2dag((ts[0], int_type))
                 r = self._term2dag((ts[1], int_type))
-                return f"{l} === {r}"
+                return f"({l} === {r})"
             else:
                 l = self._term2dag((ts[0], bool_type))
                 r = self._term2dag((ts[1], bool_type))
-                return f"{l} === {r}"
+                return f"({l} === {r})"
 
-        # case YICES_ITE_TERM: {
-        #     Vector < DagNode * > arg(3);
-        #     yices_term child1{};
-        #     yices_term child2{};
-        #     yices_term child3{};
+        if constructor == YICES_ITE_TERM:
+            ts = [yices_term_child(t, 0), yices_term_child(t, 1), yices_term_child(t, 2)]
 
-        #     child1.term = yices_term_child(e.term, 0);
-        #     child2.term = yices_term_child(e.term, 1);
-        #     child3.term = yices_term_child(e.term, 2);
+            if Terms.type_of_term(ts[1]) == int_type:
+                c = self._term2dag((ts[0], bool_type))
+                l = self._term2dag((ts[1], int_type))
+                r = self._term2dag((ts[2], int_type))
+                return f"({c} ? {l} : {r})"
 
-        #     child1.type = yices_bool_type();
+            elif Terms.type_of_term(ts[1]) == real_type:
+                c = self._term2dag((ts[0], bool_type))
+                l = self._term2dag((ts[1], real_type))
+                r = self._term2dag((ts[2], real_type))
+                return f"({c} ? {l} : {r})"
 
-        #     if (yices_type_of_term(child2.term) == yices_int_type()){
-        #         child2.type = yices_int_type();
-        #         child3.type = yices_int_type();
+            else:
+                c = self._term2dag((ts[0], bool_type))
+                l = self._term2dag((ts[1], bool_type))
+                r = self._term2dag((ts[2], bool_type))
+                return f"({c} ? {l} : {r})"
 
-        #         arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-        #         arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-        #         arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-        #         return extensionSymbol->iteIntSymbol->makeDagNode(arg);
-        #     } else if (yices_type_of_term(child2.term) == yices_real_type()){
-        #         child2.type = yices_real_type();
-        #         child3.type = yices_real_type();
-
-        #         arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-        #         arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-        #         arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-        #         return extensionSymbol->iteRealSymbol->makeDagNode(arg);
-        #     } else {
-        #         child2.type = yices_bool_type();
-        #         child3.type = yices_bool_type();
-
-        #         arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-        #         arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-        #         arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-        #         return extensionSymbol->iteBoolSymbol->makeDagNode(arg);
-        #     }
-        # }
         if constructor == YICES_ARITH_GE_ATOM:
             ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
             if Terms.type_of_term(ts[0]) == real_type or Terms.type_of_term(ts[1]) == real_type:
                 l = self._term2dag((ts[0], real_type))
                 r = self._term2dag((ts[1], real_type))
-                return f"{l} >= {r}"
+                return f"({l} >= {r})"
             else:
                 l = self._term2dag((ts[0], int_type))
                 r = self._term2dag((ts[1], int_type))
-                return f"{l} >= {r}"
+                return f"({l} >= {r})"
         
 
         # case YICES_IS_INT_ATOM: {
@@ -344,14 +324,14 @@ class YicesConverter(PyConverter):
  
             l = self._term2dag((ts[0], int_type))
             r = self._term2dag((ts[1], int_type))
-            return f"{l} div {r}"
+            return f"({l} div {r})"
 
         if constructor == YICES_RDIV:
             ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
  
             l = self._term2dag((ts[0], int_type))
             r = self._term2dag((ts[1], int_type))
-            return f"{l} / {r}"
+            return f"({l} / {r})"
 
         # case YICES_IMOD: {
         #     Vector < DagNode * > arg(2);
@@ -388,7 +368,8 @@ class YicesConverter(PyConverter):
                 yices_product_component(t, i, c_t, exp)
                 args.append(self._term2dag((c_t, Terms.type_of_term(t))))
 
-            return " * ".join(args)
+            r = " * ".join(args)
+            return f"({r})"
 
 
         if constructor == YICES_ARITH_SUM:
@@ -410,7 +391,8 @@ class YicesConverter(PyConverter):
 
                     args.append(f"{coc} * {c}")
 
-            return " + ".join(args)
+            r = " + ".join(args)
+            return f"({r})"
         
         raise Exception("failed to apply term2dag")
 

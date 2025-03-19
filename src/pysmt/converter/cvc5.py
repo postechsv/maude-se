@@ -197,10 +197,12 @@ class Cvc5Converter(PyConverter):
 
         kind, sort = term.getKind(), term.getSort()
         if kind == Kind.AND:
-            return " and ".join([self._term2dag(c) for c in term])
+            r = " and ".join([self._term2dag(c) for c in term])
+            return f"{r}"
         
         if kind == Kind.OR:
-            return " or ".join([self._term2dag(c) for c in term])
+            r = " or ".join([self._term2dag(c) for c in term])
+            return f"{r}"
         
         if kind == Kind.NOT:
             return f"(not {self._term2dag(term[0])})"
@@ -211,39 +213,43 @@ class Cvc5Converter(PyConverter):
 
         if kind == Kind.GT:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} > {r}"
+            return f"({l} > {r})"
 
         if kind == Kind.GEQ:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} >= {r}"
+            return f"({l} >= {r})"
 
         if kind == Kind.LT:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} < {r}"
+            return f"({l} < {r})"
 
         if kind == Kind.LEQ:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} <= {r}"
+            return f"({l} <= {r})"
         
         if kind == Kind.ADD:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} + {r}"
+            return f"({l} + {r})"
 
         if kind == Kind.SUB:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} - {r}"
+            return f"({l} - {r})"
 
         if kind == Kind.MULT:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
-            return f"{l} * {r}"
+            return f"({l} * {r})"
 
         if kind == Kind.DIVISION:
             l, r = self._term2dag(term[0]), self._term2dag(term[1])
 
             if sort.isInteger():
-                return f"{l} div {r}"
+                return f"({l} div {r})"
             else:
-                return f"{l} / {r}"
+                return f"({l} / {r})"
+            
+        if kind == Kind.ITE:
+            c, l, r = self._term2dag(term[0]), self._term2dag(term[1]), self._term2dag(term[2])
+            return f"({c} ? {l} : {r})"
 
         # variable
         if kind == Kind.CONSTANT:
