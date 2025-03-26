@@ -246,12 +246,13 @@ omod MAUDE-SE-META-INTERPRETER is
   op {_} : String -> Error [ctor] .
 
   op error : Nat -> Error .
-  eq error(0) = { "Parse error."                      } .
-  eq error(1) = { "Ambiguous command."                } .
-  eq error(2) = { "No module selected."               } .
-  eq error(3) = { "Failed to load module."            } .
-  eq error(4) = { "Should execute smt-search first."  } .
-  eq error(5) = { "Failed to parse smt-search term."  } .
+  eq error(0) = { "Parse error."                          } .
+  eq error(1) = { "Ambiguous command."                    } .
+  eq error(2) = { "No module selected."                   } .
+  eq error(3) = { "Failed to load module."                } .
+  eq error(4) = { "Should execute smt-search first."      } .
+  eq error(5) = { "Failed to parse term for smt-search."  } .
+  eq error(6) = { "Failed to parse term for check."       } .
   --- ...
 
   op error : String -> Error .
@@ -402,6 +403,11 @@ omod MAUDE-SE-META-INTERPRETER is
   rl < O : MaudeSE | mi : MI, check-history : [MN, LO], status : check-sat > reducedTerm(O, MI, C, T, TY)
   => < O : MaudeSE | check-history : [MN, LO, downTerm(T, unknown)], status : wait > 
      write(stdout, O, toString(downTerm(T, unknown))) .
+
+--- error
+
+  rl < O : MaudeSE | mi : MI, status : check-sat > parsedTerm(O, MI, noParse(N))
+  => < O : MaudeSE | in : nil, error-msg : error(6), status : error > .
 
   op toString : SmtCheckResult -> String .
   eq toString(RES) = "result: " + $result2str(RES) + "\n\n" .
