@@ -1,5 +1,6 @@
 load file
 load metaInterpreter
+--- load smt
 load smt-check
 
 fmod MAUDE-SE-SYNTAX is
@@ -23,7 +24,7 @@ fmod MAUDE-SE-SYNTAX is
     id-hook Bubble (1 -1)
     op-hook qidListSymbol (__ : QidList QidList ~> QidList)
     op-hook qidSymbol (<Qids> : ~> Qid)
-    id-hook Exclude (. :))] .
+    id-hook Exclude (. , :))] .
 
   sorts Optional OptionalList Input Command .
   subsort Optional < OptionalList .
@@ -31,7 +32,9 @@ fmod MAUDE-SE-SYNTAX is
 
   op select_. : Bubble -> Command .
   op smt-search`[_`,_`]in_:_=>_such`that_using_. : Bubble Bubble NaBubble Bubble Bubble Bubble Bubble -> Command .
+  op smt-search`[_]in_:_=>_such`that_using_. : NaBubble NaBubble Bubble Bubble Bubble Bubble -> Command .
   op `{fold`}smt-search`[_`,_`]in_:_=>_such`that_using_. : Bubble Bubble NaBubble Bubble Bubble Bubble Bubble -> Command .
+  op `{fold`}smt-search`[_]in_:_=>_such`that_using_. : NaBubble NaBubble Bubble Bubble Bubble Bubble -> Command .
   op check`in_:_using_. : NaBubble Bubble Bubble -> Command .
   op show`model`. : -> Command .
   op show`smt-path`concrete_. : Bubble -> Command .
@@ -109,6 +112,27 @@ omod MAUDE-SE-META-INTERPRETER is
   var SR : SearchResult? .
   var RL-ATTRS : AttrSet .
 
+---------------------------------------
+--- MaudeSE Banner
+---------------------------------------
+
+  op MAUDE-SE-VERSION : -> String .
+  eq MAUDE-SE-VERSION = "1.0.0" .
+
+  op MAUDE-SE-BUILT : -> String .
+  eq MAUDE-SE-BUILT = "Mar 25 2025" .
+  
+  op MAUDE-SE-BANNER : -> String .
+  eq MAUDE-SE-BANNER = 
+  "\n          ===================================" + 
+  "\n                        MaudeSE" +
+  "\n               (" + MAUDE-SE-VERSION + " built: " + MAUDE-SE-BUILT + ")" +
+  "\n          ===================================" + "\n\n\n" .
+
+---------------------------------------
+--- MaudeSE Interpreter
+---------------------------------------
+  
   op o : -> Oid .
 
   msg processInput : Oid Term -> Msg .
@@ -117,7 +141,7 @@ omod MAUDE-SE-META-INTERPRETER is
   eq maudeSE = <>
     < o : MaudeSE | mi : null, mn : null, logic : null, in : nil, state : 0, check-result : unknown, search-info : empty, search-fold : false, 
                     search-bound : noSearchBound, search-result : noSearchResult >
-    write(stdout, o, "\n\t MaudeSE Execution Environment\n\n")
+    write(stdout, o, MAUDE-SE-BANNER)
     createInterpreter(interpreterManager, o, none) .
 
 ---------------------------------------
@@ -178,11 +202,14 @@ omod MAUDE-SE-META-INTERPRETER is
   => < O : MaudeSE | state : 12 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtCheck(upModule(MN, false), T, LO, true))) .
 
   rl < O : MaudeSE | state : 12, mi : MI > reducedTerm(O, MI, C, T, TY)
-  => < O : MaudeSE | state : 2, check-result : downTerm(T, unknown) > 
-    getLine(stdin, O, result2str(downTerm(T, unknown)) + "MaudeSE> ") .
+  => < O : MaudeSE | state : 13, check-result : downTerm(T, unknown) > 
+     write(stdout, O, toString(downTerm(T, unknown))) .
 
-  op result2str : SmtCheckResult -> String .
-  eq result2str(RES) = "result: " + $result2str(RES) + "\n\n" .
+  rl < O : MaudeSE | state : 13 > wrote(O, O')
+  => < O : MaudeSE | state : 2 > getLine(stdin, O, "MaudeSE> ") .
+
+  op toString : SmtCheckResult -> String .
+  eq toString(RES) = "result: " + $result2str(RES) + "\n\n" .
 
   op $result2str : SmtCheckResult -> String .
   eq $result2str(true) = "sat" .
@@ -222,8 +249,16 @@ omod MAUDE-SE-META-INTERPRETER is
   => < O : MaudeSE | state : 20, mn : downTerm(MM, 'default-name), in : QIL ('smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[MT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]]),
                      search-fold : false > insertModule(MI, O, upModule(downTerm(MM, 'default-name), true)) .
 
+  rl < O : MaudeSE | state : 6, mi : MI, in : QIL > processInput(O, 'smt-search`[_`]in_:_=>_such`that_using_.['naBubble[NT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]])
+  => < O : MaudeSE | state : 20, mn : downTerm(MM, 'default-name), in : QIL ('smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[''unbounded.Sort], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]]),
+                     search-fold : false > insertModule(MI, O, upModule(downTerm(MM, 'default-name), true)) .
+
   rl < O : MaudeSE | state : 6, mi : MI, in : QIL > processInput(O, '`{fold`}smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[MT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]])
   => < O : MaudeSE | state : 20, mn : downTerm(MM, 'default-name), in : QIL ('smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[MT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]]),
+                     search-fold : true > insertModule(MI, O, upModule(downTerm(MM, 'default-name), true)) .
+
+  rl < O : MaudeSE | state : 6, mi : MI, in : QIL > processInput(O, '`{fold`}smt-search`[_`]in_:_=>_such`that_using_.['naBubble[NT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]])
+  => < O : MaudeSE | state : 20, mn : downTerm(MM, 'default-name), in : QIL ('smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[''unbounded.Sort], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]]),
                      search-fold : true > insertModule(MI, O, upModule(downTerm(MM, 'default-name), true)) .
 
   rl < O : MaudeSE | state : 20, mi : MI, mn : MN, in : ('smt-search`[_`,_`]in_:_=>_such`that_using_.['bubble[NT], 'bubble[MT], 'naBubble[MM], 'bubble[T], 'bubble[T'], 'bubble[T''], 'bubble[TH]]) QIL > insertedModule(O, MI)
@@ -251,7 +286,7 @@ omod MAUDE-SE-META-INTERPRETER is
     reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearch(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(N), LO, B))) .
 
   rl < O : MaudeSE | state : 25, mi : MI, mn : MN, search-bound : {C, N} > reducedTerm(O, MI, N', T, TY)
-  => < O : MaudeSE | state : 26, search-result : {downTerm(T, (failure).SmtResult2?)} > write(stdout, O, smtResult2str(upModule(MN, false), C, downTerm(T, (failure).SmtResult2?))) .
+  => < O : MaudeSE | state : 26, search-result : {downTerm(T, (failure).SmtResult2?)} > write(stdout, O, toString(upModule(MN, false), C, downTerm(T, (failure).SmtResult2?))) .
 
   --- crl < O : MaudeSE | state : 26, search-bound : {C, N}, search-result : SR > wrote(O, O')
   ---  => < O : MaudeSE | state : 24, search-bound : {C + 1, N} > if check(C, N, SR) .
@@ -260,8 +295,9 @@ omod MAUDE-SE-META-INTERPRETER is
    => < O : MaudeSE | state : 2, search-bound : noSearchBound, search-result : noSearchResult > 
       getLine(stdin, O, "MaudeSE> ") .
 
-  op getNum : Qid -> Nat .
-  eq getNum(QI) = downTerm(qid("s_^" + string(downTerm(QI, QI)))['0.Zero], (0).Nat) .
+  op getNum : Qid -> Bound .
+  eq getNum(''unbounded.Sort) = unbounded .
+  eq getNum(QI) = downTerm(qid("s_^" + string(downTerm(QI, QI)))['0.Zero], (0).Nat) [owise] .
 
   op mkSolNum : Nat -> Nat .
   eq mkSolNum(s N) = N .
@@ -271,20 +307,21 @@ omod MAUDE-SE-META-INTERPRETER is
   eq check(C, N, {failure}) = false .
   eq check(C, N, {SRES}) = C < N .
 
-  op smtResult2str : Module Nat SmtResult2? -> String .
-  eq smtResult2str(MO, C, failure) = "No more solutions.\n\n" .
-  ceq smtResult2str(MO, C, {T, SUBS, T', SUBS', N', N}) = printTokens(
-    'Solution qid(string(C, 10) + " ") '\s '`( 'state qid(" " + string(N, 10)) '`) '\n
-    'Symbolic 'state: metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '\n
-    'Constraint: metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '\n 
-    'Substitution: printSubst(MO, SUBS) '\n
-    'Assignment: printSubst(MO, SUBS') '\n
-    'Concrete 'state: metaPrettyPrint(MO, getVars(T''), T'', mixfix with-parens) '\n '\n) 
+  op toString : Module Nat SmtResult2? -> String .
+   eq toString(MO, C, failure) = "No more solutions.\n\n" .
+  ceq toString(MO, C, {T, SUBS, T', SUBS', N', N}) = "\n" +
+    "Solution " + string(C, 10) + " (state " + string(N, 10) + ")"              + "\n\n" +
+    "Symbolic state:" + "\n " + metaPrintToString(MO, none, T, mixfix, none)    + "\n\n" +
+    "Constraint:"     + "\n " + metaPrintToString(MO, none, T', mixfix, none)   + "\n\n" + 
+    "Substitution:"   + "\n " + toString(MO, SUBS)                              + "\n\n" +
+    "Assignment:"     + "\n " + toString(MO, SUBS')                             + "\n\n" +
+    "Concrete state:" + "\n " + metaPrintToString(MO, none, T'', mixfix, none)  + "\n\n" + "\n"
   if T'' := applySubstitution(MO, T, SUBS') .
 
-  op printSubst : Module Substitution -> QidList .
-  eq printSubst(MO, none) = nil .
-  eq printSubst(MO, V <- T ; SUBS) = metaPrettyPrint(MO, V, V, mixfix with-parens) '<-- metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '\n printSubst(MO, SUBS) .
+  op toString : Module Substitution -> String .
+  eq toString(MO, (none).Substitution) = "" .
+  eq toString(MO, V <- T ; SUBS) 
+   = metaPrintToString(MO, none, V, mixfix, none) + " <-- " + metaPrintToString(MO, none, T, mixfix, none) + "\n " + toString(MO, SUBS) .
 
   op getVars : TermList -> VariableSet .
   eq getVars(V) = V .
@@ -301,45 +338,51 @@ omod MAUDE-SE-META-INTERPRETER is
   => < O : MaudeSE | state : 30 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(getNum(PT)), LO, B))) .
 
   rl < O : MaudeSE | state : 30, mi : MI, mn : MN > reducedTerm(O, MI, C, T, TY)
-  => < O : MaudeSE | state : 2 > getLine(stdin, O, ctrace2str(upModule(MN, false), downTerm(T, (failure).Trace2Result?)) + "\n" + "MaudeSE> ") .
+  => < O : MaudeSE | state : 31 > write(stdout, O, toString(upModule(MN, false), downTerm(T, (failure).Trace2Result?), false) + "\n") .
+
+  rl < O : MaudeSE | state : 31 > wrote(O, O')
+  => < O : MaudeSE | state : 2 > getLine(stdin, O, "MaudeSE> ") .
 
   rl < O : MaudeSE | state : 6, mi : MI, mn : MN, search-info : (NT, MT, T, T', T''), logic : LO, search-fold : B > processInput(O, 'show`smt-path`symbolic_.['bubble[PT]])
   => < O : MaudeSE | state : 35 > reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, getNum(MT), mkSolNum(getNum(PT)), LO, B))) .
 
   rl < O : MaudeSE | state : 35, mi : MI, mn : MN > reducedTerm(O, MI, C, T, TY)
-  => < O : MaudeSE | state : 2 > getLine(stdin, O, trace2str(upModule(MN, false), downTerm(T, (failure).Trace2Result?)) + "\n" + "MaudeSE> ") .
+  => < O : MaudeSE | state : 36 > write(stdout, O, toString(upModule(MN, false), downTerm(T, (failure).Trace2Result?), true) + "\n") .
 
-  op ctrace2str : Module Trace2Result? -> String .
-  eq ctrace2str(MO, failure) = "Failed to get path.\n\n" .
-  eq ctrace2str(MO, {TR, SUBS}) = $ctrace2str(MO, TR, SUBS) .
+  rl < O : MaudeSE | state : 36 > wrote(O, O')
+  => < O : MaudeSE | state : 2 > getLine(stdin, O, "MaudeSE> ") .
 
-  op $ctrace2str : Module Trace2 Substitution -> String .
-  eq $ctrace2str(MO, nil, SUBS) = "" .
-  eq $ctrace2str(MO, {T || T', TY}, SUBS) = printTokens(metaPrettyPrint(MO, getVars(inst(T, SUBS)), inst(T, SUBS), mixfix with-parens) '\n) .
-  ceq $ctrace2str(MO, {T || T', TY, RL} ST, SUBS) = printTokens(
-    metaPrettyPrint(MO, getVars(T''), T'', mixfix with-parens) '\n
-    '=====`[ printRule(MO, RL) '`]=====> '\n) + $ctrace2str(MO, ST, SUBS)
-   if T'' := inst(T, SUBS) .
+  op toString : Module Trace2Result? Bool -> String .
+  eq toString(MO, failure, B) = "Failed to get path.\n\n" .
+  eq toString(MO, {TR, SUBS}, false) = toString(MO, TR, SUBS) .
 
-  op trace2str : Module Trace2Result? -> String .
-  eq trace2str(MO, failure) = "Failed to get path.\n\n" .
-  eq trace2str(MO, {TR, SUBS}) = $trace2str(MO, TR) .
+  op toString : Module Trace2 Substitution -> String .
+  eq toString(MO, nil, SUBS) = "" .
+  eq toString(MO, {T || T', TY}, SUBS) = metaPrintToString(MO, none, inst(T, SUBS), mixfix, none) + "\n" .
+  ceq toString(MO, {T || T', TY, RL} ST, SUBS) =
+    metaPrintToString(MO, none, T'', mixfix, none)  + "\n" +
+    "=====[" + toString(MO, RL) + "]=====>"         + "\n" + toString(MO, ST, SUBS)
+  if T'' := inst(T, SUBS) .
 
-  op $trace2str : Module Trace2 -> String .
-  eq $trace2str(MO, {T || T', TY} ST) = printTokens(
-    '`{ metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '|| '\n 
-        metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '`} '\n) .
-  eq $trace2str(MO, {T || T', TY, RL} ST) = printTokens(
-    '`{ metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '|| '\n 
-        metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) '`} '\n 
-        '=====`[ printRule(MO, RL) '`]=====> '\n) + $trace2str(MO, ST) .
-  eq $trace2str(MO, nil) = "" .
+  eq toString(MO, {TR, SUBS}, true) = toString(MO, TR) .
 
-  op printRule : Module Rule -> QidList .
+  op toString : Module Trace2 -> String .
+  eq toString(MO, nil) = "" .
+  eq toString(MO, {T || T', TY} ST) = "Constrained Term:" + "\n" +
+  " Term:"        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
+  " Constraint: " + metaPrintToString(MO, none, T', mixfix, none)  + "\n" .
+
+  eq toString(MO, {T || T', TY, RL} ST) = "Constrained Term:" + "\n" +
+  " Term:"        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
+  " Constraint: " + metaPrintToString(MO, none, T', mixfix, none)  + "\n" +
+  "=====[" + toString(MO, RL) + "]=====>"                          + "\n" + toString(MO, ST) .
+
+  op toString : Module Rule -> String .
   --- eq printRule(MO, rl T => T' [label(QI)] .) = 'rl '`[ QI '`] ': metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '=> metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) .
   --- eq printRule(MO, crl T => T' if CD [label(QI)] .) = 'crl '`[ QI '`] ': metaPrettyPrint(MO, getVars(T), T, mixfix with-parens) '=> metaPrettyPrint(MO, getVars(T'), T', mixfix with-parens) 'if printCond(MO, CD) .
-  eq printRule(MO, rl T => T' [RL-ATTRS label(QI)] .) = QI .
-  eq printRule(MO, crl T => T' if CD [RL-ATTRS label(QI)] .) = QI .
+  eq toString(MO, rl T => T' [RL-ATTRS label(QI)] .) = printTokens(QI) .
+  eq toString(MO, crl T => T' if CD [RL-ATTRS label(QI)] .) = printTokens(QI) .
+  eq toString(MO, RL) = "" [owise] .
 
   op printCond : Module Condition -> QidList .
   eq printCond(MO, nil) = nil .
@@ -349,4 +392,8 @@ omod MAUDE-SE-META-INTERPRETER is
 
 endom
 
+set show command off . 
+
 erewrite maudeSE .
+
+eof
