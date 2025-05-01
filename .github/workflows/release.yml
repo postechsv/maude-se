@@ -30,29 +30,19 @@ jobs:
       run: |
         ./build.sh deps
         ./build.sh prep
-        ./build.sh 
+        ./build.sh patch
 
-    - name: Build a binary wheel and a source tarball
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt install -y patchelf
-        pip install auditwheel
-        python3 -m build
-        for whl in dist/*linux_*.whl; do
-          auditwheel repair $whl
-        done
-        rm -rf dist/
-        mv wheelhouse dist
+    - name: Build Maude
+      run: ./build.sh build-maude
 
-    - name: Build a binary wheel and a source tarball
-      if: matrix.os == 'macos-latest'
-      run: python3 -m build
+    - name: Build Maude-SE
+      run: ./build.sh build-maude-se
 
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
         name: python-package-distributions
-        path: dist/
+        path: out/
 
   # publish-to-pypi:
   #   name: >-
