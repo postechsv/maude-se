@@ -5,16 +5,16 @@ with open("build/PythonPkgDescription.md", "r") as fh:
 
 setup(
     name='maude-se',
-    version='0.0.1',
+    version='0.0.2',
     author='Geunyeol Yu',
     author_email='maude-se@postech.ac.kr',
     description='Maude SMT Extension',
     long_description=long_description,
-    url='https://github.com/maude-se/maude-se',
+    url='https://github.com/postechsv/maude-se',
     project_urls={
-        'Bug Tracker'   : 'https://github.com/maude-se/maude-se/issues',
+        'Bug Tracker'   : 'https://github.com/postechsv/maude-se/issues',
         'Documentation' : 'https://maude-se.github.io',
-        'Source Code'   : 'https://github.com/maude-se/maude-se'
+        'Source Code'   : 'https://github.com/postechsv/maude-se'
     },
     long_description_content_type="text/markdown",
     license='GPLv2',

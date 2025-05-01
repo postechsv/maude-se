@@ -1,0 +1,61 @@
+diff --git CMakeLists.txt CMakeLists.txt
+index 93d1eb1..78021ff 100644
+--- CMakeLists.txt
++++ CMakeLists.txt
+@@ -1,9 +1,9 @@
+ cmake_minimum_required(VERSION 3.12)
+-project(maude)
++project(maudeSE)
+ 
+ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build;${CMAKE_MODULE_PATH}")
+ set(MAUDESMC_PATH "${CMAKE_SOURCE_DIR}/subprojects/maudesmc")
+-set(BINDING_OUTPUT_NAME "maude")
++set(BINDING_OUTPUT_NAME "maudeSE")
+ 
+ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+ set(CMAKE_INSTALL_RPATH @loader_path)
+@@ -155,6 +155,7 @@ include_directories(
+ 	"${MAUDESMC_PATH}/src/Temporal"
+ 	"${MAUDESMC_PATH}/src/3rdParty"
+ 	"${MAUDESMC_PATH}/src/AU_Theory"
++	"${MAUDESMC_PATH}/src/Extension"
+ 	${EXTRA_INCLUDE_DIRS}
+ )
+ 
+@@ -187,7 +188,7 @@ swig_link_libraries(maude PRIVATE libmaude)
+ #
+ ## Install all the components
+ 
+-install(TARGETS maude LIBRARY DESTINATION maude)
++install(TARGETS maude LIBRARY DESTINATION maudeSE/maude)
+ install(FILES
+ 	"${MAUDESMC_PATH}/installdir/lib/libmaude${CMAKE_SHARED_LIBRARY_SUFFIX}"
+ 	"${MAUDESMC_PATH}/src/Main/prelude.maude"
+@@ -202,13 +203,25 @@ install(FILES
+ 	"${MAUDESMC_PATH}/src/Main/term-order.maude"
+ 	"${MAUDESMC_PATH}/src/Main/time.maude"
+ 	${EXTRA_INSTALL_FILES}
+-	DESTINATION maude
++	DESTINATION maudeSE/maude
+ )
+ 
+ if (${LANGUAGE} STREQUAL python)
+ 	# The SWIG_SUPPORT_FILES property is only accurate for Python
+ 	get_property(wrapper_file TARGET maude PROPERTY SWIG_SUPPORT_FILES)
+-	install(FILES "${wrapper_file}" RENAME __init__.py DESTINATION maude)
++	install(FILES "${wrapper_file}" RENAME __init__.py DESTINATION maudeSE/maude)
++	file(GLOB DEPLOY_FILES_AND_DIRS "../src/pysmt/*")
++	foreach(ITEM ${DEPLOY_FILES_AND_DIRS})
++	IF( IS_DIRECTORY "${ITEM}" )
++		LIST( APPEND DIRS_TO_DEPLOY "${ITEM}" )
++	ELSE()
++		LIST( APPEND FILES_TO_DEPLOY "${ITEM}" )
++	ENDIF()
++	endforeach()
++	INSTALL(FILES ${FILES_TO_DEPLOY} DESTINATION maudeSE)
++	INSTALL(DIRECTORY ${DIRS_TO_DEPLOY} DESTINATION maudeSE)
++	install(FILES
++		"../src/smt-check.maude" "../src/maude-se-meta.maude" DESTINATION maudeSE/maude)
+ 
+ elseif (${LANGUAGE} STREQUAL java)
+ 	include(UseJava)

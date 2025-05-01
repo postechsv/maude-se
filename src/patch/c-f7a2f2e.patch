@@ -1,0 +1,124 @@
+diff --git meson.build meson.build
+index 8033a65..9638eb1 100644
+--- meson.build
++++ meson.build
+@@ -1,4 +1,4 @@
+-project('Maude', 'cpp', version: '3.5+smc', default_options: ['cpp_std=c++14'])
++project('Maude', 'cpp', version: '3.5+se', default_options: ['cpp_std=c++14'])
+ 
+ #
+ ## Configuration
+@@ -183,6 +183,16 @@ elif smtOption == 'cvc4'
+ 			required: false)
+ 	libraries += [cvc4, cln]
+ 	conf.set('USE_CVC4', 1, description: 'use CVC4 SMT solver library')
++
++elif smtOption == 'z3'
++	z3 = cxx.find_library('z3',
++			static: 'z3' in staticLibs,
++			dirs: extraSearchPaths)
++	libraries += [z3]
++	conf.set('USE_Z3', 1, description: 'use Z3 SMT solver library')
++
++elif smtOption == 'pysmt'
++	conf.set('USE_PYSMT', 1, description: 'use Python SMT solver library')
+ endif
+ 
+ #
+@@ -356,6 +366,7 @@ mixfix_includes = include_directories(
+ 	'src/FullCompiler',
+ 	'src/StrategyLanguage',
+ 	'src/SMT',
++	'src/Extension',
+ )
+ 
+ mixfix_source = [
+@@ -956,6 +967,47 @@ smt_source = [
+ 
+ smt = static_library('smt', smt_source, include_directories: smt_includes)
+ 
++# Ext
++
++ext_includes = include_directories(
++	'src/Extension',
++	'src/SMT',
++	'src/Utility',
++	'src/Interface',
++	'src/Core',
++	'src/Variable',
++	'src/Higher',
++	'src/FullCompiler',
++	'src/NA_Theory',
++	'src/FreeTheory',
++	'src/BuiltIn',
++	'src/Mixfix',
++	'src/StrategyLanguage',
++	'src/Meta',
++	'src/AU_Theory',
++	'src/CUI_Theory',
++	'src/S_Theory',
++	'src/ObjectSystem',
++	'src/IO_Stuff',
++	'src/Parser',
++)
++
++ext_source = [
++	'src/Extension/metaLevelSmtOpSymbol.cc',
++	'src/Extension/folder.cc',
++	'src/Extension/smtStateTransitionGraph.cc',
++	'src/Extension/rewriteSmtSearchState.cc',
++	'src/Extension/rewriteSmtSequenceSearch.cc',
++	'src/Extension/smtManager.cc',
++	'src/Extension/smtCheckSymbol.cc',
++	'src/Extension/simplifyFormulaSymbol.cc',
++	'src/Extension/extensionSymbol.cc',
++	'src/Extension/tacticApplySymbol.cc',
++	'src/Extension/extGlobal.cc',
++]
++
++ext = static_library('ext', ext_source, include_directories: ext_includes)
++
+ # Main
+ 
+ main_includes = include_directories(
+@@ -985,6 +1037,7 @@ main_includes = include_directories(
+ 	'src/FullCompiler',
+ 	'src/StrategyLanguage',
+ 	'src/Mixfix',
++	'src/Extension',
+ )
+ 
+ main_source = [
+@@ -1064,6 +1117,7 @@ maudeSubdirs = [
+ 	ioStuff,
+ 	core,
+ 	meta,
++	ext,
+ ]
+ 
+ maudeSubsdirsInternal = [
+@@ -1122,6 +1176,7 @@ libmaude_includes = include_directories(
+ 	'src/Temporal',
+ 	'src/Utility',
+ 	'src/Variable',
++	'src/Extension',
+ 	'ltsmod',
+ )
+ 
+diff --git meson_options.txt meson_options.txt
+index 45f96b4..91343db 100644
+--- meson_options.txt
++++ meson_options.txt
+@@ -1,4 +1,4 @@
+-option('with-smt', type: 'combo', choices: ['cvc4', 'yices2', 'no'], value: 'cvc4', description: 'use CVC4 or Yices2 as SMT solver library')
++option('with-smt', type: 'combo', choices: ['cvc4', 'yices2', 'z3', 'pysmt', 'no'], value: 'cvc4', description: 'use CVC4 or Yices2 as SMT solver library')
+ option('with-readline', type: 'feature', description: 'use GNU readline command line editing library')
+ option('with-sigsegv', type: 'feature', description: 'use GNU libsigsegv library')
+ option('enable-compiler', type: 'boolean', value: false, description: 'build the experimental integrated compiler')
+@@ -7,5 +7,5 @@ option('extra-include-dirs', type: 'array', value: [], description: 'additional
+ option('extra-lib-dirs', type: 'array', value: [], description: 'additional directories where to look for libraries')
+ option('with-ltsmin', type: 'feature', value: 'enabled', description: 'build a language module for LTSmin')
+ option('with-simaude', type: 'feature', value: 'enabled', description: 'build the statistical simulator tool')
+-option('static-libs', type: 'array', value: [], choices: ['buddy', 'gmp', 'readline', 'sigsegv', 'yices2', 'cvc4', 'popt'],
++option('static-libs', type: 'array', value: [], choices: ['buddy', 'gmp', 'readline', 'sigsegv', 'yices2', 'cvc4', 'popt', 'z3'],
+        description: 'libraries to be linked statically')
