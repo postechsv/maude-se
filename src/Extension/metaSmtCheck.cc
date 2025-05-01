@@ -1,12 +1,12 @@
 #include "SMT_Info.hh"
 // #include "variableGenerator.hh"
 #include "smtManager.hh"
-#include "smtManagerFactory.hh"
+// #include "smtManagerFactory.hh"
 #include "extGlobal.hh"
 
 bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &context)
 {
-	if (MetaModule *m = metaLevel->downModule(subject->getArgument(0)))
+	if (VisibleModule *m = metaLevel->downModule(subject->getArgument(0)))
 	{
 		if (Term *term = metaLevel->downTerm(subject->getArgument(1), m))
 		{
@@ -42,6 +42,10 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 			{
 				DagNode *r;
 				if (genAssn && result == VariableGenerator::SAT){
+					// This is Hack:
+					// we use symbol in the downed module, while we use subject's module symbol to create new expressions.
+					// We should upDagNode with different modules.
+					// MixfixModule* module = safeCast(MixfixModule*, subject->symbol()->getModule());
 					r = make_model(vg, m);
 				} else if (result == VariableGenerator::SAT_UNKNOWN){
 					r = this->unknownResultSymbol->makeDagNode();
@@ -65,7 +69,7 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 	return false;
 }
 
-DagNode*  MetaLevelSmtOpSymbol::make_model(VariableGenerator* vg, MetaModule* m){
+DagNode*  MetaLevelSmtOpSymbol::make_model(VariableGenerator* vg, MixfixModule* m){
 	SmtModel* model = vg->getModel();
 	std::vector<SmtTerm*>* keys = model->keys();
 

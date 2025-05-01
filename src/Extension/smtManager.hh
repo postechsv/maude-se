@@ -2,6 +2,7 @@
 #define SMT_MANAGER_HH
 #include "smtEngineWrapperEx.hh"
 #include "smtInterface.hh"
+#include "token.hh"
 
 class MetaLevelSmtOpSymbol;
 
@@ -12,7 +13,7 @@ class VariableGenerator : public SmtEngineWrapperEx
 public:
   VariableGenerator(const SMT_Info &smtInfo);
   // VariableGenerator(const SMT_Info &smtInfo, Connector *conn);
-  VariableGenerator(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
+  VariableGenerator(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol *extensionSymbol);
   ~VariableGenerator();
   //
   //	Virtual functions for SMT solving.
@@ -45,6 +46,13 @@ private:
   Connector *conn;
   Converter *conv;
 };
+
+// Common auxiliary functions for dag generation.
+// Taken from Maude as a library.
+
+bool containsSpecialChars(const char *str);
+string escapeWithBackquotes(const char *str);
+int encodeEscapedToken(const char *str);
 
 #ifdef USE_CVC4
 #include "cvc4.hh"

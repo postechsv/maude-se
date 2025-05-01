@@ -109,10 +109,15 @@
 
 #include "metaLevelSmtOpSymbol.hh"
 
-Z3Connector::Z3Connector(Z3Converter *conv)
-    : pushCount(0), conv(conv), s(new z3::solver(*conv->getContext())) {}
+// #include <fstream>
 
-Z3Connector::~Z3Connector() { delete s; }
+Z3Connector::Z3Connector(Z3Converter *conv)
+    : pushCount(0), conv(conv), s(new z3::solver(*conv->getContext())) 
+{
+    s_v = new z3::solver(this->ctx);
+}
+
+Z3Connector::~Z3Connector() { delete s; delete s_v; }
 
 bool Z3Connector::check_sat(std::vector<SmtTerm *> consts)
 {
@@ -150,6 +155,78 @@ SmtTerm *Z3Connector::add_const(SmtTerm *acc, SmtTerm *cur)
     }
 }
 
+inline z3::expr Z3Connector::translate(z3::expr& e)
+{
+    return z3::to_expr(ctx, Z3_translate(*conv->getContext(), e, ctx));
+}
+
+TermSubst* Z3Connector::mk_subst(std::map<DagNode*, DagNode*>& subst_dict)
+{
+    std::map<Z3SmtTerm*, Z3SmtTerm*>* subst = new std::map<Z3SmtTerm*, Z3SmtTerm*>();
+    for (auto it : subst_dict)
+    {
+        Z3SmtTerm* lhs = dynamic_cast<Z3SmtTerm *>(conv->dag2term(it.first)); 
+        Z3SmtTerm* rhs = dynamic_cast<Z3SmtTerm *>(conv->dag2term(it.second));
+
+        subst->insert(std::pair<Z3SmtTerm*, Z3SmtTerm*>(lhs, rhs));
+    }
+    return new Z3TermSubst(subst);
+}
+
+bool Z3Connector::subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur)
+{ 
+    Z3TermSubst *z3subst = dynamic_cast<Z3TermSubst *>(subst);
+
+    z3::expr_vector from(ctx);
+    z3::expr_vector to(ctx);
+
+    for(auto it : *z3subst->subst)
+    {
+        from.push_back(translate(*it.first->to_z3_expr()));
+        to.push_back(translate(*it.second->to_z3_expr()));
+    }
+
+    z3::expr z3_acc = translate(*dynamic_cast<Z3SmtTerm *>(acc)->to_z3_expr());
+    z3::expr z3_cur = translate(*dynamic_cast<Z3SmtTerm *>(cur)->to_z3_expr());
+    z3::expr z3_prv = translate(*dynamic_cast<Z3SmtTerm *>(prev)->to_z3_expr());
+
+    z3::expr f = !(implies(z3_acc && z3_cur, z3_prv.substitute(from, to)));
+
+    // Verbose("    Formula:");
+    // Verbose("      acc: " << z3_acc);
+    // Verbose("      cur: " << z3_cur);
+    // Verbose("      prv: " << z3_prv);
+    // Verbose("    Implication:");
+    // Verbose("      " << f);
+
+    s_v->push();
+    s_v->add(f);
+    z3::check_result r;
+    try {
+        r = s_v->check();
+    } catch (z3::exception & ex) {
+        IssueWarning("Z3 subsumption failed - " << ex.msg());
+        // std::ofstream ofs;
+        // ofs.open("debug.smt2");
+        // ofs << s_v->to_smt2() << std::endl;
+        // ofs.close();
+        s_v->reset();
+        return false;
+    }
+    s_v->pop();
+
+    switch (r)
+    {
+    case z3::unsat:
+        return true;
+    case z3::sat:
+        return false;
+    default:
+        IssueWarning("Subsumption result is unknown");
+        return false;
+    }
+}
+
 SmtModel *Z3Connector::get_model()
 {
     return new Z3SmtModel(s->get_model());
@@ -176,12 +253,31 @@ void Z3Connector::reset()
 
 void Z3Connector::set_logic(const char *logic)
 {
-    delete s;
-    s = new z3::solver(*conv->getContext(), logic);
+    try {
+        if (s) delete s;
+        if (s_v) delete s_v;
+
+        s = new z3::solver(*conv->getContext(), logic);
+        s_v = new z3::solver(ctx, logic);
+    } catch (z3::exception & ex) {
+        IssueWarning("Z3 solver failed - " << ex.msg());
+    }
 }
 
 Z3Converter::Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol *extensionSymbol)
     : NativeSmtConverter(smtInfo, extensionSymbol) {}
+
+
+void Z3Converter::prepareFor(VisibleModule* vmodule){
+    this->vmodule = vmodule;
+    // should initialize ...
+}
+
+void Z3Converter::markReachableNodes(){
+    for (auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++) {
+        it->first->mark();
+    }
+}
 
 z3::expr Z3Converter::dag2termInternal(DagNode *dag)
 {
@@ -688,7 +784,15 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
     {
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
-        return extensionSymbol->notBoolSymbol->makeDagNode(arg);
+
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Boolean"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("not_"), domain, sort->component());
+        // return extensionSymbol->notBoolSymbol->makeDagNode(arg);
+        return symbol->makeDagNode(arg);
     }
 
     if (e.is_and())
@@ -701,7 +805,16 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->andBoolSymbol->makeDagNode(arg);
+
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Boolean"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_and_"), domain, sort->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->andBoolSymbol->makeDagNode(arg);
     }
 
     if (e.is_or())
@@ -714,7 +827,15 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->orBoolSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Boolean"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_or_"), domain, sort->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->orBoolSymbol->makeDagNode(arg);
     }
 
     if (e.is_xor())
@@ -750,15 +871,43 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e1.is_bool())
         {
-            return extensionSymbol->eqBoolSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Boolean"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_===_"), domain, sort->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->eqBoolSymbol->makeDagNode(arg);
         }
         else if (e1.is_int())
         {
-            return extensionSymbol->eqIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_===_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->eqIntSymbol->makeDagNode(arg);
         }
         else if (e1.is_real())
         {
-            return extensionSymbol->eqRealSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_===_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->eqRealSymbol->makeDagNode(arg);
         }
     }
 
@@ -786,11 +935,31 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[1] = term2dagInternal(e.arg(1));
         if (e.arg(0).is_int())
         {
-            return extensionSymbol->ltIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_<_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->ltIntSymbol->makeDagNode(arg);
         }
         else
         {
-            return extensionSymbol->ltRealSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_<_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->ltRealSymbol->makeDagNode(arg);
         }
     }
 
@@ -801,10 +970,30 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[1] = term2dagInternal(e.arg(1));
         if (e.arg(0).is_int())
         {
-            return extensionSymbol->leqIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_<=_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->leqIntSymbol->makeDagNode(arg);
         }
         else
         {
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_<=_"), domain, range->component());
+            return symbol->makeDagNode(arg);
             return extensionSymbol->leqRealSymbol->makeDagNode(arg);
         }
     }
@@ -817,11 +1006,31 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e.arg(0).is_int())
         {
-            return extensionSymbol->gtIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_>_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->gtIntSymbol->makeDagNode(arg);
         }
         else
         {
-            return extensionSymbol->gtRealSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_>_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->gtRealSymbol->makeDagNode(arg);
         }
     }
 
@@ -833,11 +1042,31 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e.arg(0).is_int())
         {
-            return extensionSymbol->geqIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_>=_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->geqIntSymbol->makeDagNode(arg);
         }
         else
         {
-            return extensionSymbol->geqRealSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_>=_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->geqRealSymbol->makeDagNode(arg);
         }
     }
 
@@ -849,11 +1078,31 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e.arg(0).is_int())
         {
-            return extensionSymbol->eqIntSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_===_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->eqIntSymbol->makeDagNode(arg);
         }
         else
         {
-            return extensionSymbol->eqRealSymbol->makeDagNode(arg);
+            Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+            Vector<ConnectedComponent*> domain;
+    
+            domain.push_back(sort->component());
+            domain.push_back(sort->component());
+
+            Sort* range = vmodule->findSort(encodeEscapedToken("Boolean"));
+    
+            Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_===_"), domain, range->component());
+            return symbol->makeDagNode(arg);
+            // return extensionSymbol->eqRealSymbol->makeDagNode(arg);
         }
     }
 
@@ -880,7 +1129,14 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        return extensionSymbol->unaryMinusIntSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("-_"), domain, sort->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->unaryMinusIntSymbol->makeDagNode(arg);
     }
 
     if (e.is_int() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind())
@@ -893,7 +1149,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->plusIntSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Integer"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_+_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->plusIntSymbol->makeDagNode(arg);
     }
 
     if (e.is_int() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind())
@@ -906,7 +1172,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->minusIntSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Integer"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_-_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->minusIntSymbol->makeDagNode(arg);
     }
 
     if (e.is_int() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind())
@@ -919,7 +1195,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->mulIntSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Integer"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_*_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->mulIntSymbol->makeDagNode(arg);
     }
 
     if (e.is_int() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind())
@@ -947,7 +1233,15 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         mpq_set_str(total, e.get_decimal_string(0).c_str(), 10);
         mpq_canonicalize(total);
         mpq_class mpNum(total);
-        return new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
+
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Integer"));
+        Vector<ConnectedComponent*> domain;
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("<Integers>"), domain, sort->component());
+        return new SMT_NumberDagNode(static_cast<SMT_NumberSymbol*>(symbol), mpNum);
+        
+        // Should not use hooked symbols for generation.
+        // return new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpNum);
     }
 
     /**
@@ -964,7 +1258,14 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
     {
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
-        return extensionSymbol->unaryMinusRealSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("-_"), domain, sort->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->unaryMinusRealSymbol->makeDagNode(arg);
     }
 
     if (e.is_real() && e.is_app() && Z3_OP_ADD == e.decl().decl_kind())
@@ -977,7 +1278,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->plusRealSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Real"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_+_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->plusRealSymbol->makeDagNode(arg);
     }
 
     if (e.is_real() && e.is_app() && Z3_OP_SUB == e.decl().decl_kind())
@@ -990,7 +1301,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->plusRealSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Real"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_-_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->plusRealSymbol->makeDagNode(arg);
     }
 
     if (e.is_real() && e.is_app() && Z3_OP_MUL == e.decl().decl_kind())
@@ -1003,7 +1324,17 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        return extensionSymbol->mulRealSymbol->makeDagNode(arg);
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+        Vector<ConnectedComponent*> domain;
+
+        domain.push_back(sort->component());
+        domain.push_back(sort->component());
+
+        Sort* range = vmodule->findSort(encodeEscapedToken("Real"));
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("_*_"), domain, range->component());
+        return symbol->makeDagNode(arg);
+        // return extensionSymbol->mulRealSymbol->makeDagNode(arg);
     }
 
     if (e.is_real() && e.is_app() && Z3_OP_DIV == e.decl().decl_kind())
@@ -1023,7 +1354,14 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         mpq_set_str(total, newNum.c_str(), 10);
         mpq_canonicalize(total);
         mpq_class mpNum(total);
-        return new SMT_NumberDagNode(extensionSymbol->realSymbol, mpNum);
+
+        Sort* sort = vmodule->findSort(encodeEscapedToken("Real"));
+        Vector<ConnectedComponent*> domain;
+
+        Symbol* symbol = vmodule->findSymbol(encodeEscapedToken("<Reals>"), domain, sort->component());
+        return new SMT_NumberDagNode(static_cast<SMT_NumberSymbol*>(symbol), mpNum);
+        // Should not use hooked symbols for generation.
+        // return new SMT_NumberDagNode(extensionSymbol->realSymbol, mpNum);
     }
 
     // for fresh quantified variable

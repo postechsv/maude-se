@@ -33,6 +33,8 @@
 #include <sstream>
 #include <gmpxx.h>
 
+#include "simpleRootContainer.hh"
+
 class Z3SmtTerm : public SmtTerm, public z3::expr
 {
 public:
@@ -83,6 +85,15 @@ public:
 //         return a.id() < b.id();
 //     }
 // };
+
+class Z3TermSubst : public TermSubst
+{
+public:
+    Z3TermSubst(std::map<Z3SmtTerm*, Z3SmtTerm*>* subst_dict) : subst(subst_dict) {};
+    ~Z3TermSubst(){ delete subst; };
+
+    std::map<Z3SmtTerm*, Z3SmtTerm*>* subst;
+};
 
 class Z3SmtModel : public SmtModel, public z3::model
 {
@@ -143,13 +154,14 @@ struct cmpExprById{
     }
 };
 
-
-class Z3Converter : public Converter, public NativeSmtConverter< z3::expr, cmpExprById >
+// Converter should be SimpleRootContainer because it contains variable DagNode maps.
+// Otherwise, metaLevel operators such as metaSmtSearch would fail due to corrupted dags.
+class Z3Converter : public Converter, public NativeSmtConverter< z3::expr, cmpExprById >, private SimpleRootContainer
 {
 public:
     Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
 	~Z3Converter(){};
-    void prepareFor(VisibleModule* module){};
+    void prepareFor(VisibleModule* vmodule);
     SmtTerm* dag2term(DagNode* dag){
         z3::expr e = dag2termInternal(dag);
         return new Z3SmtTerm(e);
@@ -173,6 +185,11 @@ private:
     // Aux
     z3::expr dag2termInternal(DagNode* dag);
     DagNode* term2dagInternal(z3::expr);
+
+private:
+    // Maude specific
+    VisibleModule* vmodule;
+    void markReachableNodes();
 };
 
 
@@ -182,8 +199,8 @@ public:
     Z3Connector(Z3Converter* conv);
 	~Z3Connector();
     bool check_sat(std::vector<SmtTerm*> consts);
-    bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur){ return false; };
-    TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict){ return nullptr; };
+    bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur);
+    TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict);
     SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur);
     SmtModel* get_model();
     void push();
@@ -197,6 +214,11 @@ public:
 
 private:
     z3::solver *s;
+    z3::solver *s_v; // solver for validity check
+    z3::context ctx; // context for validity check
+
+    z3::expr translate(z3::expr& e);
+
     int pushCount;
     Z3Converter* conv;
 };

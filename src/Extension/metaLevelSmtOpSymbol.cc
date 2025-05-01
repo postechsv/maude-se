@@ -381,7 +381,7 @@ MetaLevelSmtOpSymbol::upTrace(RewriteSmtSequenceSearch& state, MixfixModule* m, 
   args[nrSteps] = upTraceStepFinal(state, stateNr, m, qidMap, dagNodeMap); // this is non-standard
 
   Vector<DagNode*> r_args(2);
-  r_args[0] = (nrSteps == 1) ? args[0] : traceSymbol->makeDagNode(args);
+  r_args[0] = (nrSteps == 0) ? args[0] : traceSymbol->makeDagNode(args);
   // r_args[1] = metaLevel->upSubstitution(*state.getSubstitution(), *state.getVariableInfo(), m, qidMap, dagNodeMap);
   r_args[1] = upSmtAssn(m, state.getStateModel(stateNr), qidMap, dagNodeMap);
 
@@ -405,7 +405,7 @@ MetaLevelSmtOpSymbol::upTraceStep(RewriteSmtSequenceSearch& state,
 
   args[0] = metaLevel->upDagNode(d->getArgument(0), m, qidMap, dagNodeMap);
   args[1] = metaLevel->upDagNode(constDagNode, m, qidMap, dagNodeMap);
-  args[2] = metaLevel->upType(dagNode->getSort(), qidMap);
+  args[2] = metaLevel->upType(d->getArgument(0)->getSort(), qidMap);
   args[3] = metaLevel->upRl(state.getStateRule(stateNr), m, qidMap);
   return traceStepSymbol->makeDagNode(args);
 }
@@ -427,7 +427,7 @@ MetaLevelSmtOpSymbol::upTraceStepFinal(RewriteSmtSequenceSearch& state,
 
   args[0] = metaLevel->upDagNode(d->getArgument(0), m, qidMap, dagNodeMap);
   args[1] = metaLevel->upDagNode(constDagNode, m, qidMap, dagNodeMap);
-  args[2] = metaLevel->upType(dagNode->getSort(), qidMap);
+  args[2] = metaLevel->upType(d->getArgument(0)->getSort(), qidMap);
   return traceStepNoRlSymbol->makeDagNode(args);
 }
 

@@ -116,6 +116,41 @@ VariableGenerator::makeFreshVariable(Term *baseVariable, const mpz_class &number
     return new VariableDagNode(s, newId, NONE);
 }
 
+bool containsSpecialChars(const char *str)
+{
+  if (str != nullptr)
+    for (char last = 0; *str != '\0'; last = *str, str++)
+      if (Token::specialChar(*str) && last != '`')
+        return true;
+
+  return false;
+}
+
+string escapeWithBackquotes(const char *str)
+{
+  string escaped;
+
+  // Add backquotes before special characters if not already there
+  for (char last = 0; *str != '\0'; last = *str, str++)
+  {
+    if (Token::specialChar(*str) && last != '`')
+      escaped.push_back('`');
+    escaped.push_back(*str);
+  }
+
+  return escaped;
+}
+
+int encodeEscapedToken(const char *str)
+{
+  // Escape the string only if it is needed
+  if (!containsSpecialChars(str))
+    return Token::encode(str);
+
+  string escaped = escapeWithBackquotes(str);
+  return Token::encode(escaped.c_str());
+}
+
 #ifdef USE_CVC4
 #include "cvc4.cc"
 #elif defined(USE_YICES2)

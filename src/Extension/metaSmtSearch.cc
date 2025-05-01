@@ -111,7 +111,7 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                     if (!success)
                     {
                         delete smtState;
-                        result = metaLevel->upSmtFailure();
+                        result = smtFailureSymbol->makeDagNode();
                         goto fail;
                     }
                     context.incrementRlCount();
@@ -171,6 +171,7 @@ bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingCont
                     result = upFailureTrace();
                     goto fail;
                 }
+                context.incrementRlCount();
                 ++lastSolutionNr;
             }
             m->insert(subject, smtState, solutionNr);

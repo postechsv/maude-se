@@ -69,10 +69,10 @@ public:
 class PySmtModel : public SmtModel {
 public:
     PySmtModel(){
-        cout << "model gen" << endl;
+        // cout << "model gen" << endl;
     };
     ~PySmtModel(){
-        cout << "model del" << endl;
+        // cout << "model del" << endl;
         for (auto &i : model){
             delete i.first;
             delete i.second;

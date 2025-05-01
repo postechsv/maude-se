@@ -232,6 +232,8 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			int index2;
 			bool needMerge = !fold;
 
+			ConstrainedTerm *newConsTerm = new ConstrainedTerm(c1, connector->add_const(acc, cur));
+
 			DagNode *reprDag;
 			// folding case ...
 			if (stateCollection.insertState(counter, c1, NONE, &index2))
@@ -246,57 +248,12 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 					newState->dag = c1;
 					newState->depth = n->depth + 1;
 
-					// PyObject *next = PyObject_CallMethodObjArgs(connector, add_const, acc, cur, NULL);
-					SmtTerm* next = connector->add_const(acc, cur);
-					if (next == nullptr)
-					{
-						IssueWarning("failed to accumulate constraints");
-					}
-
-					// Py_XINCREF(next);
-
-					// PyObject *objectsRepresentation00 = PyObject_Repr(next);
-					// const char *ss00 = PyUnicode_AsUTF8(objectsRepresentation00);
-
-					// PyObject *objectsRepresentation11 = PyObject_Repr(acc);
-					// const char *ss11 = PyUnicode_AsUTF8(objectsRepresentation11);
-
-					// PyObject *objectsRepresentation22 = PyObject_Repr(cur);
-					// const char *ss22 = PyUnicode_AsUTF8(objectsRepresentation22);
-
-					// Py_XDECREF(objectsRepresentation00);
-					// Py_XDECREF(objectsRepresentation11);
-					// Py_XDECREF(objectsRepresentation22);
-
-					// const void *address = static_cast<const void *>(newState->dag);
-					// std::stringstream strs;
-					// strs << address;
-					// string adrId = strs.str();
-
-					// Verbose("  new State " << counter << " added");
-					// Verbose("  dag : ");
-					// Verbose("  " << newState->dag);
-					// Verbose("  address : ");
-					// Verbose("  " << adrId.c_str());
-					// Verbose("  acc : ");
-					// Verbose("  " << ss11);
-					// Verbose("  cur : ");
-					// Verbose("  " << ss22);
-					// Verbose("  and : ");
-					// Verbose("  " << ss00);
-
-					ConstrainedTerm *t = new ConstrainedTerm(c1, next);
-					// t->dag->mark();
-
-					//   newState->constraint = conjunct;
-					// newState->constTermIndex = consTermSeen[counter].size();
 					newState->constTermIndex = 0;
 					consTermSeen.insert(ConstrainedTermMap::value_type(counter, Vector<ConstrainedTerm *>()));
-					consTermSeen[counter].append(t);
+					consTermSeen[counter].append(newConsTerm);
 					map2seen.insert(Map2Seen::value_type(make_tuple(counter, 0), seen.size()));
 					seen.append(newState);
 
-					// Verbose("    add a new state " << c1 << " with " << conjunctDag);
 					counter++;
 					needMerge = false;
 				}
@@ -324,25 +281,9 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 						{
 							IssueWarning("subsumption is wrong (" << constTerm->dag << " should be renaming equivalent with " << c1 << ")");
 						}
-						// must be true
-						// Assert(isMatch == true, "...");
 
-						// PyObject *subsumedResult = PyObject_CallMethodObjArgs(connector, subsume, constTerm->subst, constTerm->constraint, acc, cur, NULL);
 						bool subsumedResult = connector->subsume(constTerm->subst, constTerm->constraint, acc, cur);
-						// if (subsumedResult == nullptr)
-						// {
-						// 	IssueWarning("failed to apply subsumption");
-						// }
 
-						// subsumed by older one
-						// if (PyObject_RichCompareBool(subsumedResult, Py_True, Py_EQ) > 0)
-						// {
-						// 	Verbose("constraints subsumed by another");
-						// 	nextState = map2seen[make_tuple(index2, cc)];
-						// 	exists = true;
-						// 	needMerge = false;
-						// 	break;
-						// }
 						if (subsumedResult){
 							Verbose("constraints subsumed by another");
 							nextState = map2seen[make_tuple(index2, cc)];
@@ -362,52 +303,11 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 						nextState = seen.size();
 						State *newState = new State(index2, stateNr);
 						newState->avoidVariableNumber = n->rewriteState->getMaxVariableNumber();
-						//   newState->constraint = conjunct;
 						newState->constTermIndex = consTermSeen[index2].size();
 						newState->dag = reprDag;
 						newState->depth = n->depth + 1;
 
-						// stringstream pyId;
-						// pyId << counter;
-						// pyId << "-";
-						// pyId << newState->constTermIndex;
-
-						// PyObject *next = PyObject_CallMethodObjArgs(connector, add_const, acc, cur, NULL);
-						SmtTerm* next = connector->add_const(acc, cur);
-						if (next == nullptr)
-						{
-							IssueWarning("failed to make a constraint");
-						}
-
-						// Py_XINCREF(next);
-
-						// PyObject *objectsRepresentation00 = PyObject_Repr(next);
-						// const char *ss00 = PyUnicode_AsUTF8(objectsRepresentation00);
-
-						// PyObject *objectsRepresentation11 = PyObject_Repr(acc);
-						// const char *ss11 = PyUnicode_AsUTF8(objectsRepresentation11);
-
-						// PyObject *objectsRepresentation22 = PyObject_Repr(cur);
-						// const char *ss22 = PyUnicode_AsUTF8(objectsRepresentation22);
-
-						// Py_XDECREF(objectsRepresentation00);
-						// Py_XDECREF(objectsRepresentation11);
-						// Py_XDECREF(objectsRepresentation22);
-
-						// Verbose("  new State " << counter << " added");
-						// Verbose("  dag : ");
-						// Verbose("  " << newState->dag);
-						// Verbose("  acc : ");
-						// Verbose("  " << ss11);
-						// Verbose("  cur : ");
-						// Verbose("  " << ss22);
-						// Verbose("  and : ");
-						// Verbose("  " << ss00);
-
-						ConstrainedTerm *t = new ConstrainedTerm(c1, next);
-						// t->dag->mark();
-
-						consTermSeen[index2].append(t);
+						consTermSeen[index2].append(newConsTerm);
 						map2seen.insert(Map2Seen::value_type(make_tuple(index2, newState->constTermIndex), seen.size()));
 						seen.append(newState);
 						needMerge = false;
@@ -616,6 +516,8 @@ SmtStateTransitionGraph::ConstrainedTerm::ConstrainedTerm(DagNode *dag, SmtTerm 
 	matchingAutomaton = t->compileLhs(false, variableInfo, boundUniquely, subproblemLikely);
 	term = t;
 	nrMatchingVariables = variableInfo.getNrProtectedVariables();
+
+	subst = nullptr;
 }
 
 SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
@@ -632,6 +534,7 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 	// if (subst){
 	// 	Py_DECREF(subst);
 	// }
+	// cout << "dag : " << dag << " checking matching with " << other << endl;
 
 	int nrSlotsToAllocate = nrMatchingVariables;
 	if (nrSlotsToAllocate == 0)
@@ -644,6 +547,12 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 	bool result = matchingAutomaton->match(other, matcher, subproblem) &&
 				  (subproblem == 0 || subproblem->solve(true, matcher));
 	delete subproblem;
+
+	// delete old subst, if any exists
+	if (subst) {
+		delete subst;
+		subst = nullptr;
+	}
 
 	if (result)
 	{
@@ -658,9 +567,6 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 
 			subst_dict.insert(std::pair<DagNode*, DagNode*>(left, right));
 		}
-
-		// delete old subst, if any exists
-		if (subst) delete subst;
 		subst = connector->mk_subst(subst_dict);
 	}
 	return result;
