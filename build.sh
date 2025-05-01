@@ -93,7 +93,7 @@ mk_patch() {
 
   cd "$top_dir/maude-bindings/"
   (
-    git diff --no-prefix ":^subprojects" > $top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
+    git diff --no-prefix ":^subprojects" ":^pyproject.toml" > $top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
   )
 
   cd "$top_dir/maude-bindings/subprojects/maudesmc/"
@@ -104,7 +104,7 @@ mk_patch() {
 }
 
 prepare() {
-  pip install scikit-build ninja cmake meson swig
+  pip install scikit-build ninja cmake meson===1.4.1 swig build
   git clone https://github.com/fadoss/maude-bindings.git
 
   # currently use specific version
@@ -215,8 +215,9 @@ build_maude_se() {
   cd maude-bindings 
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
-    python setup.py bdist_wheel -DBUILD_LIBMAUDE=OFF \
-          -DEXTRA_INCLUDE_DIRS="$build_dir/include"
+    CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" python -m build
+    # python setup.py bdist_wheel -DBUILD_LIBMAUDE=OFF \
+          # -DEXTRA_INCLUDE_DIRS="$build_dir/include"
   )
 
   cd ..
