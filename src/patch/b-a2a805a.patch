@@ -59,3 +59,14 @@ index 93d1eb1..78021ff 100644
  
  elseif (${LANGUAGE} STREQUAL java)
  	include(UseJava)
+diff --git swig/maude.i swig/maude.i
+index 432e6b0..6afbcb8 100644
+--- swig/maude.i
++++ swig/maude.i
+@@ -238,3 +238,5 @@ bool setAssocUnifDepth(float m);
+ %include module.i
+ %include view.i
+ %include hook.i
++%include rwsmt.i
++%include core.i
+\ No newline at end of file
