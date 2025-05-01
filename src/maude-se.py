@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-import os
 import argparse
 import maudeSE.maude
 from maudeSE.factory import Factory
 # from maudeSE.hook.check import *
 # from maudeSE.hook.search import *
 
-if __name__ == '__main__':
+def main():
     solvers = ["z3","yices","cvc5"]
     default_s = solvers[0]
 

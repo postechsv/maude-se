@@ -1,0 +1,34 @@
+[project]
+name            = 'maudeSE'
+version         = '0.0.2'
+description     = 'Maude SMT Extension'
+license.text    = 'GPLv3'
+classifiers     = [
+	'Intended Audience :: Science/Research',
+	'Programming Language :: Python',
+	'Programming Language :: Python :: 3',
+	'Topic :: Scientific/Engineering',
+	'Operating System :: OS Independent',
+]
+readme = '../README.md'
+dependencies = [
+	"z3-solver",
+	"yices",
+	"cvc5",
+]
+authors = [
+	{name = "Geunyeol Yu", email = "maude-se@postech.ac.kr"},
+]
+
+[project.urls]
+"Homepage"      = 'https://maude-se.github.io'
+"Bug Tracker"   = 'https://github.com/postechsv/maude-se/issues'
+"Documentation" = 'https://maude-se.github.io'
+"Source Code"   = 'https://github.com/postechsv/maude-se'
+
+[build-system]
+requires = ['scikit-build-core', 'swig']
+build-backend = 'scikit_build_core.build'
+
+[project.scripts]
+maude-se = "maudeSE:main"
