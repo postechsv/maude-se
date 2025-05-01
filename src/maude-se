@@ -58,6 +58,4 @@ if __name__ == '__main__':
             maudeSE.maude.load('maude-se-meta.maude')
 
     except Exception as err:
-        import traceback
-        print(traceback.print_exc())
         print("error: {}".format(err))

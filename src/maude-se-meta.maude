@@ -95,7 +95,7 @@ endfm
 fmod MAUDE-SE-PRELUDE is
   pr MAUDE-SE-SYNTAX .
   pr META-SMT-CHECK .
-  pr META-SMT-SEARCH2 .
+  pr META-SMT-SEARCH .
 endfm
 
 fmod MAUDE-SE-ERROR is
@@ -134,7 +134,7 @@ endv
 
 omod MAUDE-SE-META-INTERPRETER is
   pr META-SMT-CHECK .
-  pr META-SMT-SEARCH2 .
+  pr META-SMT-SEARCH .
   inc STD-STREAM .
   inc LEXICAL .
   inc MAYBE{Oid} * (op maybe to null) .
