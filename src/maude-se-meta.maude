@@ -679,11 +679,11 @@ omod MAUDE-SE-META-INTERPRETER is
   op toString : Module Trace2 -> String .
   eq toString(MO, nil) = "" .
   eq toString(MO, {T || T', TY} ST) = "Constrained Term:" + "\n" +
-  " Term:"        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
+  " Term: "        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
   " Constraint: " + metaPrintToString(MO, none, T', mixfix, none)  + "\n" .
 
   eq toString(MO, {T || T', TY, RL} ST) = "Constrained Term:" + "\n" +
-  " Term:"        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
+  " Term: "        + metaPrintToString(MO, none, T, mixfix, none)   + "\n" +
   " Constraint: " + metaPrintToString(MO, none, T', mixfix, none)  + "\n" +
   "=====[" + toString(MO, RL) + "]=====>"                          + "\n" + toString(MO, ST) .
 

@@ -1,5 +1,5 @@
 diff --git meson.build meson.build
-index 8033a65..9638eb1 100644
+index 8033a65..07cce64 100644
 --- meson.build
 +++ meson.build
 @@ -1,4 +1,4 @@
@@ -8,7 +8,38 @@ index 8033a65..9638eb1 100644
  
  #
  ## Configuration
-@@ -183,6 +183,16 @@ elif smtOption == 'cvc4'
+@@ -121,22 +121,16 @@ staticLibs = get_option('static-libs')
+ libraries = []
+ 
+ # GNU multiprecision library (https://gmplib.org/)
+-gmpxx = dependency('gmpxx',
+-		static: 'gmp' in staticLibs,
+-		required: false)
++# Versions before 6.2.0 do not include a pkg-config file
+ 
+-if not gmpxx.found()
+-	# Versions before 6.2.0 do not include a pkg-config file
++gmpxx = cxx.find_library('gmpxx',
++	static: 'gmp' in staticLibs,
++	dirs: extraSearchPaths)
++gmp = cxx.find_library('gmp',
++	static: 'gmp' in staticLibs,
++	dirs: extraSearchPaths)
+ 
+-	gmpxx = cxx.find_library('gmpxx',
+-			static: 'gmp' in staticLibs,
+-			dirs: extraSearchPaths)
+-	gmp = cxx.find_library('gmp',
+-			static: 'gmp' in staticLibs,
+-			dirs: extraSearchPaths)
+-
+-	libraries += [gmp]
+-endif
++libraries += [gmp]
+ 
+ # GNU readline (https://tiswww.case.edu/php/chet/readline/rltop.html)
+ readline = dependency('readline',
+@@ -183,6 +177,16 @@ elif smtOption == 'cvc4'
  			required: false)
  	libraries += [cvc4, cln]
  	conf.set('USE_CVC4', 1, description: 'use CVC4 SMT solver library')
@@ -25,7 +56,7 @@ index 8033a65..9638eb1 100644
  endif
  
  #
-@@ -356,6 +366,7 @@ mixfix_includes = include_directories(
+@@ -356,6 +360,7 @@ mixfix_includes = include_directories(
  	'src/FullCompiler',
  	'src/StrategyLanguage',
  	'src/SMT',
@@ -33,7 +64,7 @@ index 8033a65..9638eb1 100644
  )
  
  mixfix_source = [
-@@ -956,6 +967,47 @@ smt_source = [
+@@ -956,6 +961,47 @@ smt_source = [
  
  smt = static_library('smt', smt_source, include_directories: smt_includes)
  
@@ -81,7 +112,7 @@ index 8033a65..9638eb1 100644
  # Main
  
  main_includes = include_directories(
-@@ -985,6 +1037,7 @@ main_includes = include_directories(
+@@ -985,6 +1031,7 @@ main_includes = include_directories(
  	'src/FullCompiler',
  	'src/StrategyLanguage',
  	'src/Mixfix',
@@ -89,7 +120,7 @@ index 8033a65..9638eb1 100644
  )
  
  main_source = [
-@@ -1064,6 +1117,7 @@ maudeSubdirs = [
+@@ -1064,6 +1111,7 @@ maudeSubdirs = [
  	ioStuff,
  	core,
  	meta,
@@ -97,7 +128,7 @@ index 8033a65..9638eb1 100644
  ]
  
  maudeSubsdirsInternal = [
-@@ -1122,6 +1176,7 @@ libmaude_includes = include_directories(
+@@ -1122,6 +1170,7 @@ libmaude_includes = include_directories(
  	'src/Temporal',
  	'src/Utility',
  	'src/Variable',

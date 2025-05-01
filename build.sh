@@ -34,13 +34,24 @@ lib_dir="$build_dir/lib"
 # functionality
 progress() { echo "===== " $@ ; }
 
-build_deps() {
+build_deps_workflows() {
 
   if [ "$OS" == "Darwin" ]; then
+    # echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> $HOME/.bash_profile
+    # echo 'export PATH="/opt/homebrew/opt/flex/bin:$PATH"' >> $HOME/.bash_profile
+    # export LDFLAGS="-L/opt/homebrew/opt/bison/lib"
+    # export LDFLAGS="-L/opt/homebrew/opt/flex/lib"
+    # export CPPFLAGS="-I/opt/homebrew/opt/flex/include"
+
     brew install libsigsegv
     brew install gmp
     build_buddy
     brew install libtecla
+
+    mkdir -p $build_dir
+    mkdir -p $build_dir/include
+    mkdir -p $build_dir/lib
+    mkdir -p $third_party
 
     alibs=("$(get_brew_pkg "libsigsegv")" "$(get_brew_pkg "gmp")" "$(get_brew_pkg "libtecla")")
 
@@ -69,12 +80,28 @@ build_deps() {
   rm -rf "$build_dir"/lib/*.dylib*
 }
 
+build_deps() {
+
+  build_libsigsegv
+  build_gmp
+  build_buddy
+  build_tecla
+
+  # build_libpoly
+  # build_libncurses
+
+  # build smt solver
+  # build_z3
+  # build_yices2
+
+  rm -rf "$build_dir"/lib/*.so*
+  rm -rf "$build_dir"/lib/*.dylib*
+}
+
 patch_src() {
   progress "Apply patchings"
   maude_src_dir="$top_dir/maude-bindings"
   patch_src_dir="$top_dir/src/patch"
-
-  cp "$patch_src_dir/setup.py" "$maude_src_dir"
 
   cd "$maude_src_dir/"
   (
@@ -93,7 +120,7 @@ mk_patch() {
 
   cd "$top_dir/maude-bindings/"
   (
-    git diff --no-prefix ":^subprojects" ":^pyproject.toml" > $top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
+    git diff --no-prefix ":^subprojects" ":^pyproject.toml" ":^README.md" > $top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
   )
 
   cd "$top_dir/maude-bindings/subprojects/maudesmc/"
@@ -109,9 +136,7 @@ prepare() {
 
   # currently use specific version
   cd maude-bindings
-  # && git checkout aefa8a8875dc3b82b6b0367cb73a1f533021d0e3
-  git submodule update --init 
-  # && rm -rf .git && rm -rf .github
+  git submodule update --init
 }
 
 build_maude_lib() {
@@ -145,7 +170,8 @@ build_maude_lib() {
             -Dwith-ltsmin=disabled \
             -Dwith-simaude=disabled \
             -Dc_args='-mno-thumb' \
-            -Dc_link_args="-Wl,--export-dynamic"
+            -Dc_link_args="-Wl,--export-dynamic" \
+            -Dcpp_link_args="-Wl,-x -u __gmpz_get_d -L"$build_dir"/lib -lgmp"
     fi
     cd release && ninja
   )
@@ -208,6 +234,9 @@ build_maude_se() {
   cp $maudesmc_dir/release/libmaude.so $maudesmc_dir/installdir/lib
   cp $maudesmc_dir/release/libmaude.dylib $maudesmc_dir/installdir/lib
 
+  cp "$top_dir/src/pyproject.toml" $top_dir/maude-bindings
+  cp "$top_dir/README.md" $top_dir/maude-bindings
+
   cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
   cp "$src_dir/swig/core.i"   "$swig_src_dir"
   cp "$src_dir/Extension/pysmt.hh" "$top_dir/maude-bindings/src" 
@@ -227,7 +256,7 @@ build_maude_se() {
 }
 
 # build gmp
-build_gmp() {
+build_gmp_raw() {
   progress "Building gmp library"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
@@ -250,6 +279,24 @@ build_gmp() {
     fi
 
     make
+    make check
+    make install
+  )
+}
+
+# build gmp
+build_gmp() {
+  progress "Building gmp library"
+  mkdir -p "$build_dir"
+  mkdir -p "$third_party"
+  ( progress "Downloading gmp 6.1.2"
+    get_gnu "gmp" "6.1.2" "tar.xz"
+    cd "$third_party/gmp-6.1.2"
+
+    ./configure --prefix="$build_dir" CFLAGS=-fPIC CXXFLAGS=-fPIC \
+		--enable-cxx --enable-fat --disable-shared --enable-static --build=x86_64-pc-linux-gnu
+          
+    make -j4
     make check
     make install
   )
@@ -294,7 +341,7 @@ build_yices2() {
 }
 
 #
-build_buddy() {
+build_buddy_raw() {
   progress "Building BuDDy library"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
@@ -315,7 +362,7 @@ build_buddy() {
                   --disable-shared
       make
       make check
-      chmod a+x ../tools/install-sh
+      chmod a+x ./tools/install-sh
       make install
     else
       ./configure LDFLAGS=-lm \
@@ -330,8 +377,36 @@ build_buddy() {
   )
 }
 
+build_buddy() {
+  progress "Building BuDDy library"
+  mkdir -p "$build_dir"
+  mkdir -p "$third_party"
+  ( progress "Downloading BuDDy 2.4"
+    buddy_dir="$third_party/buddy-2.4"
+
+    curl -L https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz > "$buddy_dir.tar.gz"
+    tar -xvzf "$buddy_dir.tar.gz" -C "$third_party"
+    rm -rf "$buddy_dir.tar.gz"
+
+    cd "$buddy_dir"
+
+    # replace old config guess to latest one
+    rm -rf config.guess config.sub
+
+    wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
+    wget -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD'
+
+    ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" --includedir="$include_dir" --libdir="$lib_dir" --disable-shared
+    
+    make -j4
+    make check
+    chmod a+x ./tools/install-sh
+    make install
+  )
+}
+
 # build tecla
-build_tecla() {
+build_tecla_raw() {
   progress "Building tecla library"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
@@ -367,8 +442,29 @@ build_tecla() {
   )
 }
 
+# build tecla
+build_tecla() {
+  progress "Building tecla library"
+  mkdir -p "$build_dir"
+  mkdir -p "$third_party"
+  ( progress "Downloading Tecla 1.6.3"
+    tecla_dir="$third_party/libtecla"
+  
+    curl -o "$tecla_dir.tar.gz" https://sites.astro.caltech.edu/~mcs/tecla/libtecla-1.6.3.tar.gz
+    tar -xvzf "$tecla_dir.tar.gz" -C "$third_party"
+    rm -rf "$tecla_dir.tar.gz" 
+    
+    cd "$tecla_dir"
+
+    ./configure CXXFLAGS-"-fPIC" CFLAGS="-fPIC -g -fno-stack-protector -O3" \
+                --prefix=$build_dir
+    make
+    make install
+  )
+}
+
 # build libsigsegv
-build_libsigsegv() {
+build_libsigsegv_raw() {
   progress "Building libsigsegv library"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
@@ -385,6 +481,26 @@ build_libsigsegv() {
       ./configure CFLAGS="-g -fno-stack-protector -O3" \
                   --prefix="$build_dir" --enable-shared=no
     fi
+
+    make -j4
+    make check
+    make install
+  )
+}
+
+# build libsigsegv
+build_libsigsegv() {
+  progress "Building libsigsegv library"
+  mkdir -p "$build_dir"
+  mkdir -p "$third_party"
+  ( progress "Downloading Libsigsegv 2.12"
+    get_gnu "libsigsegv" "2.12" "tar.gz"
+    sigsegv_dir="$third_party/libsigsegv-2.12"
+    
+    cd "$sigsegv_dir"
+
+    ./configure CXXFLAGS="-fPIC" CFLAGS="-fPIC -g -fno-stack-protector -O3" \
+                --prefix="$build_dir" --enable-shared=no
     
     make -j4
     make check
@@ -475,6 +591,7 @@ build_command="$1" ; shift
 case "$build_command" in
     prep)               prepare                   "$@" ;;
     deps)               build_deps                "$@" ;;
+    deps-wf)            build_deps_workflows      "$@" ;;
     patch)              patch_src                 "$@" ;;
     build-maude)        build_maude_lib           "$@" ;;
     build-maude-se)     build_maude_se            "$@" ;;

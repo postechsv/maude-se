@@ -1,6 +1,6 @@
 [project]
-name            = 'maudeSE'
-version         = '0.0.2'
+name            = 'maude-se'
+version         = '0.0.1.dev0'
 description     = 'Maude SMT Extension'
 license.text    = 'GPLv3'
 classifiers     = [
@@ -10,7 +10,7 @@ classifiers     = [
 	'Topic :: Scientific/Engineering',
 	'Operating System :: OS Independent',
 ]
-readme = '../README.md'
+readme = 'README.md'
 dependencies = [
 	"z3-solver",
 	"yices",

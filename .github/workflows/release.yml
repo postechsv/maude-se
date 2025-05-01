@@ -4,14 +4,33 @@ on:
     tags:
       - 'v*'
 jobs:
-  build:
+  manylinux_2_28:
+    name: Linux packages (manylinux_2_28)
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out repository code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build Python packages
+      run: |
+        docker run -v $(pwd):/work -w /work quay.io/pypa/manylinux_2_28_x86_64 ./build/many_linux.sh
+
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: py-package-dist-many-linux
+        path: out/
+
+  macos:
     name: Build distribution 📦
     strategy:
       matrix:
         python-version: ['3.8','3.9','3.10','3.11','3.12','3.13']
-        os: [macos-latest, ubuntu-latest]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
     - name: Setup Python ${{ matrix.python-version }}
@@ -28,12 +47,15 @@ jobs:
 
     - name: Prepare prerequisites
       run: |
-        ./build.sh deps
+        ./build.sh deps-wf
         ./build.sh prep
         ./build.sh patch
-
+    
     - name: Build Maude
-      run: ./build.sh build-maude
+      run: |
+        ./deps.sh
+        source ~/.bashrc
+        ./build.sh build-maude
 
     - name: Build Maude-SE
       run: ./build.sh build-maude-se
@@ -41,89 +63,21 @@ jobs:
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
-        name: python-package-distributions
+        name: py-package-dist-${{ strategy.job-index }}
         path: out/
 
-  # publish-to-pypi:
-  #   name: >-
-  #     Publish Python 🐍 distribution 📦 to PyPI
-  #   if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
-  #   needs:
-  #   - build
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: pypi
-  #     url: https://pypi.org/p/stlmc
-  #   permissions:
-  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
-
-  #   steps:
-  #   - name: Download all the dists
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: python-package-distributions
-  #       path: dist/
-  #   - name: Publish distribution 📦 to PyPI
-  #     uses: pypa/gh-action-pypi-publish@release/v1
-
-  # github-release:
-  #   name: >-
-  #     Sign the Python 🐍 distribution 📦 with Sigstore
-  #     and upload them to GitHub Release
-  #   needs:
-  #   - publish-to-pypi
-  #   runs-on: ubuntu-latest
-
-  #   permissions:
-  #     contents: write  # IMPORTANT: mandatory for making GitHub Releases
-  #     id-token: write  # IMPORTANT: mandatory for sigstore
-
-  #   steps:
-  #   - name: Download all the dists
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: python-package-distributions
-  #       path: dist/
-  #   - name: Sign the dists with Sigstore
-  #     uses: sigstore/gh-action-sigstore-python@v2.1.1
-  #     with:
-  #       inputs: >-
-  #         ./dist/*.tar.gz
-  #         ./dist/*.whl
-  #   - name: Create GitHub Release
-  #     env:
-  #       GITHUB_TOKEN: ${{ github.token }}
-  #     run: >-
-  #       gh release create
-  #       '${{ github.ref_name }}'
-  #       --repo '${{ github.repository }}'
-  #       --notes ""
-  #   - name: Upload artifact signatures to GitHub Release
-  #     env:
-  #       GITHUB_TOKEN: ${{ github.token }}
-  #     # Upload to GitHub Release using the `gh` CLI.
-  #     # `dist/` contains the built packages, and the
-  #     # sigstore-produced signatures and certificates.
-  #     run: >-
-  #       gh release upload
-  #       '${{ github.ref_name }}' dist/**
-  #       --repo '${{ github.repository }}'
-
-
-  publish-to-testpypi:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+  publish-to-pypi:
+    name: >-
+      Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+    runs-on: ubuntu-latest
     needs:
-    - build
-    strategy:
-      matrix:
-        python-version: ['3.8','3.9','3.10','3.11','3.12','3.13']
-        os: [macos-latest, ubuntu-latest]
-
-    runs-on: ${{ matrix.os }}
+      - manylinux_2_28
+      - macos
 
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/maude-se
+      name: pypi
+      url: https://pypi.org/p/maude-se
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
@@ -132,9 +86,90 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        name: python-package-distributions
-        path: dist/
-    - name: Publish distribution 📦 to TestPyPI
+        pattern: py-package-dist-*
+        merge-multiple: true
+        path: out/
+    - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        repository-url: https://test.pypi.org/legacy/
+        packages-dir: out/
+
+  github-release:
+    name: >-
+      Sign the Python 🐍 distribution 📦 with Sigstore
+      and upload them to GitHub Release
+
+    runs-on: ubuntu-latest
+    needs:
+      - publish-to-pypi
+      # - publish-to-testpypi
+
+    permissions:
+      contents: write  # IMPORTANT: mandatory for making GitHub Releases
+      id-token: write  # IMPORTANT: mandatory for sigstore
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        pattern: py-package-dist-*
+        merge-multiple: true
+        path: out/
+
+    - name: Sign the dists with Sigstore
+      uses: sigstore/gh-action-sigstore-python@v3.0.0
+      with:
+        inputs: >-
+          ./out/*.tar.gz
+          ./out/*.whl
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: >-
+        gh release create
+        '${{ github.ref_name }}'
+        --repo '${{ github.repository }}'
+        --notes ""
+
+    - name: Upload artifact signatures to GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      # Upload to GitHub Release using the `gh` CLI.
+      # `dist/` contains the built packages, and the
+      # sigstore-produced signatures and certificates.
+      run: >-
+        gh release upload
+        '${{ github.ref_name }}' out/**
+        --repo '${{ github.repository }}'
+
+
+  # publish-to-testpypi:
+  #   name: Publish Python 🐍 distribution 📦 to TestPyPI
+    
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - manylinux_2_28
+  #     - macos
+
+  #   environment:
+  #     name: testpypi
+  #     url: https://test.pypi.org/p/maude-se
+
+  #   permissions:
+  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+  #   steps:
+  #   - name: Download all the dists
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       pattern: py-package-dist-*
+  #       merge-multiple: true
+  #       path: out/
+  #   - name: Publish distribution 📦 to TestPyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       packages-dir: out/
+  #       password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+  #       repository-url: https://test.pypi.org/legacy/
+  #       verbose: true

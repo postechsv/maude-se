@@ -1,5 +1,5 @@
 diff --git CMakeLists.txt CMakeLists.txt
-index 93d1eb1..df5d9e4 100644
+index 93d1eb1..a51f080 100644
 --- CMakeLists.txt
 +++ CMakeLists.txt
 @@ -1,9 +1,9 @@
@@ -39,7 +39,7 @@ index 93d1eb1..df5d9e4 100644
  install(FILES
  	"${MAUDESMC_PATH}/installdir/lib/libmaude${CMAKE_SHARED_LIBRARY_SUFFIX}"
  	"${MAUDESMC_PATH}/src/Main/prelude.maude"
-@@ -202,13 +204,28 @@ install(FILES
+@@ -202,13 +204,27 @@ install(FILES
  	"${MAUDESMC_PATH}/src/Main/term-order.maude"
  	"${MAUDESMC_PATH}/src/Main/time.maude"
  	${EXTRA_INSTALL_FILES}
@@ -61,7 +61,6 @@ index 93d1eb1..df5d9e4 100644
 +	ENDIF()
 +	endforeach()
 +	INSTALL(FILES ${FILES_TO_DEPLOY} DESTINATION maudeSE)
-+	INSTALL(FILES "${MAUDE_SE_INSTALL_FILES}/maude-se.py" RENAME __init__.py DESTINATION maudeSE)
 +	INSTALL(DIRECTORY ${DIRS_TO_DEPLOY} DESTINATION maudeSE)
 +	install(FILES
 +		"${MAUDE_SE_INSTALL_FILES}/smt-check.maude" 
