@@ -13,8 +13,19 @@ src_dir="$(pwd)/src"
 # maudesmc
 smc_dir="maude-bindings/subprojects/maudesmc"
 
-build_dir="$top_dir/$smc_dir/.build"
-third_party="$top_dir/$smc_dir/.3rd_party"
+maude_raw_dir="$top_dir/test-build/Maude/src"
+
+# build_dir="$top_dir/$smc_dir/.build"
+# third_party="$top_dir/$smc_dir/.3rd_party"
+
+# build_dir="$top_dir/test-build/.build"
+# third_party="$top_dir/test-build/.3rd_party"
+
+build_dir="$top_dir/.build"
+third_party="$top_dir/.3rd_party"
+
+# OS detection
+OS=$(uname -s)
 
 # -------------------
 include_dir="$build_dir/include"
@@ -24,16 +35,35 @@ lib_dir="$build_dir/lib"
 progress() { echo "===== " $@ ; }
 
 build_deps() {
-  build_gmp
-  build_libsigsegv
+
+  if [ "$OS" == "Darwin" ]; then
+    brew install libsigsegv
+    brew install gmp
+    build_buddy
+    brew install libtecla
+
+    alibs=("$(get_brew_pkg "libsigsegv")" "$(get_brew_pkg "gmp")" "$(get_brew_pkg "libtecla")")
+
+    for d in "${alibs[@]}"
+    do
+      # copy
+      cp $d/include/* $build_dir/include
+      cp $d/lib/* $build_dir/lib
+    done
+
+  else
+    build_libsigsegv
+    build_gmp
+    build_buddy
+    build_tecla
+  fi
+
+  # build_libpoly
   # build_libncurses
-  build_tecla
-  build_libpoly
-  build_buddy
 
   # build smt solver
-  build_z3
-  build_yices2
+  # build_z3
+  # build_yices2
 
   rm -rf "$build_dir"/lib/*.so*
   rm -rf "$build_dir"/lib/*.dylib*
@@ -42,12 +72,35 @@ build_deps() {
 patch_src() {
   progress "Apply patchings"
   maude_src_dir="$top_dir/maude-bindings"
-  patch_src_dir="$top_dir/src/build"
+  patch_src_dir="$top_dir/src/patch"
 
-  cp "$patch_src_dir/CMakeLists.txt" "$maude_src_dir"
   cp "$patch_src_dir/setup.py" "$maude_src_dir"
-  cp "$patch_src_dir/meson_options.txt" "$maude_src_dir/subprojects/maudesmc/"
-  cp "$patch_src_dir/meson.build" "$maude_src_dir/subprojects/maudesmc/"
+
+  cd "$maude_src_dir/"
+  (
+    patch -p0 < $top_dir/src/patch/b-*.patch
+  )
+
+  cd "$maude_src_dir/subprojects/maudesmc/"
+  (
+    patch -p0 < $top_dir/src/patch/c-*.patch
+    patch -p0 < $top_dir/src/patch/d-*.patch
+  )
+}
+
+mk_patch() {
+  progress "Make patch for Maude as a library"
+
+  cd "$top_dir/maude-bindings/"
+  (
+    git diff --no-prefix ":^subprojects" > $top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
+  )
+
+  cd "$top_dir/maude-bindings/subprojects/maudesmc/"
+  (
+    git diff --no-prefix ":^src" > $top_dir/src/patch/c-$(git log -1 --pretty=format:"%h").patch
+    git diff --no-prefix src/ > $top_dir/src/patch/d-$(git log -1 --pretty=format:"%h").patch
+  )
 }
 
 prepare() {
@@ -55,13 +108,17 @@ prepare() {
   git clone https://github.com/fadoss/maude-bindings.git
 
   # currently use specific version
-  cd maude-bindings && git checkout aefa8a8875dc3b82b6b0367cb73a1f533021d0e3
-  git submodule update --init && rm -rf .git && rm -rf .github
+  cd maude-bindings
+  # && git checkout aefa8a8875dc3b82b6b0367cb73a1f533021d0e3
+  git submodule update --init 
+  # && rm -rf .git && rm -rf .github
 }
 
 build_maude_lib() {
   maude_src_dir="$top_dir/maude-bindings/subprojects/maudesmc/src"
-  cp -r "$src_dir/Extension" "$maude_src_dir"
+  cp -r "$src_dir/Extension" "$smc_dir/src"
+  # py_lib="$(python3-config --prefix)/lib"
+  py_inc="$(python -c "from sysconfig import get_paths; print(get_paths()['include'])")"
 
   cd maude-bindings/subprojects/maudesmc
   (
@@ -71,7 +128,7 @@ build_maude_lib() {
     if [[ "$os" == "Darwin" ]]; then
       arch -arm64 meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
             -Dextra-lib-dirs="$build_dir/lib" \
-            -Dextra-include-dirs="$build_dir/include" \
+            -Dextra-include-dirs="$build_dir/include, $py_inc" \
             -Dstatic-libs='buddy, gmp, sigsegv' \
             -Dwith-smt='pysmt' \
             -Dwith-ltsmin=disabled \
@@ -82,7 +139,7 @@ build_maude_lib() {
     else
       meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
             -Dextra-lib-dirs="$build_dir/lib" \
-            -Dextra-include-dirs="$build_dir/include" \
+            -Dextra-include-dirs="$build_dir/include, $py_inc" \
             -Dstatic-libs='buddy, gmp, sigsegv' \
             -Dwith-smt='pysmt' \
             -Dwith-ltsmin=disabled \
@@ -93,6 +150,52 @@ build_maude_lib() {
     cd release && ninja
   )
 }
+
+# build maude
+# TODO: need to update in ubuntu
+build_maude() {
+  progress "Copying source files to Maude directory"
+  cp -r "$src_dir/Extension" "$maude_raw_dir"
+
+  # cd "$top_dir/test-build/Maude"
+  # aclocal
+  # autoconf
+  # autoheader
+  # automake --add-missing
+  # automake
+
+  mkdir -p "$top_dir/test-build/Maude/Out"
+
+  # need to build first with dynamic options,
+  # and then do the static building.
+  # maude needs dynamic library for TCP.
+  # Bstatic will compile only z3 with libz3.a not libz3.so
+  #
+  # CXXFLAGS if you need dynamic library linking,
+  # you need to add libz3.so to lib dir and remove -pthread option
+  #
+  # ./configure CXXFLAGS="-std=c++11 -I$include_dir -pthread" \
+  #	    LDFLAGS="-L$lib_dir" \
+  #	    "$@"
+  cd "$top_dir/test-build/Maude/Out"
+  (
+      ../configure --with-yices2=no --with-cvc4=no --with-z3=yes --enable-compiler \
+      BISON="/opt/homebrew/opt/bison/bin/bison" \
+      CPPFLAGS="-I$include_dir" CXXFLAGS="-g -fno-stack-protector -fstrict-aliasing -mmacosx-version-min=15.0 -std=c++11" \
+      LDFLAGS="-L$lib_dir -Wl,-no_pie" \
+      Z3_LIB="$lib_dir/libz3.a" \
+      GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a" \
+    "$@"
+
+    # -Wall -O3
+
+    make
+    make check
+    cd src/Main
+    cp maude maude.darwin64
+  )
+}
+
 
 build_maude_se() {
   maudesmc_dir="$top_dir/maude-bindings/subprojects/maudesmc"
@@ -113,7 +216,7 @@ build_maude_se() {
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
     python setup.py bdist_wheel -DBUILD_LIBMAUDE=OFF \
-          -DEXTRA_INCLUDE_DIRS="$maudesmc_dir/.build/include"
+          -DEXTRA_INCLUDE_DIRS="$build_dir/include"
   )
 
   cd ..
@@ -127,14 +230,25 @@ build_gmp() {
   progress "Building gmp library"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
-  ( progress "Downloading gmp 6.1.2"
-    get_gnu "gmp" "6.1.2" "tar.xz"
-    cd "$third_party/gmp-6.1.2"
+  ( progress "Downloading gmp 6.3.0"
+    get_gnu "gmp" "6.3.0" "tar.xz"
+    cd "$third_party/gmp-6.3.0"
 
-    ./configure --prefix="$build_dir" CFLAGS=-fPIC CXXFLAGS=-fPIC \
-		--enable-cxx --enable-fat --disable-shared --enable-static --build=x86_64-pc-linux-gnu
-          
-    make -j4
+    if [ "$OS" == "Darwin" ]; then
+      ./configure CFLAGS="-g -fno-stack-protector -O3 -mmacosx-version-min=10.15" \
+                  CXXFLAGS="-g -fno-stack-protector -O3 -mmacosx-version-min=10.15 -std=c++11" \
+                  --prefix="$build_dir" \
+                  --enable-cxx \
+                  --enable-fat \
+                  --enable-shared=yes
+    else    
+      ./configure --prefix="$build_dir" \
+                  --enable-cxx --enable-fat \
+                  --disable-shared --enable-static \
+                  --build=x86_64-pc-linux-gnu
+    fi
+
+    make
     make check
     make install
   )
@@ -185,16 +299,33 @@ build_buddy() {
   mkdir -p "$third_party"
   ( progress "Downloading BuDDy 2.4"
     buddy_dir="$third_party/buddy-2.4"
-    
-    curl -L https://sourceforge.net/projects/buddy/files/latest/download > "$buddy_dir.tar.gz" 
+
+    curl -L https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz > "$buddy_dir.tar.gz"
     tar -xvzf "$buddy_dir.tar.gz" -C "$third_party"
     rm -rf "$buddy_dir.tar.gz"
 
     cd "$buddy_dir"
-    ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" --includedir="$include_dir" --libdir="$lib_dir" --disable-shared
-    
-    make -j4
-    make install
+  
+    if [ "$OS" == "Darwin" ]; then
+      ./configure LDFLAGS=-lm \
+                  CFLAGS="-g -fno-stack-protector -O3 -mmacosx-version-min=10.15" \
+                  CXXFLAGS="-g -fno-stack-protector -O3 -mmacosx-version-min=10.15 -std=c++11" \
+                  --prefix=$build_dir \
+                  --disable-shared
+      make
+      make check
+      chmod a+x ../tools/install-sh
+      make install
+    else
+      ./configure LDFLAGS=-lm \
+                  CFLAGS="-g -fno-stack-protector -O3" \
+                  CXXFLAGS="-g -fno-stack-protector -O3" \
+                  --prefix="$build_dir" \
+                  --disable-shared
+      make
+      make check
+      make install
+    fi
   )
 }
 
@@ -211,8 +342,27 @@ build_tecla() {
     rm -rf "$tecla_dir.tar.gz" 
     
     cd "$tecla_dir"
-    ./configure --without-man-pages
-    make -j4 LIBDIR="$build_dir"/lib INCDIR="$build_dir"/include TARGETS=normal TARGET_LIBS="static" install_lib install_inc
+
+    if [ "$OS" == "Darwin" ]; then
+      # Add #include <sys/ioctl.h> as the first line of enhance.c
+      echo -e "#include <sys/ioctl.h>\n$(cat enhance.c)" > enhance.c
+
+      # replace old config guess to latest one
+      rm -rf config.guess config.sub
+
+      wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
+      wget -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD'
+
+      ./configure CFLAGS="-fno-stack-protector -O3 -mmacosx-version-min=10.15" \
+                  --prefix=$build_dir
+      make
+      make install
+    else
+      ./configure CFLAGS="-g -fno-stack-protector -O3" \
+                  --prefix=$build_dir
+      make
+      make install
+    fi
   )
 }
 
@@ -226,7 +376,14 @@ build_libsigsegv() {
     sigsegv_dir="$third_party/libsigsegv-2.12"
     
     cd "$sigsegv_dir"
-    ./configure --prefix="$build_dir" --disable-shared --enable-static
+
+    if [ "$OS" == "Darwin" ]; then
+      ./configure CFLAGS="-g -fno-stack-protector -O3 -mmacosx-version-min=10.15" \
+                  --prefix="$build_dir" --enable-shared=no
+    else
+      ./configure CFLAGS="-g -fno-stack-protector -O3" \
+                  --prefix="$build_dir" --enable-shared=no
+    fi
     
     make -j4
     make check
@@ -299,6 +456,10 @@ get_gnu() {
   rm -rf "$third_party/$libname.$ext"
 }
 
+get_brew_pkg() {
+  echo "$(brew --cellar $1)/$(brew list --versions $1 | tr ' ' '\n' | tail -1)"
+}
+
 # Follow the below steps
 #  1. prepare
 #  2. build_deps
@@ -316,6 +477,8 @@ case "$build_command" in
     patch)              patch_src                 "$@" ;;
     build-maude)        build_maude_lib           "$@" ;;
     build-maude-se)     build_maude_se            "$@" ;;
+    mk-patch)           mk_patch                  "$@" ;;
+    build-test)         build_maude               "$@" ;;
     *)      echo "
     usage: $0 [prep|deps|patch|build]
            $0 script <options>
