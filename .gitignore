@@ -3,5 +3,7 @@
 .vscode/
 .DS_Store
 .python-version
+.3rd_party/
+.build/
 maude-bindings/
 out/
