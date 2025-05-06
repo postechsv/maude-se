@@ -68,10 +68,10 @@ class YicesConnector(PyConnector):
 
         d_s = time.time()
         t_v, t_l = list(), list()
-        sub = subst.getSubst()
+        sub = subst.keys()
         for p in sub:
             (src, _), _, _ = self._c.dag2term(p).data()
-            (trg, _), _, _ = self._c.dag2term(sub[p]).data()
+            (trg, _), _, _ = self._c.dag2term(subst.get(p)).data()
 
             t_v.append(src)
             t_l.append(trg)
