@@ -80,3 +80,16 @@ index 432e6b0..6afbcb8 100644
 +%include rwsmt.i
 +%include core.i
 \ No newline at end of file
+diff --git swig/specific/python.i swig/specific/python.i
+index a061ff6..62d7a8f 100644
+--- swig/specific/python.i
++++ swig/specific/python.i
+@@ -385,7 +385,7 @@ __version__ = '1.5.0'
+ // Trim the strings returned by all function named getMetadata
+ // to efficiently get rid of the quotes in the internal Maude strings
+ %typemap(out) const char* getMetadata {
+-	$result = SWIG_FromCharPtrAndSize(($1 ? $1 + 1 : 0), ($1 ? strlen($1) - 2 : 0));
++	$result = SWIG_FromCharPtrAndSize(($1 ? $1 : 0), ($1 ? strlen($1) : 0));
+ }
+ 
+ // Methods for obtaining the operator and term hooks as dictionaries

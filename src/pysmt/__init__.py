@@ -1,8 +1,6 @@
 import argparse
 from .maude import *
 from .factory import Factory
-# from maudeSE.hook.check import *
-# from maudeSE.hook.search import *
 
 def main():
     solvers = ["z3","yices","cvc5"]
@@ -21,35 +19,19 @@ def main():
 
     try:
         # instantiate our interface
-        # factory = Factory()
-        # factory.set_solver(args.s)
-        # factorySetter = maudeSE.maude.SmtManagerFactorySetter()
-        # factorySetter.setSmtManagerFactory(factory)
+        if args.s not in solvers:
+            raise ValueError("Unsupported solver : {}".format(args.s))
+
         setSmtSolver(args.s)
-        # maudeSE.maude.cvar.smtManagerFactory = Factory()
         setSmtManagerFactory(Factory().__disown__())
 
         # initialize Maude interpreter
         init(advise=False)
 
-        # conv = factory.createConverter()
-        # conn = factory.createConnector()
-        # conv = conn.get_converter()
-
-        # register special hooks
-        # searchPathHook = SearchHook(conn, conv, path=True)
-        # maudeSE.maude.connectEqHook('SmtSearchPathSymbol', searchPathHook)
-
-        # load preludes
-
-        # maudeSE.maude.load('smt.maude')
-        # maudeSE.maude.load('smt-check.maude')
-
-        # load an input file
-
         if args.file is None:
             raise ValueError("should provide an input Maude file")
         
+        # load an input file
         load(args.file)
 
         if args.no_meta == False:
