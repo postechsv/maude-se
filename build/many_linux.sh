@@ -50,7 +50,7 @@ cd maude-bindings/subprojects/maudesmc
 cd $top_dir
 
 
-versions=(cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313)
+versions=(cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313)
 
 maudesmc_dir="$top_dir/maude-bindings/subprojects/maudesmc"
 swig_src_dir="$top_dir/maude-bindings/swig"

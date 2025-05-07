@@ -140,7 +140,7 @@ jobs:
       # sigstore-produced signatures and certificates.
       run: >-
         gh release upload
-        '${{ github.ref_name }}' out/**
+        '${{ github.ref_name }}' out/**/*.whl
         --repo '${{ github.repository }}'
 
 

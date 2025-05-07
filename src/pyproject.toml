@@ -1,6 +1,6 @@
 [project]
 name            = 'maude-se'
-version         = '0.0.1.dev1'
+version         = '0.0.1.dev2'
 description     = 'Maude SMT Extension'
 license.text    = 'GPLv3'
 classifiers     = [
