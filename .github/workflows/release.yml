@@ -28,9 +28,10 @@ jobs:
     name: Build distribution 📦
     strategy:
       matrix:
+        os: ['macos-latest','macos-13']
         python-version: ['3.8','3.9','3.10','3.11','3.12','3.13']
 
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
     - name: Setup Python ${{ matrix.python-version }}
@@ -44,21 +45,9 @@ jobs:
         pip install
         build
         --user
-
-    - name: Prepare prerequisites
-      run: |
-        ./build.sh deps-wf
-        ./build.sh prep
-        ./build.sh patch
     
-    - name: Build Maude
-      run: |
-        ./deps.sh
-        source ~/.bashrc
-        ./build.sh build-maude
-
-    - name: Build Maude-SE
-      run: ./build.sh build-maude-se
+    - name: Build Python package
+      run: ./build/macos.sh
 
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
@@ -66,33 +55,33 @@ jobs:
         name: py-package-dist-${{ strategy.job-index }}
         path: out/
 
-  publish-to-pypi:
-    name: >-
-      Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
-    runs-on: ubuntu-latest
-    needs:
-      - manylinux_2_28
-      - macos
+  # publish-to-pypi:
+  #   name: >-
+  #     Publish Python 🐍 distribution 📦 to PyPI
+  #   if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
+  #   runs-on: ubuntu-latest
+  #   needs:
+  #     - manylinux_2_28
+  #     - macos
 
-    environment:
-      name: pypi
-      url: https://pypi.org/p/maude-se
+  #   environment:
+  #     name: pypi
+  #     url: https://pypi.org/p/maude-se
 
-    permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+  #   permissions:
+  #     id-token: write  # IMPORTANT: mandatory for trusted publishing
 
-    steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        pattern: py-package-dist-*
-        merge-multiple: true
-        path: out/
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        packages-dir: out/
+  #   steps:
+  #   - name: Download all the dists
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       pattern: py-package-dist-*
+  #       merge-multiple: true
+  #       path: out/
+  #   - name: Publish distribution 📦 to PyPI
+  #     uses: pypa/gh-action-pypi-publish@release/v1
+  #     with:
+  #       packages-dir: out/
 
   github-release:
     name: >-
@@ -101,7 +90,9 @@ jobs:
 
     runs-on: ubuntu-latest
     needs:
-      - publish-to-pypi
+      - manylinux_2_28
+      - macos  
+      # - publish-to-pypi
       # - publish-to-testpypi
 
     permissions:
@@ -140,7 +131,7 @@ jobs:
       # sigstore-produced signatures and certificates.
       run: >-
         gh release upload
-        '${{ github.ref_name }}' out/**/*.whl
+        '${{ github.ref_name }}' out/*.whl
         --repo '${{ github.repository }}'
 
 
