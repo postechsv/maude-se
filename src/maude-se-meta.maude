@@ -227,7 +227,7 @@ omod MAUDE-SE-META-INTERPRETER is
 ---------------------------------------
 
   op MAUDE-SE-VERSION : -> String .
-  eq MAUDE-SE-VERSION = "1.0.0" .
+  eq MAUDE-SE-VERSION = "0.0.2" .
 
   op MAUDE-SE-BUILT : -> String .
   eq MAUDE-SE-BUILT = "Mar 25 2025" .

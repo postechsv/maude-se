@@ -11,10 +11,12 @@ def main():
                         help="a directory to a configuration file (default: \"config.yml\")")
     parser.add_argument("-s", "-solver", metavar="SOLVER", type=str, help="solver name")
     parser.add_argument("-no-meta", help="no metaInterpreter", action="store_true")
-    parser.add_argument("-v", "-verbose", help="print verbose messages", action="store_true")
     args = parser.parse_args()
 
     try:
+        if args.file is None:
+            raise ValueError("should provide an input Maude file")
+
         # load configurations
         cfg = load_config(os.path.dirname(__file__))
         check_config(cfg)
@@ -40,9 +42,6 @@ def main():
 
         # initialize Maude interpreter
         init(advise=False)
-
-        if args.file is None:
-            raise ValueError("should provide an input Maude file")
         
         # load an input file
         load(args.file)
@@ -51,8 +50,4 @@ def main():
             load('maude-se-meta.maude')
 
     except Exception as err:
-        if args.verbose:
-            import traceback
-            print(traceback.print_exc())
-
         print("error: {}".format(err))

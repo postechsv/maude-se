@@ -73,9 +73,16 @@ build_maude() {
   cp -r "$src_dir/Extension" "$smc_dir/src"
   py_inc="$(python -c "from sysconfig import get_paths; print(get_paths()['include'])")"
 
+  if [[ "$os" == "Darwin" ]]; then
+    arch_opt="arch -$arch"
+  else
+    arch_opt=""
+  fi
+
   cd $smc_dir
   (
-    arch -$arch meson setup release --buildtype=custom -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
+    rm -rf release
+    $arch_opt meson setup release -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
       -Dextra-lib-dirs="$build_dir/lib" \
       -Dextra-include-dirs="$build_dir/include, $py_inc" \
       -Dstatic-libs='buddy, gmp, sigsegv' \
@@ -115,7 +122,7 @@ build_maude_se() {
     rm -rf dist/ maude.egg-info/ _skbuild/
     CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
     ARCHFLAGS="-arch $arch" \
-      python -m pip wheel -w dist .
+      python -m pip wheel -w dist --no-deps .
   )
 
   cd "$top_dir"
@@ -162,8 +169,11 @@ build_buddy() {
     # replace old config guess to latest one
     rm -rf config.guess config.sub
 
-    wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
-    wget -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD'
+    # this is unstable
+    # wget -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD'
+    # wget -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD'
+
+    cp $top_dir/build/config.sub $top_dir/build/config.guess ./
 
     ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" --includedir="$include_dir" --libdir="$lib_dir" --disable-shared
 
@@ -191,7 +201,7 @@ build_tecla() {
 
     cd "$tecla_dir"
 
-    ./configure CXXFLAGS-"-fPIC" CFLAGS="-fPIC -g -fno-stack-protector -O3" \
+    ./configure CXXFLAGS="-fPIC" CFLAGS="-fPIC -g -fno-stack-protector -O3" \
       --prefix=$build_dir
     make
     make install
@@ -224,8 +234,8 @@ build_libsigsegv() {
 
 build_from_brew() {
 
-  mkdir -p "$build_dir"
-  mkdir -p "$third_party"
+  mkdir -p "$build_dir/include"
+  mkdir -p "$build_dir/lib"
 
   brew install $1
 

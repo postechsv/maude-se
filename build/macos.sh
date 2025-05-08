@@ -8,6 +8,5 @@ export PATH="$(brew --prefix flex)/bin:$PATH"
 
 ./build/build.sh prep
 ./build/build.sh deps
-./build/build.sh prep
 ./build/build.sh build-maude
 ./build/build.sh build-maude-se
