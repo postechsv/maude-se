@@ -1,11 +1,12 @@
 import ctypes
 
-from ..util import *
+from maudeSE.util import *
 from functools import reduce
 
 from maudeSE.maude import *
 from yices import *
 from yices_api import *
+import re
 
 
 class YicesConverter(PyConverter):

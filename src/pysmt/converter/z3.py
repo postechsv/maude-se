@@ -1,6 +1,6 @@
 from typing import Dict
 
-from ..util import *
+from maudeSE.util import *
 from functools import reduce
 from maudeSE.maude import *
 

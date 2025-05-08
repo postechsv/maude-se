@@ -2,8 +2,8 @@ import cvc5
 import time
 
 from cvc5 import Kind as cvcKind
-from ..maude import *
-from ..util import id_gen
+from maudeSE.maude import *
+from maudeSE.util import id_gen
 from maudeSE.maude import *
 
 class Cvc5Connector(PyConnector):

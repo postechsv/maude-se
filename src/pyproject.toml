@@ -11,11 +11,6 @@ classifiers     = [
 	'Operating System :: OS Independent',
 ]
 readme = 'README.md'
-dependencies = [
-	"z3-solver",
-	"yices",
-	"cvc5",
-]
 authors = [
 	{name = "Geunyeol Yu", email = "maude-se@postech.ac.kr"},
 ]

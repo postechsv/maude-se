@@ -7,16 +7,15 @@ from maudeSE.maude import PySmtManagerFactory
 class Factory(PySmtManagerFactory):
     def __init__(self):
         PySmtManagerFactory.__init__(self)
-        self._map = {
-            "z3"       : (Z3Converter, Z3Connector),
-            "yices"    : (YicesConverter, YicesConnector),
-            "cvc5"     : (Cvc5Converter, Cvc5Connector),
-        }
+        self._map = dict()
+
+    def register(self, name, conv_cls, conn_cls):
+        self._map[name] = (conv_cls, conn_cls)
 
     def check_solver(self, solver: str):
         # deprecate ...
         if solver not in self._map:
-            raise Exception("unsupported solver {}".format(solver))
+            raise Exception("unregistered solver {}".format(solver))
 
     def createConverter(self):
         solver = maudeSE.maude.cvar.smtSolver

@@ -1,8 +1,8 @@
 import z3
 import time
 
-from ..maude import *
-from ..util import id_gen
+from maudeSE.maude import *
+from maudeSE.util import id_gen
 from maudeSE.maude import *
 
 class Z3Connector(PyConnector):

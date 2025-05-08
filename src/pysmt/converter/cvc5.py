@@ -1,9 +1,10 @@
-from ..util import *
+from maudeSE.util import *
 from functools import reduce
 
 from maudeSE.maude import *
 
 import cvc5
+import re
 from cvc5 import Kind
 
 

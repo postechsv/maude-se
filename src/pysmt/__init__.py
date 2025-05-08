@@ -1,29 +1,42 @@
 import argparse
-from .maude import *
-from .factory import Factory
+from maudeSE import *
+from maudeSE.factory import *
+from maudeSE.util import *
 
 def main():
-    solvers = ["z3","yices","cvc5"]
-    default_s = solvers[0]
-
-    s_help = ["set an underlying SMT solver",
-              "* Supported solvers: {{{}}}".format(",".join(solvers)),
-              "* Usage: -s {}".format(solvers[-1]), "* Default: -s {}".format(default_s)]
     
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('file', nargs='?', type=str, help="input Maude file")
-    parser.add_argument("-s", "-solver", metavar="SOLVER", nargs='?', type=str,
-                        help="\n".join(s_help), default=default_s)
+    parser.add_argument("-cfg", "-config", metavar="CONFIG", type=str, 
+                        help="a directory to a configuration file (default: \"config.yml\")")
+    parser.add_argument("-s", "-solver", metavar="SOLVER", type=str, help="solver name")
     parser.add_argument("-no-meta", help="no metaInterpreter", action="store_true")
+    parser.add_argument("-v", "-verbose", help="print verbose messages", action="store_true")
     args = parser.parse_args()
 
     try:
-        # instantiate our interface
-        if args.s not in solvers:
-            raise ValueError("Unsupported solver : {}".format(args.s))
+        # load configurations
+        cfg = load_config(os.path.dirname(__file__))
+        check_config(cfg)
 
-        setSmtSolver(args.s)
-        setSmtManagerFactory(Factory().__disown__())
+        user_cfg = load_user_config(args)
+        cfg = update_config(cfg, user_cfg)
+        check_config(cfg)
+
+        s = cfg["solver"]
+
+        # instantiate our interface
+        setSmtSolver(s)
+        factory = Factory().__disown__()
+
+        s_def = cfg["solver-def"][s]
+
+        conv = load_class_from_file(s_def["converter"]["dir"], s_def["converter"]["name"])
+        conn = load_class_from_file(s_def["connector"]["dir"], s_def["connector"]["name"])
+
+        factory.register(s, conv, conn)
+
+        setSmtManagerFactory(factory)
 
         # initialize Maude interpreter
         init(advise=False)
@@ -34,8 +47,12 @@ def main():
         # load an input file
         load(args.file)
 
-        if args.no_meta == False:
+        if cfg["no-meta"] == False:
             load('maude-se-meta.maude')
 
     except Exception as err:
+        if args.verbose:
+            import traceback
+            print(traceback.print_exc())
+
         print("error: {}".format(err))

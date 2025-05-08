@@ -1,0 +1,28 @@
+solver: "z3"
+
+solver-def:
+  "z3":                         # name of a solver
+    connector: 
+      name: "Z3Connector"       # connector name
+      dir: "./connector/z3.py"  # connector directory
+    converter: 
+      name: "Z3Converter"       # converter name
+      dir: "./converter/z3.py"  # converter directory
+
+  "yices":
+    connector:
+      name: "YicesConnector"
+      dir: "./connector/yices.py"
+    converter:
+      name: "YicesConverter"
+      dir: "./converter/yices.py"
+
+  "cvc5":
+    connector:
+      name: "Cvc5Connector"
+      dir: "./connector/cvc5.py"
+    converter:
+      name: "Cvc5Converter"
+      dir: "./converter/cvc5.py"
+
+no-meta: false

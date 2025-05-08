@@ -1,8 +1,8 @@
 import time
 
 from yices import *
-from ..maude import *
-from ..util import id_gen
+from maudeSE.maude import *
+from maudeSE.util import id_gen
 from maudeSE.maude import *
 
 class YicesConnector(PyConnector):
