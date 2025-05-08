@@ -15,12 +15,6 @@ smc_dir="maude-bindings/subprojects/maudesmc"
 
 maude_raw_dir="$top_dir/test-build/Maude/src"
 
-# build_dir="$top_dir/$smc_dir/.build"
-# third_party="$top_dir/$smc_dir/.3rd_party"
-
-# build_dir="$top_dir/test-build/.build"
-# third_party="$top_dir/test-build/.3rd_party"
-
 build_dir="$top_dir/.build"
 third_party="$top_dir/.3rd_party"
 
@@ -37,12 +31,6 @@ progress() { echo "===== " $@ ; }
 build_deps_workflows() {
 
   if [ "$OS" == "Darwin" ]; then
-    # echo 'export PATH="/opt/homebrew/opt/bison/bin:$PATH"' >> $HOME/.bash_profile
-    # echo 'export PATH="/opt/homebrew/opt/flex/bin:$PATH"' >> $HOME/.bash_profile
-    # export LDFLAGS="-L/opt/homebrew/opt/bison/lib"
-    # export LDFLAGS="-L/opt/homebrew/opt/flex/lib"
-    # export CPPFLAGS="-I/opt/homebrew/opt/flex/include"
-
     brew install libsigsegv
     brew install gmp
     build_buddy
@@ -244,9 +232,9 @@ build_maude_se() {
   cd maude-bindings 
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
-    CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" python -m build
-    # python setup.py bdist_wheel -DBUILD_LIBMAUDE=OFF \
-          # -DEXTRA_INCLUDE_DIRS="$build_dir/include"
+    # ARCHFLAGS="-arch $arch" \ # not needed for local build 
+    CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
+      python -m pip wheel -w dist .
   )
 
   cd ..
