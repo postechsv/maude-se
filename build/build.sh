@@ -75,8 +75,10 @@ build_maude() {
 
   if [[ "$os" == "Darwin" ]]; then
     arch_opt="arch -$arch"
+    undef_symb="___gmpz_get_d"
   else
     arch_opt=""
+    undef_symb="__gmpz_get_d"
   fi
 
   cd $smc_dir
@@ -91,7 +93,7 @@ build_maude() {
       -Dwith-simaude=disabled \
       -Dc_args='-mno-thumb' \
       -Dc_link_args="-Wl,--export-dynamic" \
-      -Dcpp_link_args="-Wl,-x -u ___gmpz_get_d -L"$build_dir"/lib -lgmp"
+      -Dcpp_link_args="-Wl,-x -u $undef_symb -L"$build_dir"/lib -lgmp"
     cd release && ninja
   )
 }
