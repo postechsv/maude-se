@@ -14,13 +14,13 @@ class PyDataConatiner {
 public:
 
     PyDataConatiner(PyObject* data) : data(data) { 
-        Py_INCREF(this->data); 
+        Py_XINCREF(this->data); 
     };
     ~PyDataConatiner() {
-        Py_DECREF(this->data); 
+        Py_XDECREF(this->data); 
     };
     PyObject* getData() { 
-        Py_INCREF(this->data); 
+        Py_XINCREF(this->data); 
         return this->data;
     };
 };
@@ -68,24 +68,14 @@ public:
 
 class PySmtModel : public SmtModel {
 public:
-    PySmtModel(){
-        // cout << "model gen" << endl;
-    };
+    PySmtModel(){};
     ~PySmtModel(){
-        // cout << "model del" << endl;
         for (auto &i : model){
             delete i.first;
             delete i.second;
         }
     };
     void set(PyObject* k, PyObject* v){
-        // avoid gc
-        // Py_INCREF(k); 
-        // Py_INCREF(v); 
-        // refs.push_back(k);
-        // refs.push_back(v);
-
-        // model[k] = v;
         PySmtTerm* tk = new PySmtTerm(k);
         PySmtTerm* tv = new PySmtTerm(v);
         model.insert(std::pair<PySmtTerm*, PySmtTerm*>(tk, tv));
@@ -127,10 +117,8 @@ public:
 public:
     // implementation of the Converter interface
     inline SmtTerm* dag2term(DagNode* dag) { 
-        EasyTerm* term = new EasyTerm(dag);
-        PySmtTerm* pyTerm = pyDag2term(term);
-        delete term;
-
+        EasyTerm term(dag);
+        PySmtTerm* pyTerm = pyDag2term(&term);
         return pyTerm;
     };
 
@@ -140,14 +128,13 @@ public:
             // this is handled by Python
             if(EasyTerm* result = pyTerm2dag(t)){
                 DagNode* dag = result->getDag();
+                delete result; // otherwise memory becomes corrupted
                 return dag;
             }
         }
         return nullptr;
     };
 };
-
-// typedef Model<PySmtTerm*> PySmtModel;
 
 class PyConnector : public Connector
 {

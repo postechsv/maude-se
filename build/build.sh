@@ -86,14 +86,15 @@ build_maude() {
     rm -rf release
     $arch_opt meson setup release -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
       -Dextra-lib-dirs="$build_dir/lib" \
-      -Dextra-include-dirs="$build_dir/include, $py_inc" \
+      -Dextra-include-dirs="$build_dir/include, $py_inc, $top_dir/maude-bindings/src" \
       -Dstatic-libs='buddy, gmp, sigsegv' \
       -Dwith-smt='pysmt' \
       -Dwith-ltsmin=disabled \
       -Dwith-simaude=disabled \
       -Dc_args='-mno-thumb' \
       -Dc_link_args="-Wl,--export-dynamic" \
-      -Dcpp_link_args="-Wl,-x -u $undef_symb -L"$build_dir"/lib -lgmp"
+      -Dcpp_link_args="-Wl,-x -u $undef_symb -L"$build_dir"/lib -lgmp" \
+      -Dcpp_std=c++17
     cd release && ninja
   )
 }
@@ -107,6 +108,8 @@ prep_build_maude_se() {
   cp $smc_dir/release/config.h $smc_dir/build
   cp $smc_dir/release/libmaude.so $smc_dir/installdir/lib
   cp $smc_dir/release/libmaude.dylib $smc_dir/installdir/lib
+
+  strip $smc_dir/installdir/lib/*.so # only for Linux
 
   cp "$top_dir/src/pyproject.toml" $top_dir/maude-bindings
   cp "$top_dir/README.md" $top_dir/maude-bindings

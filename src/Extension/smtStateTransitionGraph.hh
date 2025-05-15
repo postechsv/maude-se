@@ -240,7 +240,7 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
   ConstrainedTerm *ct = consTermSeen[state->hashConsIndex][state->constTermIndex];
   std::map<DagNode*, DagNode*>* modelMap = new std::map<DagNode*, DagNode*>();
   if (ct->model == nullptr){
-    IssueWarning("bug occured");
+    IssueWarning("bug occurred");
   }
 
   std::vector<SmtTerm*>* ks = ct->model->keys();

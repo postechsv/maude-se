@@ -18,6 +18,8 @@ class Z3Converter(PyConverter):
         self._symbol_map = dict()
         self._var_map = dict()
 
+        self.thisown = False
+
         # smt.maude map
         self._op_dict = {
             "not_"          : z3.Not,
@@ -185,7 +187,9 @@ class Z3Converter(PyConverter):
     def term2dag(self, term):
         try:
             t, _, _ = term.data()
-            return self._module.parseTerm(self._term2dag(t))
+            a = self._module.parseTerm(self._term2dag(t))
+            a.thisown = False
+            return a
         except:
             return None
 
@@ -283,7 +287,7 @@ class Z3Converter(PyConverter):
         
         # Boolean
         if isinstance(term, z3.z3.BoolRef):
-            if not (z3.is_true(term) and z3.is_false(term)):
+            if not (z3.is_true(term) or z3.is_false(term)):
                 return f"{term}:Boolean"
             else:
                 return f"({str(term).lower()}).Boolean"
@@ -303,8 +307,14 @@ class Z3Converter(PyConverter):
         :param t: A maude term
         :returns: A pair of an SMT solver term and its variables
         """
-        term, v_set = self._dag2term(t)
-        return PySmtTerm([term, None, list(v_set)])
+        try:
+            term, v_set = self._dag2term(t)
+            a = PySmtTerm([term, None, list(v_set)])
+            a.thisown = False
+            return a
+        except:
+            import traceback
+            print(traceback.print_exc())
 
     def _dag2term(self, t: Term):
 

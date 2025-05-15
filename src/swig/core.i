@@ -14,16 +14,13 @@
 
 namespace std {
   %template (SmtTermVector) vector<SmtTerm*>;
-  // %template (PySmtModelMap)   map<PySmtTerm*, PySmtTerm*>;
   %template (PySmtTermVector)   vector<PySmtTerm*>;
-  // %template (ModelDict)     map<PyObject*, PyObject*>;
   %template (SmtModelPair)  pair<SmtTerm*, SmtTerm*>;
 	%template (SmtModelPairVector) vector<pair<SmtTerm*, SmtTerm*>>;
 }
 
 %feature("director:except") {
     if ($error != NULL) {
-      cout << "i throw" << endl;
         throw Swig::DirectorMethodException();
     }
 }
@@ -32,25 +29,6 @@ namespace std {
     try { $action }
     catch (Swig::DirectorException &e) { SWIG_fail; }
 }
-
-// %template
-// %template (PySmtModel) Model<PySmtTerm*>;
-// %rename (SmtModel) PySmtModel;
-
-// class PySmtTerm {
-
-// public:
-//   PySmtTerm(PyObject*);
-//   ~PySmtTerm();
-
-// %extend {
-//   %pythoncode{
-//     def getData(self):
-//       return self.data
-//   }
-
-// }
-// };
 
 class PySmtTerm {
 public:
@@ -70,21 +48,6 @@ public:
     void set(PyObject* k, PyObject* v);
 };
 
-
-// class Converter
-// {
-// public:
-//   // %newobject dag2term;
-//   // %newobject dag2term;
-
-// 	virtual ~Converter() {};
-//   virtual PyObject* prepareFor(VisibleModule* module) = 0;
-//   // virtual SmtTerm* dag2term(DagNode* dag) = 0;
-//   // virtual DagNode* term2dag(SmtTerm* term) = 0;
-//   virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
-//   virtual PyObject* getSymbol(PyObject* dag) = 0;
-// };
-
 %rename (term2dag) pyTerm2dag;
 %rename (dag2term) pyDag2term;
 
@@ -92,8 +55,8 @@ public:
 class PyConverter
 {
 public:
-  %newobject pyDag2term;
-  %newobject pyTerm2dag;
+  // %newobject pyDag2term;
+  // %newobject pyTerm2dag;
 
   virtual ~PyConverter() {};
   virtual void prepareFor(VisibleModule* module) = 0;
@@ -103,25 +66,6 @@ public:
   virtual PyObject* getSymbol(PyObject* dag) = 0;
 };
 
-// class SmtTerm{
-// public:
-//   SmtTerm() = delete;
-//   SmtTerm(PyObject* data);
-//   ~SmtTerm();
-//   PyObject* getData();
-// };
-
-// class PyTermSubst {
-// public:
-
-//   %rename(subst) getData;
-
-//   PyTermSubst() = delete;
-//   PyTermSubst(PyObject* data);
-//   ~PyTermSubst();
-//   PyObject* getData();
-// };
-
 class PyTermSubst {
 public:
     PyTermSubst();
@@ -129,26 +73,6 @@ public:
     EasyTerm* get(EasyTerm* v);
     std::vector<EasyTerm*> keys();
 };
-
-// class SmtModel{
-// public:
-//     PyObject* model;
-
-//     SmtModel() = delete;
-//     SmtModel(PyObject* model);
-//     PyObject* getModel();
-// };
-
-// class SmtModel{
-// public:
-//     %newobject keys;
-
-//     SmtModel();
-//     ~SmtModel();
-//     void set(SmtTerm* k, SmtTerm* v);
-//     SmtTerm* get(SmtTerm* k);
-//     std::vector<SmtTerm*>* keys();
-// };
 
 %feature("director") SmtResult;
 class SmtResult{
@@ -186,9 +110,9 @@ public:
 class PyConnector : public Connector
 {
 public:
-  %newobject py_check_sat;
-  %newobject py_add_const;
-  %newobject py_get_model;
+  // %newobject py_check_sat;
+  // %newobject py_add_const;
+  // %newobject py_get_model;
   // %newobject py_mk_subst;
 
   virtual ~PyConnector() {};
@@ -216,8 +140,8 @@ public:
 class PySmtManagerFactory : public SmtManagerFactory
 {
 public:
-  %newobject py_createConverter;
-  %newobject py_createConnector;
+  // %newobject py_createConverter;
+  // %newobject py_createConnector;
 
   virtual ~PySmtManagerFactory() {};
   virtual PyConnector* py_createConnector(PyConverter* conv) = 0;
