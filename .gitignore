@@ -5,5 +5,8 @@
 .python-version
 .3rd_party/
 .build/
+.native-3rd_party/
+.native-build/
 maude-bindings/
+Maude/
 out/

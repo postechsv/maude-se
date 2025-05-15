@@ -1,0 +1,357 @@
+diff --git configure.ac configure.ac
+index 4e0364a..e1e45cf 100644
+--- configure.ac
++++ configure.ac
+@@ -3,7 +3,7 @@
+ #
+ #	Initialize autoconf stuff.
+ #
+-AC_INIT([Maude],[3.5],[maude-bugs@lists.cs.illinois.edu])
++AC_INIT([Maude],[3.5+se],[maude-bugs@lists.cs.illinois.edu])
+ #
+ #	Allow directory names that look like macros.
+ #
+@@ -81,6 +81,26 @@ if (test -z "$BUDDY_LIB") then
+ fi
+ AC_SUBST(BUDDY_LIB)
+ #
++#	Check to see if we should use Z3 for SMT solving.
++#
++AC_ARG_WITH(z3,
++	    AS_HELP_STRING([--with-z3],[use Z3 SMT solver library [default=no]]),
++        [WITH_Z3=$withval],
++        [WITH_Z3=no])
++if (test $WITH_Z3 = yes) then
++#
++#	Check if user set a particular Z3 library to use and if
++#	not set default.
++#
++  AC_DEFINE([USE_Z3], [], [use Z3 SMT solver library])
++  if (test -z "$Z3_LIB") then
++    Z3_LIB="-lz3"
++  fi
++  AC_SUBST(Z3_LIB)
++else
++  Z3_LIB=""
++fi
++#
+ #	Check to see if we should use Yices2 for SMT solving.
+ #
+ AC_ARG_WITH(yices2,
+@@ -397,6 +417,7 @@ AC_CONFIG_FILES([Makefile
+ 		 src/FullCompiler/Makefile
+ 		 src/StrategyLanguage/Makefile
+ 		 src/Mixfix/Makefile
++     src/Extension/Makefile
+ 		 src/SMT/Makefile
+ 		 src/Main/Makefile
+ 		 tests/Makefile
+diff --git src/Main/Makefile.am src/Main/Makefile.am
+index 47dced6..a4da148 100644
+--- src/Main/Makefile.am
++++ src/Main/Makefile.am
+@@ -30,7 +30,8 @@ maude_CPPFLAGS = \
+ 	-I$(top_srcdir)/src/FullCompiler \
+ 	-I$(top_srcdir)/src/StrategyLanguage \
+ 	-I$(top_srcdir)/src/Parser \
+-	-I$(top_srcdir)/src/Mixfix
++	-I$(top_srcdir)/src/Mixfix \
++	-I$(top_srcdir)/src/Extension
+ 
+ maude_LDADD = \
+ 	../Mixfix/libmixfix.a \
+@@ -52,6 +53,7 @@ maude_LDADD = \
+ 	../Variable/libvariable.a \
+ 	../Interface/libinterface.a \
+ 	../Core/libcore.a \
++	../Extension/libExtension.a \
+ 	../Parser/libparser.a \
+ 	../Temporal/libtemporal.a \
+ 	../IO_Stuff/libIO_Stuff.a \
+@@ -62,7 +64,8 @@ maude_LDADD = \
+ 	$(GMP_LIBS) \
+ 	$(BUDDY_LIB) \
+ 	$(TECLA_LIBS) \
+-	$(LIBSIGSEGV_LIB)
++	$(LIBSIGSEGV_LIB) \
++	$(Z3_LIB)
+ 
+ maude_SOURCES = \
+ 	main.cc
+diff --git src/Makefile.am src/Makefile.am
+index 300b068..ef9e5db 100644
+--- src/Makefile.am
++++ src/Makefile.am
+@@ -22,4 +22,5 @@ SUBDIRS = \
+ 	StrategyLanguage \
+ 	Mixfix \
+ 	SMT \
++	Extension \
+ 	Main
+diff --git src/Meta/metaLevel.hh src/Meta/metaLevel.hh
+index 06d6c93..cee2598 100644
+--- src/Meta/metaLevel.hh
++++ src/Meta/metaLevel.hh
+@@ -37,6 +37,8 @@
+ class MetaLevel
+ {
+   NO_COPYING(MetaLevel);
++private:
++  friend class MetaLevelSmtOpSymbol;
+ 
+ public:
+   enum VariantFlags
+diff --git src/Mixfix/Makefile.am src/Mixfix/Makefile.am
+index cf4e082..3d2e23b 100644
+--- src/Mixfix/Makefile.am
++++ src/Mixfix/Makefile.am
+@@ -29,7 +29,8 @@ libmixfix_a_CPPFLAGS = \
+ 	-I$(top_srcdir)/src/3rdParty \
+ 	-I$(top_srcdir)/src/FullCompiler \
+ 	-I$(top_srcdir)/src/StrategyLanguage \
+-	-I$(top_srcdir)/src/SMT
++	-I$(top_srcdir)/src/SMT \
++	-I$(top_srcdir)/src/Extension
+ 
+ libmixfix_a_SOURCES = \
+ 	parameterDatabase.cc \
+diff --git src/Mixfix/fancySymbols.cc src/Mixfix/fancySymbols.cc
+index 4e7c84e..0a5f785 100644
+--- src/Mixfix/fancySymbols.cc
++++ src/Mixfix/fancySymbols.cc
+@@ -127,6 +127,8 @@ MixfixModule::newFancySymbol(Token prefixName,
+       return new QuotedIdentifierOpSymbol(name, nrArgs);
+     case SymbolType::META_LEVEL_OP_SYMBOL:
+       return new MetaLevelOpSymbol(name, nrArgs, strategy);
++    case SymbolType::META_LEVEL_SMT_OP_SYMBOL:
++      return new MetaLevelSmtOpSymbol(name, nrArgs, strategy);
+     case SymbolType::MODEL_CHECKER_SYMBOL:
+       return new ModelCheckerSymbol(name);
+     case SymbolType::SAT_SOLVER_SYMBOL:
+diff --git src/Mixfix/mixfixModule.cc src/Mixfix/mixfixModule.cc
+index fd3deca..4418715 100644
+--- src/Mixfix/mixfixModule.cc
++++ src/Mixfix/mixfixModule.cc
+@@ -152,6 +152,7 @@
+ 
+ //	metalevel class definitions
+ #include "metaLevelOpSymbol.hh"
++#include "metaLevelSmtOpSymbol.hh"
+ #include "interpreterManagerSymbol.hh"
+ 
+ //	front end class definitions
+diff --git src/Mixfix/specialSymbolTypes.cc src/Mixfix/specialSymbolTypes.cc
+index 797a18c..0835ec2 100644
+--- src/Mixfix/specialSymbolTypes.cc
++++ src/Mixfix/specialSymbolTypes.cc
+@@ -64,3 +64,4 @@
+   MACRO(TimeManagerSymbol, SymbolType::TIME_MANAGER_SYMBOL)
+   MACRO(PrngManagerSymbol, SymbolType::PRNG_MANAGER_SYMBOL)
+   MACRO(ObjectConstructorSymbol, SymbolType::OBJECT_CONSTRUCTOR_SYMBOL)
++  MACRO(MetaLevelSmtOpSymbol, SymbolType::META_LEVEL_SMT_OP_SYMBOL)
+\ No newline at end of file
+diff --git src/Mixfix/symbolType.hh src/Mixfix/symbolType.hh
+index b76460c..9feb140 100644
+--- src/Mixfix/symbolType.hh
++++ src/Mixfix/symbolType.hh
+@@ -88,6 +88,7 @@ public:
+     TIME_MANAGER_SYMBOL,
+     PRNG_MANAGER_SYMBOL,
+     OBJECT_CONSTRUCTOR_SYMBOL,
++    META_LEVEL_SMT_OP_SYMBOL,
+ 
+     END_OF_SYMBOLS_WITH_ATTACHMENTS
+   };
+diff --git src/Mixfix/variableGenerator.cc src/Mixfix/variableGenerator.cc
+index 8621129..0650ec0 100644
+--- src/Mixfix/variableGenerator.cc
++++ src/Mixfix/variableGenerator.cc
+@@ -1,125 +1 @@
+-/*
+-
+-    This file is part of the Maude 3 interpreter.
+-
+-    Copyright 1997-2014 SRI International, Menlo Park, CA 94025, USA.
+-
+-    This program is free software; you can redistribute it and/or modify
+-    it under the terms of the GNU General Public License as published by
+-    the Free Software Foundation; either version 2 of the License, or
+-    (at your option) any later version.
+-
+-    This program is distributed in the hope that it will be useful,
+-    but WITHOUT ANY WARRANTY; without even the implied warranty of
+-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-    GNU General Public License for more details.
+-
+-    You should have received a copy of the GNU General Public License
+-    along with this program; if not, write to the Free Software
+-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+-
+-*/
+-
+-//
+-//      Implementation for class VariableGenerator.
+-//
+-
+-//      utility stuff
+-#include "macros.hh"
+-#include "vector.hh"
+-
+-//      forward declarations
+-#include "interface.hh"
+-#include "core.hh"
+-#include "variable.hh"
+-#include "mixfix.hh"
+-#include "SMT.hh"
+-
+-//      interface class definitions
+-#include "symbol.hh"
+-#include "term.hh"
+-
+-//	variable class definitions
+-#include "variableDagNode.hh"
+-#include "variableTerm.hh"
+-
+-#include "freeDagNode.hh"
+-
+-//	SMT class defintions
+-#include "SMT_Symbol.hh"
+-#include "SMT_NumberSymbol.hh"
+-#include "SMT_NumberDagNode.hh"
+-
+-//	front end class definitions
+-#include "token.hh"
+-#include "variableGenerator.hh"
+-
+-#ifdef USE_CVC4
+-#include "cvc4_Bindings.cc"
+-#elif defined(USE_YICES2) 
+-#include "yices2_Bindings.cc"
+-#else
+-
+-//
+-//	Code for no SMT support case.
+-//
+-
+-VariableGenerator::VariableGenerator(const SMT_Info& smtInfo)
+-{
+-  IssueWarning("No SMT solver linked at compile time.");
+-}
+-
+-VariableGenerator::~VariableGenerator()
+-{
+-}
+-
+-VariableGenerator::Result
+-VariableGenerator::assertDag(DagNode* dag)
+-{
+-  return SAT_UNKNOWN;
+-}
+-
+-VariableGenerator::Result
+-VariableGenerator::checkDag(DagNode* dag)
+-{
+-  return SAT_UNKNOWN;
+-}
+-
+-void
+-VariableGenerator::push()
+-{
+-}
+-
+-void
+-VariableGenerator::pop()
+-{
+-}
+-
+-inline void
+-VariableGenerator::clearAssertions()
+-{
+-}
+-
+-#endif
+-
+-//
+-//	Common code
+-//
+-
+-VariableDagNode*
+-VariableGenerator::makeFreshVariable(Term* baseVariable, const mpz_class& number)
+-{
+-  Symbol* s = baseVariable->symbol();
+-  VariableTerm* vt = safeCast(VariableTerm*, baseVariable);
+-  int id = vt->id();
+-
+-  string newNameString = "#";
+-  char* name = mpz_get_str(0, 10, number.get_mpz_t());
+-  newNameString += name;
+-  free(name);
+-  newNameString += "-";
+-  newNameString +=  Token::name(id);
+-  int newId = Token::encode(newNameString.c_str());
+-
+-  return new VariableDagNode(s, newId, NONE);
+-}
++#include "../Extension/smtManager.cc"
+\ No newline at end of file
+diff --git src/Mixfix/variableGenerator.hh src/Mixfix/variableGenerator.hh
+index cd79c7c..90ff962 100644
+--- src/Mixfix/variableGenerator.hh
++++ src/Mixfix/variableGenerator.hh
+@@ -25,35 +25,5 @@
+ //
+ #ifndef _variableGenerator_hh_
+ #define _variableGenerator_hh_
+-#include "SMT_Info.hh"
+-#include "SMT_EngineWrapper.hh"
+-
+-#ifdef USE_CVC4
+-#include "cvc4_Bindings.hh"
+-#elif defined(USE_YICES2) 
+-#include "yices2_Bindings.hh"
+-#else
+-
+-//
+-//	Code for no SMT support case.
+-//
+-
+-class VariableGenerator : public SMT_EngineWrapper
+-{
+-public:
+-  VariableGenerator(const SMT_Info& smtInfo);
+-  ~VariableGenerator();
+-  //
+-  //	Virtual functions for SMT solving.
+-  //
+-  Result assertDag(DagNode* dag);
+-  Result checkDag(DagNode* dag);
+-  void clearAssertions();
+-  void push();
+-  void pop();
+-
+-  VariableDagNode* makeFreshVariable(Term* baseVariable, const mpz_class& number);
+-};
+-
+-#endif
++#include "../Extension/smtManager.hh"
+ #endif
+diff --git tests/Misc/smtTest tests/Misc/smtTest
+index 14f27f7..73e41b9 100755
+--- tests/Misc/smtTest
++++ tests/Misc/smtTest
+@@ -6,11 +6,15 @@ then
+ else if grep "#define USE_YICES2" ../../config.h ; # are we using YICES2?
+ then
+   echo "testing Yices2"
++else if grep "#define USE_Z3" ../../config.h ; # are we using Z3?
++then
++  echo "testing Z3"
+ else
+   echo "no SMT support compiled in"
+   exit 77 # grep returned nonzero exit so skip this test
+ fi
+ fi
++fi
+ 
+ MAUDE_LIB=$srcdir/../../src/Main
+ export MAUDE_LIB
