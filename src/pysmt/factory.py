@@ -2,11 +2,11 @@ import maudeSE.maude
 
 from .connector import *
 from .converter import *
-from maudeSE.maude import PySmtManagerFactory
+from maudeSE.maude import SmtManagerFactory
 
-class Factory(PySmtManagerFactory):
+class Factory(SmtManagerFactory):
     def __init__(self):
-        PySmtManagerFactory.__init__(self)
+        SmtManagerFactory.__init__(self)
         self._map = dict()
 
     def register(self, name, conv_cls, conn_cls):

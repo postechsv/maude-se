@@ -111,25 +111,32 @@ public:
     virtual void prepareFor(VisibleModule* module) = 0;
     virtual PySmtTerm* pyDag2term(EasyTerm* dag) = 0;
     virtual EasyTerm* pyTerm2dag(PySmtTerm* term) = 0;
-    virtual PyObject* mkApp(PyObject* symbol, PyObject* args) = 0;
-    virtual PyObject* getSymbol(PyObject* dag) = 0;
 
 public:
     // implementation of the Converter interface
-    inline SmtTerm* dag2term(DagNode* dag) { 
-        EasyTerm term(dag);
-        PySmtTerm* pyTerm = pyDag2term(&term);
-        return pyTerm;
+    inline SmtTerm* dag2term(DagNode* dag) {
+        try {
+            EasyTerm term(dag);
+            return pyDag2term(&term);
+        } catch (const std::exception &e) {
+            PyErr_Print();
+            throw std::runtime_error("Python converter error");
+        }
     };
 
     // this converter must be pysmt term type
     inline DagNode* term2dag(SmtTerm* term){
         if (PySmtTerm* t = static_cast<PySmtTerm*>(term)){
             // this is handled by Python
-            if(EasyTerm* result = pyTerm2dag(t)){
-                DagNode* dag = result->getDag();
-                delete result; // otherwise memory becomes corrupted
-                return dag;
+            try {
+                if(EasyTerm* result = pyTerm2dag(t)){
+                    DagNode* dag = result->getDag();
+                    delete result; // otherwise memory becomes corrupted
+                    return dag;
+                }
+            } catch (const std::exception &e) {
+                PyErr_Print();
+                throw std::runtime_error("Python converter error");
             }
         }
         return nullptr;
@@ -142,11 +149,8 @@ public:
 	virtual ~PyConnector() {};
     virtual bool py_check_sat(std::vector<PySmtTerm*> consts) = 0;
     virtual bool py_subsume(PyTermSubst* subst, PySmtTerm* prev, PySmtTerm* acc, PySmtTerm* cur) = 0;
-    // virtual TermSubst* mkSubst(std::vector<DagNode*> vars, std::vector<DagNode*> vals) = 0;
-    // virtual PyObject* merge(PyObject* subst, PyObject* prev_const, std::vector<SmtTerm*> target_consts) = 0;
-    // virtual PyTermSubst* py_mk_subst(std::vector<EasyTerm*> vars, std::vector<EasyTerm*> vals) = 0;
+    // virtual bool merge(PyTermSubst* subst, PySmtTerm* prev, std::vector<PySmtTerm*> target_consts) = 0;
     virtual PySmtTerm* py_add_const(PySmtTerm* acc, PySmtTerm* cur) = 0;
-    // virtual SmtModel* get_model() = 0;
     virtual PySmtModel* py_get_model() = 0;
     virtual void print_model() = 0;
     virtual void set_logic(const char* logic) = 0;

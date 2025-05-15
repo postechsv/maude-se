@@ -8,11 +8,11 @@ import re
 from cvc5 import Kind
 
 
-class Cvc5Converter(PyConverter):
+class Cvc5Converter(Converter):
     """A term converter from Maude to Yices"""
 
     def __init__(self):
-        PyConverter.__init__(self)
+        Converter.__init__(self)
         self._s = cvc5.Solver()
         self._g = id_gen()
         self._symbol_info = dict()
@@ -285,7 +285,7 @@ class Cvc5Converter(PyConverter):
           an SMT solver term and its variables
         """
         term, v_set = self._dag2term(t)
-        return PySmtTerm([term, None, list(v_set)])
+        return SmtTerm([term, None, list(v_set)])
     
     def _dag2term(self, t: Term):
 
@@ -393,48 +393,3 @@ class Cvc5Converter(PyConverter):
             return tuple([t, v_s])
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")
-    
-    def mkApp(self, op, args):
-        """make an application term
-
-        :param op: An operator
-        :param args: a list of arguments
-        :returns: A pair of an SMT solver term and its variables
-        """
-        op_c, th = op
-
-        if th == "euf": 
-            f = self._s.mkTerm(Kind.APPLY_UF, op_c, *map(lambda x: x[0], args))
-            return tuple([f, None, list()])
-        else:
-            t = None
-            for op in op_c:
-                if t is None:
-                    t = self._s.mkTerm(op, *map(lambda x: x[0], args))
-                else:
-                    t = self._s.mkTerm(op, t)
-
-            return tuple([t, None, list()])
-
-    def getSymbol(self, t: Term):
-        """returns a corresponding operator
-
-        :param t: A maude term
-        :returns: A corresponding operator
-        """
-        if t.isVariable():
-            raise Exception("an input term cannot be a variable")
-
-        symbol = str(t.symbol())
-
-        sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
-        sorts.append(self._decl_sort(str(t.symbol().getRangeSort())))
-        k = (symbol, tuple(sorts))
-
-        if k in self._symbol_map:
-            return self._symbol_map[k]
-
-        if symbol in self._op_dict:
-            return tuple([self._op_dict[symbol], "builtin"])
-        
-        raise Exception(f"fail to get corresponding symbol of \"{t}\"")

@@ -9,11 +9,11 @@ from yices_api import *
 import re
 
 
-class YicesConverter(PyConverter):
+class YicesConverter(Converter):
     """A term converter from Maude to Yices"""
 
     def __init__(self):
-        PyConverter.__init__(self)
+        Converter.__init__(self)
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
@@ -405,11 +405,11 @@ class YicesConverter(PyConverter):
           an SMT solver term and its variables
         """
         term, v_set = self._dag2term(t)
-        return PySmtTerm([(term, Terms.type_of_term(term)), None, list(v_set)])
+        return SmtTerm([(term, Terms.type_of_term(term)), None, list(v_set)])
     
     def _dag2term(self, t: Term):
-        if t in self._dag2term_memoize:
-            return self._dag2term_memoize[t]
+        # if t in self._dag2term_memoize:
+        #     return self._dag2term_memoize[t]
 
         if t.isVariable():
             v_sort, v_name = str(t.getSort()), t.getVarName()
@@ -420,7 +420,7 @@ class YicesConverter(PyConverter):
                 v = self._var_dict[key]
                 term = tuple([v, set([v])])
 
-                self._dag2term_memoize[t] = term
+                # self._dag2term_memoize[t] = term
                 return term
 
             v = None
@@ -447,7 +447,7 @@ class YicesConverter(PyConverter):
                 self._var_dict[key] = v
                 term = tuple([v, set([v])])
 
-                self._dag2term_memoize[t] = term
+                # self._dag2term_memoize[t] = term
                 return term
 
             raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
@@ -496,13 +496,13 @@ class YicesConverter(PyConverter):
                     f = Terms.application(f, raw_args)
             
             term = tuple([f, v_s])
-            self._dag2term_memoize[t] = term
+            # self._dag2term_memoize[t] = term
             return term
 
         if symbol in self._bool_const:
             c = self._bool_const[symbol]()
             term = tuple([c, set()])
-            self._dag2term_memoize[t] = term
+            # self._dag2term_memoize[t] = term
             return term
         
         if symbol in self._num_const:
@@ -516,7 +516,7 @@ class YicesConverter(PyConverter):
             c = self._num_const[symbol](val)
 
             term = tuple([c, set()])
-            self._dag2term_memoize[t] = term
+            # self._dag2term_memoize[t] = term
             return term
 
         if symbol in self._op_dict:
@@ -530,57 +530,7 @@ class YicesConverter(PyConverter):
                 t = op(*map(lambda x: x[0], p_args))
 
             term = tuple([t, reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())])
-            self._dag2term_memoize[t] = term
+            # self._dag2term_memoize[t] = term
             return term
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")
-
-    def mkApp(self, op, args):
-        """make an application term
-
-        :param op: An operator
-        :param args: a list of arguments
-        :returns: A pair of an SMT solver term and its variables
-        """
-        o, ty = op
-        if ty == "list":
-            t = o(list(map(lambda x: x[0][0], args)))
-        else:
-            t = o(*map(lambda x: x[0][0], args))
-        return tuple([(t, Terms.type_of_term(t)), None, list()])
-    
-    def getSymbol(self, t: Term):
-        """returns a corresponding operator
-
-        :param t: A maude term
-        :returns: A corresponding operator
-        """
-        symbol = str(t.symbol())
-
-        sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
-        sorts.append(self._decl_sort(str(t.symbol().getRangeSort())))
-        k = (symbol, tuple(sorts))
-
-        if k in self._symbol_map:
-            sym, th, name = self._symbol_map[k]
-
-            fun_key = (sym, symbol)
-            assert th == "euf"
-
-            # get function type and make a function term
-            if fun_key not in self._func_dict:
-                self._func_dict[fun_key] = Terms.new_uninterpreted_term(sym, symbol)
-
-            return self._func_dict[fun_key]
-
-        if symbol in self._op_dict:
-            op = self._op_dict[symbol]
-
-            # multinary
-            if symbol == "_and_" or symbol == "_or_":
-                ty = "list"
-            else:
-                ty = "tuple"
-            return tuple([op, ty])
-        
-        raise Exception(f"fail to get corresponding symbol of \"{t}\"")

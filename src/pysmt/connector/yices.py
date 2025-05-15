@@ -5,8 +5,8 @@ from maudeSE.maude import *
 from maudeSE.util import id_gen
 from maudeSE.maude import *
 
-class YicesConnector(PyConnector):
-    def __init__(self, converter: PyConverter, logic=None):
+class YicesConnector(Connector):
+    def __init__(self, converter: Converter, logic=None):
         super().__init__()
         self._c = converter
         self._g = id_gen()
@@ -61,7 +61,7 @@ class YicesConnector(PyConnector):
             ((acc_f, _), _, acc_v), ((cur_t, _), _, cur_v) = acc.data(), cur.data()
             body = Terms.yand([acc_f, cur_t])
 
-        return PySmtTerm([(body, Terms.type_of_term(body)), None, None])
+        return SmtTerm([(body, Terms.type_of_term(body)), None, None])
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
@@ -107,54 +107,11 @@ class YicesConnector(PyConnector):
             raise Exception("failed to apply subsumption (give-up)")
 
     def merge(self, subst, prev_t, prev, cur_t, acc, cur):
-        mo = prev_t.symbol().getModule()
-        
-        rename_dict = dict()
-        t_l, t_r, t_s = list(), list(), list()
-        eq_l, eq_r = list(), list()
-        for p in subst:
-            if p == subst[p]:
-                continue
-
-            idx = next(self._g)
-
-            src, _, _ = self._c.dag2term(p)
-            trg, _, _ = self._c.dag2term(subst[p])
-
-            n_trg = Terms.new_uninterpreted_term(Terms.type_of_term(trg), f"#mergeVar{idx}")
-            newVar = mo.parseTerm(f"#mergeVar{idx}:{p.getSort()}")
-
-            eq_l.append(Terms.eq(trg, n_trg))
-            eq_r.append(Terms.eq(src, n_trg))
-
-            t_l.append(trg)
-            t_r.append(src)
-            t_s.append(n_trg)
-            
-            rename_dict[subst[p]] = newVar
-            
-        prev_c, _, _ = prev
-
-        (acc_f, _, _), (cur_c, _, _) = acc, cur
-
-        conj = Terms.yand([acc_f, cur_c])
-
-        c = Terms.yor([Terms.yand([Terms.subst(t_l, t_s, prev_c), *eq_l]), Terms.yand([Terms.subst(t_r, t_s, conj), *eq_r])])
-
-        n_subst = Substitution(rename_dict)
-        new_prev = n_subst.instantiate(prev_t)
-
-        return tuple([new_prev, tuple([c, None, None])])
-    
-    # def mkSubst(self, vars, vals):
-    #     subst = dict()
-    #     for v, val in zip(vars, vals):
-    #         subst[v] = val
-    #     return TermSubst(subst)
+        pass
 
     def get_model(self):
         raw_m = Model.from_context(self._ctx, 1)
-        m = PySmtModel()
+        m = SmtModel()
         for t in raw_m.collect_defined_terms():
             try:
                 ty = Terms.type_of_term(t)

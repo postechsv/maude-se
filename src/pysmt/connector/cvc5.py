@@ -6,8 +6,8 @@ from maudeSE.maude import *
 from maudeSE.util import id_gen
 from maudeSE.maude import *
 
-class Cvc5Connector(PyConnector):
-    def __init__(self, converter: PyConverter, logic=None):
+class Cvc5Connector(Connector):
+    def __init__(self, converter: Converter, logic=None):
         super().__init__()
         self._c = converter
         self._g = id_gen()
@@ -54,11 +54,10 @@ class Cvc5Connector(PyConnector):
     def _make_model(self):
         _vars = self._get_vars()
 
-        m = PySmtModel()
+        m = SmtModel()
         for v in _vars:
             k, v = [v, None, None], [self._s.getValue(v), None, None]
             m.set(k, v)
-
         return m
     
     def _get_vars(self):
@@ -86,7 +85,7 @@ class Cvc5Connector(PyConnector):
             (acc_f, _, acc_v), (cur_t, _, cur_v) = acc.data(), cur.data()
             body = self._s.mkTerm(cvcKind.AND, acc_f, cur_t)
 
-        return PySmtTerm([body, None, None])
+        return SmtTerm([body, None, None])
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
@@ -138,14 +137,7 @@ class Cvc5Connector(PyConnector):
             raise Exception("failed to apply subsumption (give-up)")
 
     def merge(self, subst, prev_t, prev, cur_t, acc, cur):
-        # TODO
         pass
-
-    # def mkSubst(self, vars, vals):
-    #     subst = dict()
-    #     for v, val in zip(vars, vals):
-    #         subst[v] = val
-    #     return TermSubst(subst)
 
     def get_model(self):
         return self._make_model()

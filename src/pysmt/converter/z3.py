@@ -8,17 +8,15 @@ import z3
 import re
 
 
-class Z3Converter(PyConverter):
+class Z3Converter(Converter):
     """A term converter from Maude to Z3"""
 
     def __init__(self):
-        PyConverter.__init__(self)
+        Converter.__init__(self)
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
         self._var_map = dict()
-
-        self.thisown = False
 
         # smt.maude map
         self._op_dict = {
@@ -187,9 +185,7 @@ class Z3Converter(PyConverter):
     def term2dag(self, term):
         try:
             t, _, _ = term.data()
-            a = self._module.parseTerm(self._term2dag(t))
-            a.thisown = False
-            return a
+            return self._module.parseTerm(self._term2dag(t))
         except:
             return None
 
@@ -307,14 +303,8 @@ class Z3Converter(PyConverter):
         :param t: A maude term
         :returns: A pair of an SMT solver term and its variables
         """
-        try:
-            term, v_set = self._dag2term(t)
-            a = PySmtTerm([term, None, list(v_set)])
-            a.thisown = False
-            return a
-        except:
-            import traceback
-            print(traceback.print_exc())
+        term, v_set = self._dag2term(t)
+        return SmtTerm([term, None, list(v_set)])
 
     def _dag2term(self, t: Term):
 
@@ -402,29 +392,3 @@ class Z3Converter(PyConverter):
             return tuple([op(*map(lambda x: x[0], p_args)), reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())])
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")
-
-    def mkApp(self, op, args):
-        """make an application term
-
-        :param op: An operator
-        :param args: a list of arguments
-        :returns: A pair of an SMT solver term and its variables
-        """
-        return tuple([op(*map(lambda x: x[0], args)), None, list()])
-    
-    def getSymbol(self, t: Term):
-        """returns a corresponding operator
-
-        :param t: A maude term
-        :returns: A corresponding operator
-        """
-        if t.isVariable():
-            raise Exception("an input term cannot be a variable")
-
-        symbol = str(t.symbol())
-
-        if symbol in self._op_dict:
-            op = self._op_dict[symbol]
-            return op
-        
-        raise Exception(f"fail to get corresponding symbol of \"{t}\"")
