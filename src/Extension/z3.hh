@@ -32,213 +32,226 @@
 #include <vector>
 #include <sstream>
 #include <gmpxx.h>
+#include <memory>
 
 #include "simpleRootContainer.hh"
 
-class Z3SmtTerm : public SmtTerm, public z3::expr
+class Z3SmtTerm : public SmtTerm
 {
+    std::shared_ptr<z3::context> ctx_;
+    z3::expr expr_;
+
 public:
-    Z3SmtTerm(z3::expr e) : z3::expr(e) {};
-    ~Z3SmtTerm(){};
+    Z3SmtTerm(std::shared_ptr<z3::context> c, const z3::expr &e)
+        : ctx_(std::move(c)), expr_(e) {}
 
-    inline z3::expr* to_z3_expr(){
-        return dynamic_cast<z3::expr*>(this);
-    };
-
-// public:
-//     Z3SmtTerm(z3::expr const & z3term) : z3term(z3term) {};
-//     ~Z3SmtTerm(){};
-//     inline z3::expr getTerm(){ return z3::expr(z3term.ctx()); };
-
-// private:
-//     z3::expr const & z3term;
-// public:
-//     Z3SmtTerm(z3::context & ctx) : ctx(ctx) {};
-//     ~Z3SmtTerm(){};
-//     inline z3::expr getTerm(){ return z3::expr(ctx); };
-
-// private:
-    // z3::context & ctx;
-
-// public:
-//     Z3SmtTerm(z3::expr const & z3term) : ctx(z3term.ctx()) {};
-//     ~Z3SmtTerm(){};
-//     inline z3::expr getTerm(){ return z3::expr(ctx); };
-
-// private:
-//     z3::context & ctx;
-
-// public:
-//     Z3SmtTerm(z3::expr const & z3term) { term = & z3::expr(z3term); };
-//     ~Z3SmtTerm(){};
-//     inline z3::expr getTerm(){ return z3::expr(*term); };
-
-// private:
-//     z3::expr* term;
+    z3::expr expr() const { return expr_; }
+    std::shared_ptr<z3::context> context() const { return ctx_; }
 };
-
-// comparator for Reverse Variable Map
-// struct rsvCmp {
-//     bool operator()(const SmtTerm* lhs, const SmtTerm* rhs) const {
-//         z3::expr a = dynamic_cast<Z3SmtTerm*>(const_cast<SmtTerm*>(lhs))->getTerm();
-//         z3::expr b = dynamic_cast<Z3SmtTerm*>(const_cast<SmtTerm*>(rhs))->getTerm();
-//         return a.id() < b.id();
-//     }
-// };
 
 class Z3TermSubst : public TermSubst
 {
 public:
-    Z3TermSubst(std::map<Z3SmtTerm*, Z3SmtTerm*>* subst_dict) : subst(subst_dict) {};
-    ~Z3TermSubst(){ delete subst; };
+    explicit Z3TermSubst(std::shared_ptr<
+                         std::map<std::shared_ptr<Z3SmtTerm>, std::shared_ptr<Z3SmtTerm>>>
+                             subst_dict)
+        : subst(std::move(subst_dict)) {}
 
-    std::map<Z3SmtTerm*, Z3SmtTerm*>* subst;
+    std::shared_ptr<std::map<std::shared_ptr<Z3SmtTerm>, std::shared_ptr<Z3SmtTerm>>> subst;
 };
 
-class Z3SmtModel : public SmtModel, public z3::model
+// class Z3SmtModel : public SmtModel, public z3::model
+// {
+// public:
+//     Z3SmtModel(z3::model m) : z3::model(m) {
+//         // cout << "z3 model gen" << endl;
+//         int num = m.num_consts();
+
+//         for(int i = 0; i < num; i++){
+//             z3::func_decl c = m.get_const_decl(i);
+//             z3::expr r = m.get_const_interp(c);
+
+//             // cout << "  lhs: " << c() << endl;
+//             // cout << "  rhs: " << r << endl;
+
+//             Z3SmtTerm* lhs = new Z3SmtTerm(c());
+//             Z3SmtTerm* rhs = new Z3SmtTerm(r);
+
+//             model.insert(std::pair<Z3SmtTerm*, Z3SmtTerm*>(lhs, rhs));
+//         }
+
+//     };
+
+//     ~Z3SmtModel(){
+//         // cout << "z3 model del" << endl;
+//         for (auto &i : model){
+//             delete i.first;
+//             delete i.second;
+//         }
+//     };
+
+//     SmtTerm* get(SmtTerm* k){
+//         if (Z3SmtTerm* t = static_cast<Z3SmtTerm*>(k)){
+//             auto it = model.find(t);
+//             if (it != model.end()){
+//                 return it->second;
+//             }
+//         }
+//         return nullptr;
+//     };
+
+//     std::vector<SmtTerm*>* keys(){
+//         std::vector<SmtTerm*>* ks = new std::vector<SmtTerm*>();
+//         for (auto &i : model){
+//             ks->push_back(i.first);
+//         }
+//         return ks;
+//     };
+
+// private:
+//     // std::vector<PyObject*> refs;
+//     std::map<Z3SmtTerm*, Z3SmtTerm*> model;
+// };
+
+class Z3SmtModel : public SmtModel
 {
 public:
-    Z3SmtModel(z3::model m) : z3::model(m) {
-        // cout << "z3 model gen" << endl;
+    Z3SmtModel(const z3::model &m, std::shared_ptr<z3::context> ctx)
+        : model_(m), ctx_(std::move(ctx))
+    {
         int num = m.num_consts();
-
-        for(int i = 0; i < num; i++){
+        for (int i = 0; i < num; ++i)
+        {
             z3::func_decl c = m.get_const_decl(i);
             z3::expr r = m.get_const_interp(c);
 
-            // cout << "  lhs: " << c() << endl;
-            // cout << "  rhs: " << r << endl;
+            auto lhs = std::make_shared<Z3SmtTerm>(ctx_, c());
+            auto rhs = std::make_shared<Z3SmtTerm>(ctx_, r);
 
-            Z3SmtTerm* lhs = new Z3SmtTerm(c());
-            Z3SmtTerm* rhs = new Z3SmtTerm(r);
-
-            model.insert(std::pair<Z3SmtTerm*, Z3SmtTerm*>(lhs, rhs));
+            model_map_[lhs] = rhs;
         }
+    }
 
-    };
+    SmtTerm *get(SmtTerm *k) override
+    {
+        auto *z3k = dynamic_cast<Z3SmtTerm *>(k);
+        if (!z3k)
+            return nullptr;
 
-    ~Z3SmtModel(){        
-        // cout << "z3 model del" << endl;
-        for (auto &i : model){
-            delete i.first;
-            delete i.second;
-        }
-    };
+        unsigned id = z3k->expr().id();
 
-    SmtTerm* get(SmtTerm* k){
-        if (Z3SmtTerm* t = static_cast<Z3SmtTerm*>(k)){
-            auto it = model.find(t);
-            if (it != model.end()){
-                return it->second;
+        for (const auto &[lhs, rhs] : model_map_)
+        {
+            if (id == lhs->expr().id())
+            {
+                return rhs.get();
             }
         }
         return nullptr;
-    };
+    }
 
-    std::vector<SmtTerm*>* keys(){
-        std::vector<SmtTerm*>* ks = new std::vector<SmtTerm*>();
-        for (auto &i : model){
-            ks->push_back(i.first);
+    std::vector<SmtTerm *> *keys() override
+    {
+        auto *ks = new std::vector<SmtTerm *>();
+        for (const auto &[lhs, _] : model_map_)
+        {
+            ks->push_back(lhs.get());
         }
         return ks;
-    };
+    }
 
 private:
-    // std::vector<PyObject*> refs;
-    std::map<Z3SmtTerm*, Z3SmtTerm*> model;
+    z3::model model_;
+    std::shared_ptr<z3::context> ctx_;
+    std::map<std::shared_ptr<Z3SmtTerm>, std::shared_ptr<Z3SmtTerm>> model_map_;
 };
 
-struct cmpExprById{
-    bool operator( )(const z3::expr &lhs, const z3::expr &rhs) const {
+struct cmpExprById
+{
+    bool operator()(const z3::expr &lhs, const z3::expr &rhs) const
+    {
         return lhs.id() < rhs.id();
     }
 };
 
 // Converter should be SimpleRootContainer because it contains variable DagNode maps.
 // Otherwise, metaLevel operators such as metaSmtSearch would fail due to corrupted dags.
-class Z3Converter : public Converter, public NativeSmtConverter< z3::expr, cmpExprById >, private SimpleRootContainer
+class Z3Converter : public Converter, public NativeSmtConverter<z3::expr, cmpExprById>, private SimpleRootContainer
 {
 public:
-    Z3Converter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
-	~Z3Converter(){};
-    void prepareFor(VisibleModule* vmodule);
-    SmtTerm* dag2term(DagNode* dag){
-        z3::expr e = dag2termInternal(dag);
-        return new Z3SmtTerm(e);
-    };
-    DagNode* term2dag(SmtTerm* term){
-        Z3SmtTerm* t = dynamic_cast<Z3SmtTerm*>(term);
-        return term2dagInternal(z3::expr(*dynamic_cast<z3::expr*>(t)));
-    }
+    Z3Converter(const SMT_Info &smtInfo);
+    ~Z3Converter() {};
+    void prepareFor(VisibleModule *module);
+    SmtTerm *dag2term(DagNode *dag);
+    DagNode *term2dag(SmtTerm *term);
 
 public:
-    inline z3::context* getContext(){ return &ctx; };
+    inline std::shared_ptr<z3::context> getContext() { return ctx; };
 
 private:
-    z3::context ctx;
+    std::shared_ptr<z3::context> ctx;
+    SymbolGetter sg;
 
 private:
     // override
-    z3::expr variableGenerator(DagNode *dag, ExprType exprType);
-    z3::expr makeVariable(VariableDagNode* v);
+    z3::expr makeVariable(DagNode *dag);
 
     // Aux
-    z3::expr dag2termInternal(DagNode* dag);
-    DagNode* term2dagInternal(z3::expr);
+    z3::expr dag2termInternal(DagNode *dag);
+    DagNode *term2dagInternal(z3::expr);
 
 private:
-    // Maude specific
-    VisibleModule* vmodule;
     void markReachableNodes();
 };
-
 
 class Z3Connector : public Connector
 {
 public:
-    Z3Connector(Z3Converter* conv);
-	~Z3Connector();
-    bool check_sat(std::vector<SmtTerm*> consts);
-    bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur);
-    TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict);
-    SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur);
-    SmtModel* get_model();
+    Z3Connector(Z3Converter *conv);
+    bool check_sat(std::vector<SmtTerm *> consts);
+    bool subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur);
+    TermSubst *mk_subst(std::map<DagNode *, DagNode *> &subst_dict);
+    SmtTerm *add_const(SmtTerm *acc, SmtTerm *cur);
+    SmtModel *get_model();
     void push();
     void pop();
 
-    void print_model(){};
-    void set_logic(const char* logic);
+    void print_model() {};
+    void set_logic(const char *logic);
     void reset();
 
-    Converter* get_converter(){ return conv; };
+    Converter *get_converter() { return conv; };
 
 private:
-    z3::solver *s;
-    z3::solver *s_v; // solver for validity check
-    z3::context ctx; // context for validity check
+    z3::expr translate(z3::expr e);
 
-    z3::expr translate(z3::expr& e);
-
+    std::shared_ptr<z3::context> ctx; // context shared
+    std::unique_ptr<z3::solver> s;    // solver from external context
+    std::unique_ptr<z3::solver> s_v;  // solver from local context
+    Z3Converter *conv;
     int pushCount;
-    Z3Converter* conv;
 };
 
 class Z3SmtManagerFactory : public SmtManagerFactory
 {
 public:
-    Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){
-        return new Z3Converter(smtInfo, extensionSymbol);
+    Converter *createConverter(const SMT_Info &smtInfo)
+    {
+        return new Z3Converter(smtInfo);
     }
-    Connector* createConnector(Converter* conv){
-        return new Z3Connector(dynamic_cast<Z3Converter*>(conv));
+    Connector *createConnector(Converter *conv)
+    {
+        return new Z3Connector(dynamic_cast<Z3Converter *>(conv));
     }
 };
 
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
-    void set(){
-        if (smtManagerFactory) delete smtManagerFactory;
+    void set()
+    {
+        if (smtManagerFactory)
+            delete smtManagerFactory;
         smtManagerFactory = new Z3SmtManagerFactory();
     };
 };
