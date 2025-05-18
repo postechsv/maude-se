@@ -109,44 +109,33 @@
 
 #include "metaLevelSmtOpSymbol.hh"
 
-// #include <fstream>
-
-#include <chrono>
-
 Z3Connector::Z3Connector(Z3Converter *conv)
     : pushCount(0),
-      conv(conv), ctx(std::make_shared<z3::context>()), 
-      s(new z3::solver(*conv->getContext())),
-      s_v(std::make_unique<z3::solver>(*ctx)) {}
+      conv(conv), ctx(std::move(conv->getContext())),
+      s(std::make_unique<z3::solver>(*ctx, z3::solver::simple()))
+{
+    z3::params p(*ctx);
+    // for better performance
+    p.set("auto_config", false); // do not use, automatic configuration
+    p.set("mbqi", false);        // do not use, model-based quantifier instantiation
+    s->set(p);
+}
 
 bool Z3Connector::check_sat(std::vector<SmtTerm *> consts)
 {
-    auto start = std::chrono::high_resolution_clock::now();
-
-    std::vector<Z3SmtTerm*> zterms;
+    std::vector<Z3SmtTerm *> zterms;
     zterms.reserve(consts.size());
 
-    for (auto* t : consts)
-        zterms.push_back(static_cast<Z3SmtTerm*>(t)); 
+    for (auto *t : consts)
+        zterms.push_back(static_cast<Z3SmtTerm *>(t));
 
     z3::expr_vector constraints(s->ctx());
-    for (auto* zt : zterms)
-        constraints.push_back(zt->expr());
+    for (auto *zt : zterms)
+        constraints.push_back(translate(zt->expr()));
 
-    s->add(constraints); 
+    s->add(constraints);
 
-    auto mid = std::chrono::high_resolution_clock::now();
-
-    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(mid - start);
-    std::cout << "Elapsed time (add): " << duration1.count() << " ms\n";
-
-    z3::check_result r = s->check();
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - mid);
-    std::cout << "Elapsed time (check sat): " << duration.count() << " ms\n";
-
-    switch (r)
+    switch (s->check())
     {
     case z3::unsat:
         return false;
@@ -170,27 +159,36 @@ SmtTerm *Z3Connector::add_const(SmtTerm *acc, SmtTerm *cur)
     {
         Z3SmtTerm *z3Acc = dynamic_cast<Z3SmtTerm *>(acc);
         Z3SmtTerm *z3Cur = dynamic_cast<Z3SmtTerm *>(cur);
-        return new Z3SmtTerm(conv->getContext(), z3Acc->expr() && z3Cur->expr());
+        return new Z3SmtTerm(ctx, translate(z3Acc->expr() && z3Cur->expr()));
     }
 }
 
 inline z3::expr Z3Connector::translate(z3::expr e)
 {
-    return z3::expr(*ctx, Z3_translate(*conv->getContext(), e, *ctx));
+    if (&(e.ctx()) == ctx.get())
+    {
+        return e;
+    }
+    else
+    {
+        Z3_ast translated = Z3_translate(e.ctx(), e, *ctx);
+        return z3::expr(*ctx, translated);
+    }
 }
 
-TermSubst* Z3Connector::mk_subst(std::map<DagNode*, DagNode*>& subst_dict)
+TermSubst *Z3Connector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
 {
     auto subst_map = std::make_shared<
         std::map<std::shared_ptr<Z3SmtTerm>, std::shared_ptr<Z3SmtTerm>>>();
 
-    for (auto& [dag_lhs, dag_rhs] : subst_dict)
+    for (auto &[dag_lhs, dag_rhs] : subst_dict)
     {
-        Z3SmtTerm* lhs_raw = dynamic_cast<Z3SmtTerm*>(conv->dag2term(dag_lhs));
-        Z3SmtTerm* rhs_raw = dynamic_cast<Z3SmtTerm*>(conv->dag2term(dag_rhs));
+        Z3SmtTerm *lhs_raw = dynamic_cast<Z3SmtTerm *>(conv->dag2term(dag_lhs));
+        Z3SmtTerm *rhs_raw = dynamic_cast<Z3SmtTerm *>(conv->dag2term(dag_rhs));
 
-        if (lhs_raw && rhs_raw) {
-            auto lhs = std::make_shared<Z3SmtTerm>(*lhs_raw);  // use copy constructor
+        if (lhs_raw && rhs_raw)
+        {
+            auto lhs = std::make_shared<Z3SmtTerm>(*lhs_raw); // use copy constructor
             auto rhs = std::make_shared<Z3SmtTerm>(*rhs_raw);
             (*subst_map)[lhs] = rhs;
         }
@@ -198,7 +196,6 @@ TermSubst* Z3Connector::mk_subst(std::map<DagNode*, DagNode*>& subst_dict)
 
     return new Z3TermSubst(subst_map);
 }
-
 
 bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur)
 {
@@ -219,19 +216,12 @@ bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm
 
     z3::expr f = !(implies(z3_acc && z3_cur, z3_prv.substitute(from, to)));
 
-    // Verbose("    Formula:");
-    // Verbose("      acc: " << z3_acc);
-    // Verbose("      cur: " << z3_cur);
-    // Verbose("      prv: " << z3_prv);
-    // Verbose("    Implication:");
-    // Verbose("      " << f);
-
-    s_v->push();
-    s_v->add(f);
+    s->push();
+    s->add(f);
     z3::check_result r;
     try
     {
-        r = s_v->check();
+        r = s->check();
     }
     catch (z3::exception &ex)
     {
@@ -240,10 +230,10 @@ bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm
         // ofs.open("debug.smt2");
         // ofs << s_v->to_smt2() << std::endl;
         // ofs.close();
-        s_v->reset();
+        s->reset();
         return false;
     }
-    s_v->pop();
+    s->pop();
 
     switch (r)
     {
@@ -259,7 +249,7 @@ bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm
 
 SmtModel *Z3Connector::get_model()
 {
-    return new Z3SmtModel(s->get_model(), conv->getContext());
+    return new Z3SmtModel(s->get_model(), ctx);
 }
 
 void Z3Connector::push()
@@ -285,8 +275,13 @@ void Z3Connector::set_logic(const char *logic)
 {
     try
     {
-        s = std::make_unique<z3::solver>(*conv->getContext(), logic);
-        s_v = std::make_unique<z3::solver>(*ctx, logic);
+        s = std::make_unique<z3::solver>(*ctx, logic);
+
+        z3::params p(*ctx);
+        // for better performance
+        p.set("auto_config", false); // do not use, automatic configuration
+        p.set("mbqi", false);        // do not use, model-based quantifier instantiation
+        s->set(p);
     }
     catch (z3::exception &ex)
     {
@@ -304,12 +299,7 @@ void Z3Converter::prepareFor(VisibleModule *module)
 
 SmtTerm *Z3Converter::dag2term(DagNode *dag)
 {
-    auto start = std::chrono::high_resolution_clock::now();
     z3::expr e = dag2termInternal(dag);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "Elapsed time: " << duration.count() << " ms\n";
     return new Z3SmtTerm(ctx, e);
 }
 
