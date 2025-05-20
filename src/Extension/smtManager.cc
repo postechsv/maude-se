@@ -3,11 +3,20 @@
 #include "vector.hh"
 
 // forward declarations
+#include "strategyLanguage.hh"
 #include "interface.hh"
 #include "core.hh"
 #include "variable.hh"
 #include "mixfix.hh"
+#include "higher.hh"
 #include "SMT.hh"
+
+#include "module.hh"
+#include "interpreter.hh"
+#include "global.hh"
+#include "syntacticPreModule.hh"
+#include "visibleModule.hh"
+#include "userLevelRewritingContext.hh"
 
 // interface class definitions
 #include "symbol.hh"
@@ -29,73 +38,90 @@
 //	front end class definitions
 #include "token.hh"
 
+VisibleModule *getCurrentModule()
+{
+    SyntacticPreModule *premodule = interpreter.getCurrentModule();
 
-VariableGenerator::VariableGenerator(const SMT_Info& smtInfo){
-    SmtManagerFactorySetter* smfs = new SmtManagerFactorySetter();
+    if (premodule == nullptr || premodule->getFlatSignature()->isBad())
+        return nullptr;
+
+    VisibleModule *vmod = premodule->getFlatModule();
+
+    if (vmod->isBad())
+        return nullptr;
+
+    vmod->protect();
+    return vmod;
+}
+
+VariableGenerator::VariableGenerator(const SMT_Info &smtInfo, bool use_cur_module, bool use_folding_check) : conn(nullptr), conn2(nullptr), conv(nullptr)
+{
+    SmtManagerFactorySetter *smfs = new SmtManagerFactorySetter();
     smfs->set();
     delete smfs;
 
-    conv = smtManagerFactory->createConverter(smtInfo, nullptr);
+    conv = smtManagerFactory->createConverter(smtInfo);
     conn = smtManagerFactory->createConnector(conv);
-  }
 
-VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){
-    SmtManagerFactorySetter* smfs = new SmtManagerFactorySetter();
-    smfs->set();
-    delete smfs;
+    if (use_folding_check)
+        conn2 = smtManagerFactory->createConnector(conv);
 
-    conv = smtManagerFactory->createConverter(smtInfo, extensionSymbol);
-    conn = smtManagerFactory->createConnector(conv);
-  }
+    if (use_cur_module)
+        conv->prepareFor(getCurrentModule());
+}
 
-// VariableGenerator::VariableGenerator(const SMT_Info& smtInfo, Connector* conn)
-//   : conn(conn), conv(conn->get_converter()) {
-//   }
-
-VariableGenerator::~VariableGenerator(){
-  if (conn) delete conn;
-  if (conv) delete conv;
+VariableGenerator::~VariableGenerator()
+{
+    if (conn)
+        delete conn;
+    if (conn2)
+        delete conn2;
+    if (conv)
+        delete conv;
 }
 
 VariableGenerator::Result
-VariableGenerator::assertDag(DagNode* dag)
+VariableGenerator::assertDag(DagNode *dag)
 {
-  SmtTerm* o = conv->dag2term(dag);
-  std::vector<SmtTerm*> formulas;
-  formulas.push_back(o);
+    SmtTerm *o = conv->dag2term(dag);
+    std::vector<SmtTerm *> formulas;
+    formulas.push_back(o);
 
-  if(conn->check_sat(formulas)){
-    return SAT;
-  }
-  return UNSAT;
+    if (conn->check_sat(formulas))
+    {
+        return SAT;
+    }
+    return UNSAT;
 }
 
 VariableGenerator::Result
-VariableGenerator::checkDag(DagNode* dag)
+VariableGenerator::checkDag(DagNode *dag)
 {
-  push();
-  Result r = assertDag(dag);
-  pop();
+    push();
+    Result r = assertDag(dag);
+    pop();
 
-  return r;
+    return r;
 }
 
 inline void
-VariableGenerator::clearAssertions(){ conn->reset(); }
+VariableGenerator::clearAssertions() { conn->reset(); }
 
 inline void
-VariableGenerator::push(){ conn->push(); }
+VariableGenerator::push() { conn->push(); }
 
 inline void
-VariableGenerator::pop(){ conn->pop(); }
+VariableGenerator::pop() { conn->pop(); }
 
-SmtModel* VariableGenerator::getModel(){
-  return conn->get_model();
+SmtModel *VariableGenerator::getModel()
+{
+    return conn->get_model();
 }
 
-inline void 
-VariableGenerator::setLogic(const char* logic){
-  conn->set_logic(logic);
+inline void
+VariableGenerator::setLogic(const char *logic)
+{
+    conn->set_logic(logic);
 }
 
 VariableDagNode *
@@ -118,37 +144,37 @@ VariableGenerator::makeFreshVariable(Term *baseVariable, const mpz_class &number
 
 bool containsSpecialChars(const char *str)
 {
-  if (str != nullptr)
-    for (char last = 0; *str != '\0'; last = *str, str++)
-      if (Token::specialChar(*str) && last != '`')
-        return true;
+    if (str != nullptr)
+        for (char last = 0; *str != '\0'; last = *str, str++)
+            if (Token::specialChar(*str) && last != '`')
+                return true;
 
-  return false;
+    return false;
 }
 
 string escapeWithBackquotes(const char *str)
 {
-  string escaped;
+    string escaped;
 
-  // Add backquotes before special characters if not already there
-  for (char last = 0; *str != '\0'; last = *str, str++)
-  {
-    if (Token::specialChar(*str) && last != '`')
-      escaped.push_back('`');
-    escaped.push_back(*str);
-  }
+    // Add backquotes before special characters if not already there
+    for (char last = 0; *str != '\0'; last = *str, str++)
+    {
+        if (Token::specialChar(*str) && last != '`')
+            escaped.push_back('`');
+        escaped.push_back(*str);
+    }
 
-  return escaped;
+    return escaped;
 }
 
 int encodeEscapedToken(const char *str)
 {
-  // Escape the string only if it is needed
-  if (!containsSpecialChars(str))
-    return Token::encode(str);
+    // Escape the string only if it is needed
+    if (!containsSpecialChars(str))
+        return Token::encode(str);
 
-  string escaped = escapeWithBackquotes(str);
-  return Token::encode(escaped.c_str());
+    string escaped = escapeWithBackquotes(str);
+    return Token::encode(escaped.c_str());
 }
 
 #ifdef USE_CVC4
@@ -162,54 +188,52 @@ int encodeEscapedToken(const char *str)
 
 // dummy
 
-
-SmtTerm* DummyConverter::dag2term(DagNode* dag)
+SmtTerm *DummyConverter::dag2term(DagNode *dag)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-DagNode* DummyConverter::term2dag(SmtTerm* term)
+DagNode *DummyConverter::term2dag(SmtTerm *term)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-
-bool DummyConnector::check_sat(std::vector<SmtTerm*> consts)
+bool DummyConnector::check_sat(std::vector<SmtTerm *> consts)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return false;
 }
 
-bool DummyConnector::subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur)
+bool DummyConnector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return false;
 }
-  
-TermSubst* DummyConnector::mk_subst(std::map<DagNode*, DagNode*>& subst_dict)
+
+TermSubst *DummyConnector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-SmtTerm* DummyConnector::add_const(SmtTerm* acc, SmtTerm* cur)
-{
-    IssueWarning("No SMT solver connected at compile time.");
-    return nullptr;
-}
-  
-SmtModel* DummyConnector::get_model()
+SmtTerm *DummyConnector::add_const(SmtTerm *acc, SmtTerm *cur)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-VariableGenerator* DummySmtManagerFactory::create(const SMT_Info& smtInfo)
+SmtModel *DummyConnector::get_model()
 {
-    DummyConnector* dummyConnector = new DummyConnector(new DummyConverter());
-    VariableGenerator* vg = new VariableGenerator(smtInfo, dummyConnector);
+    IssueWarning("No SMT solver connected at compile time.");
+    return nullptr;
+}
+
+VariableGenerator *DummySmtManagerFactory::create(const SMT_Info &smtInfo)
+{
+    DummyConnector *dummyConnector = new DummyConnector(new DummyConverter());
+    VariableGenerator *vg = new VariableGenerator(smtInfo, dummyConnector);
     return vg;
 }
 
