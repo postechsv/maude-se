@@ -43,6 +43,8 @@ class Z3Converter(Converter):
             "_<=_"          : z3.z3.ArithRef.__le__,
             "_>_"           : z3.z3.ArithRef.__gt__,
             "_>=_"          : z3.z3.ArithRef.__ge__,
+
+            "toInteger"     : z3.z3.ToInt,
         }
 
         self._const_dict = {
@@ -55,8 +57,8 @@ class Z3Converter(Converter):
         self._special_const = {
             # var constructor
             "IntegerVar"    : z3.IntSort,
-            "BoolVar"       : z3.BoolSort,
-            "RealVar"       : z3.Real,
+            "BooleanVar"    : z3.BoolSort,
+            "RealVar"       : z3.RealSort,
         }
 
         self._sort_dict = {
@@ -184,12 +186,15 @@ class Z3Converter(Converter):
     
     def term2dag(self, term):
         try:
-            t, _, _ = term.data()
-            return self._module.parseTerm(self._term2dag(t))
+            return self._module.parseTerm(self._term2dag(term.data()))
         except:
             return None
 
     def _term2dag(self, term):
+
+        t_hash = hash(term)
+        if t_hash in self._var_map:
+            return self._var_map[t_hash]
 
         if z3.is_and(term):
             r = " and ".join([self._term2dag(c) for c in term.children()])
@@ -301,10 +306,9 @@ class Z3Converter(Converter):
         """translate a maude term to a SMT solver term
 
         :param t: A maude term
-        :returns: A pair of an SMT solver term and its variables
+        :returns: An SMT solver term
         """
-        term, v_set = self._dag2term(t)
-        return SmtTerm([term, None, list(v_set)])
+        return SmtTerm(self._dag2term(t))
 
     def _dag2term(self, t: Term):
 
@@ -335,27 +339,29 @@ class Z3Converter(Converter):
                 # v_hash = hash(v)
                 # if v_hash not in self._var_map:
                 #     self._var_map[v_hash] = t
-                return tuple([v, set([v])])
+                return v
 
             raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
 
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
 
-        # if symbol_sort in self._special_const:
-        #     if t not in self._special_id:
-        #         self._special_id[t] = next(self._g)
+        if symbol_sort in self._special_const:
+            if t not in self._special_id:
+                self._special_id[t] = next(self._g)
 
-        #     # remove "var" from type for backward compatibility
-        #     name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
-        #     sort = self._special_const[symbol_sort]()
+            # remove "var" from type for backward compatibility
+            name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
+            sort = self._special_const[symbol_sort]()
             
-        #     v = z3.Const(name, sort)
+            # print(name, sort)
+            v = z3.Const(name, sort)
 
-        #     # keep track of special const
-        #     # v_hash = hash(v)
-        #     # if v_hash not in self._var_map:
-        #     #     self._var_map[v_hash] = t
-        #     return tuple([v, set([v])])
+            # keep track of special const
+            v_hash = hash(v)
+            if v_hash not in self._var_map:
+                self._var_map[v_hash] = str(t)
+
+            return v
 
         sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
         sorts.append(self._decl_sort(str(t.symbol().getRangeSort())))
@@ -365,7 +371,7 @@ class Z3Converter(Converter):
             p_args = [self._dag2term(arg) for arg in t.arguments()]
             sym = self._symbol_map[k]
 
-            return tuple([sym(*map(lambda x: x[0], p_args)), reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())])
+            return sym(*p_args)
 
         if symbol in self._const_dict:
             val = str(t)
@@ -383,12 +389,12 @@ class Z3Converter(Converter):
                 val = False
 
             c = self._const_dict[symbol](val)
-            return tuple([c, set()])
+            return c
 
         if symbol in self._op_dict:
             p_args = [self._dag2term(arg) for arg in t.arguments()]
             op = self._op_dict[symbol]
 
-            return tuple([op(*map(lambda x: x[0], p_args)), reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())])
+            return op(*p_args)
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")

@@ -1,5 +1,4 @@
 import z3
-import time
 
 from maudeSE.maude import *
 from maudeSE.util import id_gen
@@ -13,19 +12,12 @@ class Z3Connector(Connector):
 
         _logic = "QF_LRA" if logic is None else logic
 
-        # time
-        self._tt = 0.0
-        self._dt = 0.0
-        self._st = 0.0
-        self._mt = 0.0
-
         # set solver
         self._s = z3.SolverFor(_logic)
-        self._ss = z3.SolverFor(_logic)
     
     def check_sat(self, consts):
         for const in consts:
-            c, _, _ = const.data()
+            c = const.data()
             self._s.add(c)
 
         r = self._s.check()
@@ -49,52 +41,33 @@ class Z3Connector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            cur_t, _, cur_v = cur.data()
-            body = cur_t
-
+            body = cur.data()
         else:
-            acc_f, _, acc_v = acc.data()
-            cur_t, _, cur_v = cur.data()
-            body = z3.And(acc_f, cur_t)
+            body = z3.And(acc.data(), cur.data())
 
-        return SmtTerm([z3.simplify(body), None, None])
+        return SmtTerm(z3.simplify(body))
 
     def subsume(self, subst, prev, acc, cur):
-        s = time.time()
-        
-        d_s = time.time()
         t_l = list()
         sub = subst.keys()
         for p in sub:
-            src, _, _ = self._c.dag2term(p).data()
-            trg, _, _ = self._c.dag2term(subst.get(p)).data()
+            src = self._c.dag2term(p).data()
+            trg = self._c.dag2term(subst.get(p)).data()
 
             t_l.append((src, trg))
-        d_e = time.time()
 
-        self._dt += d_e - d_s
+        prev_c = prev.data()
 
-        prev_c, _, _ = prev.data()
-
-        acc_c, _, _ = acc.data()
-        cur_c, _, _ = cur.data()
+        acc_c = acc.data()
+        cur_c = cur.data()
     
-        so_s = time.time()
-        self._ss.push()
-        self._ss.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
+        self._s.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
 
-        r = self._ss.check()
-        self._ss.pop()
-        so_e = time.time()
-        self._st += so_e - so_s
+        r = self._s.check()
 
         if r == z3.unsat:
-            e = time.time()
-            self._tt += e - s
             return True
         elif r == z3.sat:
-            e = time.time()
-            self._tt += e - s
             return False
         else:
             raise Exception("failed to apply subsumption (give-up)")
@@ -107,8 +80,7 @@ class Z3Connector(Connector):
         
         m = SmtModel()
         for d in raw_m.decls():
-            k, v = [d, None, None], [raw_m[d], None, None]
-            m.set(k, v)
+            m.set(d, raw_m[d])
         return m
 
     def print_model(self):
@@ -117,7 +89,6 @@ class Z3Connector(Connector):
     def set_logic(self, logic):
         # recreate solver
         self._s = z3.SolverFor(logic)
-        self._ss = z3.SolverFor(logic)
     
     def get_converter(self):
         return self._c

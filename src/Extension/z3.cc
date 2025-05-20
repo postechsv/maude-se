@@ -2,7 +2,6 @@
 #include "macros.hh"
 #include "vector.hh"
 #include "pointerMap.hh"
-#include "meta.hh"
 
 // forward declarations
 #include "interface.hh"
@@ -48,66 +47,14 @@
 #include "strategicExecution.hh"
 #include "strategyExpression.hh"
 
-// //      interface class definitions
-// #include "symbol.hh"
-// #include "dagNode.hh"
-// #include "rawDagArgumentIterator.hh"
-// #include "rawArgumentIterator.hh"
-// #include "term.hh"
-// #include "extensionInfo.hh"
-
-// //      core class definitions
-// #include "variableInfo.hh"
-// #include "variableSymbol.hh"
-// #include "preEquation.hh"
-// #include "substitution.hh"
-// #include "rewritingContext.hh"
-// #include "module.hh"
-// #include "label.hh"
-// #include "rule.hh"
-// #include "symbolMap.hh"
-
-// //	higher class definitions
-// #include "pattern.hh"
-// #include "rewriteSearchState.hh"
-// #include "matchSearchState.hh"
-// #include "rewriteSequenceSearch.hh"
-// #include "narrowingSequenceSearch.hh"
-// #include "unificationProblem.hh"
-// #include "irredundantUnificationProblem.hh"
-// #include "variantSearch.hh"
-// #include "filteredVariantUnifierSearch.hh"
-// #include "narrowingSearchState2.hh"
-// #include "narrowingSequenceSearch3.hh"
-
-// //      free theory class definitions
-// #include "freeNet.hh"
-// #include "freeSymbol.hh"
-// #include "freeDagNode.hh"
-
-// //      variable class definitions
-// #include "variableDagNode.hh"
-
-// //      built in class definitions
-// #include "succSymbol.hh"
-// #include "bindingMacros.hh"
-
 //      front end class definitions
 #include "userLevelRewritingContext.hh"
 #include "quotedIdentifierSymbol.hh"
 #include "quotedIdentifierDagNode.hh"
 #include "quotedIdentifierOpSymbol.hh"
-#include "metaModule.hh"
-#include "metaLevel.hh"
-#include "metaLevelSmtOpSymbol.hh"
-#include "fileTable.hh"
 #include "syntacticPreModule.hh"
-#include "interpreter.hh"
 #include "visibleModule.hh"
 #include "freshVariableSource.hh"
-#include "mixfixParser.hh"
-
-#include "metaLevelSmtOpSymbol.hh"
 
 Z3Connector::Z3Connector(Z3Converter *conv)
     : pushCount(0),
@@ -813,7 +760,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
         Vector<ConnectedComponent *> domain;
         domain.push_back(bk);
 
@@ -831,13 +778,20 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
             arg[i] = term2dagInternal(e.arg(i));
         }
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(bk);
         domain.push_back(bk);
 
-        return sg.getSymbol("_and_", domain, bk)->makeDagNode(arg);
+        if (e.is_and())
+            return sg.getSymbol("_and_", domain, bk)->makeDagNode(arg);
+        if (e.is_or())
+            return sg.getSymbol("_or_", domain, bk)->makeDagNode(arg);
+        if (e.is_xor())
+            return sg.getSymbol("_xor_", domain, bk)->makeDagNode(arg);
+        if (e.is_implies())
+            return sg.getSymbol("_implies_", domain, bk)->makeDagNode(arg);
     }
 
     if (e.is_eq())
@@ -855,7 +809,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e1);
         arg[1] = term2dagInternal(e2);
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e1.is_bool())
         {
@@ -869,7 +823,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e1.is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -880,7 +834,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e1.is_real())
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -899,11 +853,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[1] = term2dagInternal(e.arg(1));
         arg[2] = term2dagInternal(e.arg(2));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
         Vector<ConnectedComponent *> domain;
         if (e.arg(1).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
 
             domain.push_back(ik);
             domain.push_back(ik);
@@ -913,7 +867,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
 
         if (e.arg(1).is_real())
         {
-            ConnectedComponent *ik = sg.getKind("RealExpr");
+            ConnectedComponent *ik = sg.getKind("Real");
 
             domain.push_back(ik);
             domain.push_back(ik);
@@ -937,11 +891,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e.arg(0).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -951,7 +905,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         }
         else
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -967,11 +921,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e.arg(0).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -981,7 +935,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         }
         else
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -997,11 +951,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e.arg(0).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -1011,7 +965,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         }
         else
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -1027,11 +981,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e.arg(0).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -1041,7 +995,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         }
         else
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -1057,11 +1011,11 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
 
         if (e.arg(0).is_int())
         {
-            ConnectedComponent *ik = sg.getKind("IntegerExpr");
+            ConnectedComponent *ik = sg.getKind("Integer");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(ik);
@@ -1071,7 +1025,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         }
         else
         {
-            ConnectedComponent *rk = sg.getKind("RealExpr");
+            ConnectedComponent *rk = sg.getKind("Real");
             Vector<ConnectedComponent *> domain;
 
             domain.push_back(rk);
@@ -1086,8 +1040,8 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *bk = sg.getKind("BooleanExpr");
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *bk = sg.getKind("Boolean");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1103,7 +1057,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1115,7 +1069,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1134,7 +1088,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
             arg[i] = term2dagInternal(e.arg(i));
         }
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1154,7 +1108,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
             arg[i] = term2dagInternal(e.arg(i));
         }
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1174,7 +1128,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
             arg[i] = term2dagInternal(e.arg(i));
         }
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1189,7 +1143,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1204,7 +1158,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(ik);
@@ -1236,8 +1190,8 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *ik = sg.getKind("IntegerExpr");
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *ik = sg.getKind("Integer");
+        ConnectedComponent *rk = sg.getKind("Real");
 
         Vector<ConnectedComponent *> domain;
 
@@ -1251,7 +1205,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1269,7 +1223,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1288,7 +1242,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1307,7 +1261,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         {
             arg[i] = term2dagInternal(e.arg(i));
         }
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
@@ -1322,7 +1276,7 @@ DagNode *Z3Converter::term2dagInternal(z3::expr e)
         arg[0] = term2dagInternal(e.arg(0));
         arg[1] = term2dagInternal(e.arg(1));
 
-        ConnectedComponent *rk = sg.getKind("RealExpr");
+        ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
