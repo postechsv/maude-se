@@ -13,23 +13,35 @@ index 76301f1..876efc0 100644
    enum VariantFlags
      {
 diff --git src/Mixfix/fancySymbols.cc src/Mixfix/fancySymbols.cc
-index 825b96b..f5cf8ac 100644
+index 825b96b..12fbfa6 100644
 --- src/Mixfix/fancySymbols.cc
 +++ src/Mixfix/fancySymbols.cc
-@@ -127,6 +127,8 @@ MixfixModule::newFancySymbol(Token prefixName,
+@@ -127,6 +127,10 @@ MixfixModule::newFancySymbol(Token prefixName,
        return new QuotedIdentifierOpSymbol(name, nrArgs);
      case SymbolType::META_LEVEL_OP_SYMBOL:
        return new MetaLevelOpSymbol(name, nrArgs, strategy);
 +    case SymbolType::META_LEVEL_SMT_OP_SYMBOL: 
 +      return new MetaLevelSmtOpSymbol(name, nrArgs, strategy);
++    case SymbolType::SMT_OP_SYMBOL:
++      return new SmtOpSymbol(name, nrArgs, strategy);
      case SymbolType::MODEL_CHECKER_SYMBOL:
        return new ModelCheckerSymbol(name);
      case SymbolType::STRATEGY_MODEL_CHECKER_SYMBOL:
 diff --git src/Mixfix/mixfixModule.cc src/Mixfix/mixfixModule.cc
-index 6627c86..9ef5858 100644
+index 6627c86..41f4e9c 100644
 --- src/Mixfix/mixfixModule.cc
 +++ src/Mixfix/mixfixModule.cc
-@@ -157,6 +157,7 @@
+@@ -119,6 +119,9 @@
+ #include "SMT_NumberTerm.hh"
+ #include "SMT_NumberDagNode.hh"
+ 
++// SMT Op definition
++#include "smtOpSymbol.hh" 
++
+ //	higher class definitions
+ #include "rewriteSequenceSearch.hh"
+ #include "modelCheckerSymbol.hh"
+@@ -157,6 +160,7 @@
  
  //	metalevel class definitions
  #include "metaLevelOpSymbol.hh"
@@ -38,24 +50,26 @@ index 6627c86..9ef5858 100644
  
  //	front end class definitions
 diff --git src/Mixfix/specialSymbolTypes.cc src/Mixfix/specialSymbolTypes.cc
-index f00c9af..cd84031 100644
+index f00c9af..cd6f9bf 100644
 --- src/Mixfix/specialSymbolTypes.cc
 +++ src/Mixfix/specialSymbolTypes.cc
-@@ -66,3 +66,4 @@
+@@ -66,3 +66,5 @@
    MACRO(TimeManagerSymbol, SymbolType::TIME_MANAGER_SYMBOL)
    MACRO(PrngManagerSymbol, SymbolType::PRNG_MANAGER_SYMBOL)
    MACRO(ObjectConstructorSymbol, SymbolType::OBJECT_CONSTRUCTOR_SYMBOL)
 +  MACRO(MetaLevelSmtOpSymbol, SymbolType::META_LEVEL_SMT_OP_SYMBOL)
++  MACRO(SmtOpSymbol, SymbolType::SMT_OP_SYMBOL)
 \ No newline at end of file
 diff --git src/Mixfix/symbolType.hh src/Mixfix/symbolType.hh
-index 4c38a2d..b8f38b1 100644
+index 4c38a2d..c198b87 100644
 --- src/Mixfix/symbolType.hh
 +++ src/Mixfix/symbolType.hh
-@@ -90,6 +90,7 @@ public:
+@@ -90,6 +90,8 @@ public:
      TIME_MANAGER_SYMBOL,
      PRNG_MANAGER_SYMBOL,
      OBJECT_CONSTRUCTOR_SYMBOL,
 +    META_LEVEL_SMT_OP_SYMBOL,
++    SMT_OP_SYMBOL,
  
      END_OF_SYMBOLS_WITH_ATTACHMENTS
    };

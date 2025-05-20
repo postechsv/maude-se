@@ -44,7 +44,7 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         Pattern *smtGoal = new Pattern(smtGoalTerm, false);
                         const SMT_Info &smtInfo = m->getSMT_Info();
                         // SmtManager *vg = new SmtManager(smtInfo);
-                        VariableGenerator *vg = new VariableGenerator(smtInfo, dynamic_cast<MetaLevelSmtOpSymbol *>(const_cast<MetaLevelSmtOpSymbol *>(this)));
+                        VariableGenerator *vg = new VariableGenerator(smtInfo, false, true);
                         // SmtManagerFactory *factory = new SmtFactory();
                         // WrapperFactory *factory = m->getOwner()->getWrapperFactory();
                         // Converter *conv = factory->createConverter();
@@ -52,9 +52,11 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
 
                         Converter *conv = vg->getConverter();
                         Connector *conn = vg->getConnector();
+                        Connector *conn2 = vg->getConnector2();
                         // prepare for the current module
                         conv->prepareFor(m);
                         conn->set_logic(logic);
+                        conn2->set_logic(logic);
                         // vg->setUnderline(conn, conv);
 
                         // cout << "   !!! Made cached SMT_RewriteSequenceSearch !!!" << endl;

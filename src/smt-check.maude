@@ -1,12 +1,116 @@
---- load smt 
---- we need to import this ...
+fmod VAR-ID is
+  sort SMTVarId .
+endfm
+
+fmod BOOLEAN-EXPR is
+  inc VAR-ID .
+  inc BOOLEAN .
+
+  sort BooleanExpr .
+  subsort Boolean < BooleanExpr .
+
+  sort BooleanVar .
+  subsort BooleanVar < BooleanExpr .
+  op b : SMTVarId -> BooleanVar [ctor] .
+
+  op not_ : BooleanExpr -> BooleanExpr [ditto] .
+  op _and_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+  op _xor_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+  op _or_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+  op _implies_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+
+  op _===_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+  op _=/==_ : BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+  op _?_:_ : BooleanExpr BooleanExpr BooleanExpr -> BooleanExpr [ditto] .
+
+  op forall : BooleanVar BooleanExpr -> BooleanExpr .
+  op exists : BooleanVar BooleanExpr -> BooleanExpr .
+endfm
+
+fmod INTEGER-EXPR is
+  inc VAR-ID .
+  inc INTEGER .
+  pr BOOLEAN-EXPR .
+
+  sort IntegerExpr .
+  subsort Integer < IntegerExpr .
+
+  sort IntegerVar .
+  subsort IntegerVar < IntegerExpr .
+  op i : SMTVarId -> IntegerVar [ctor] .
+
+  op -_ : IntegerExpr -> IntegerExpr [ditto] .
+  op _+_ : IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+  op _*_ : IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+  op _-_ : IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+  op _div_ : IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+  op _mod_ : IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+
+  op _<_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+  op _<=_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+  op _>_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto].
+  op _>=_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+
+  op _===_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+  op _=/==_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+  op _?_:_ : BooleanExpr IntegerExpr IntegerExpr -> IntegerExpr [ditto] .
+
+  op _divisible_ : IntegerExpr IntegerExpr -> BooleanExpr [ditto] .
+
+  op forall : IntegerVar BooleanExpr -> BooleanExpr .
+  op exists : IntegerVar BooleanExpr -> BooleanExpr .
+endfm
+
+fmod REAL-EXPR is
+  inc VAR-ID .
+  inc REAL .
+  pr BOOLEAN-EXPR .
+
+  sort RealExpr .
+  subsort Real < RealExpr .
+
+  sort RealVar .
+  subsort RealVar < RealExpr .
+  op r : SMTVarId -> RealVar [ctor] .
+
+  op -_ : RealExpr -> RealExpr [ditto] .
+  op _+_ : RealExpr RealExpr -> RealExpr [ditto] .
+  op _*_ : RealExpr RealExpr -> RealExpr [ditto] .
+  op _-_ : RealExpr RealExpr -> RealExpr [ditto] .
+  op _/_ : RealExpr RealExpr -> RealExpr [ditto] .
+
+  op _<_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+  op _<=_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+  op _>_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+  op _>=_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+
+  op _===_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+  op _=/==_ : RealExpr RealExpr -> BooleanExpr [ditto] .
+  op _?_:_ : BooleanExpr RealExpr RealExpr -> RealExpr [ditto] .
+
+  op forall : RealVar BooleanExpr -> BooleanExpr .
+  op exists : RealVar BooleanExpr -> BooleanExpr .
+endfm
+
+fmod REAL-INTEGER-EXPR is
+  pr INTEGER-EXPR .
+  pr REAL-EXPR .
+  inc REAL-INTEGER .
+
+  op toReal : IntegerExpr -> RealExpr [ditto] .
+  op toInteger : RealExpr -> IntegerExpr [ditto] .
+  op isInteger : RealExpr -> BooleanExpr [ditto] .
+endfm
 
 fmod SATISFYING-ASSIGNMENTS is
-  pr META-LEVEL .
+  pr BOOL .
+  pr REAL-INTEGER-EXPR .
 
   sort SatAssignment .
-  op _|->_ : Term Term -> SatAssignment [ctor] .
-  op {_|->_} : String String -> SatAssignment [ctor] .
+
+  op _|->_ : IntegerExpr IntegerExpr -> SatAssignment [ctor] .
+  op _|->_ : BooleanExpr BooleanExpr -> SatAssignment [ctor] .
+  op _|->_ : RealExpr RealExpr -> SatAssignment [ctor] .
 
   sort SatAssignmentSet .
   subsort SatAssignment < SatAssignmentSet .
@@ -19,70 +123,29 @@ fmod SATISFYING-ASSIGNMENTS is
   op {_} : SatAssignmentSet -> SmtCheckResult [ctor] .
 endfm
 
+fmod SMT-LOGIC is
+  pr QID .
 
-fmod META-SMT-CHECK is
-  pr REAL-INTEGER .
+  sort Logic .
+  subsort Qid < Logic .
+
+  op auto : -> Logic [ctor] .
+endfm
+
+fmod SMT-CHECK is
+  pr SMT-LOGIC .
   pr SATISFYING-ASSIGNMENTS .
 
-  op metaSmtCheck : Module Term Qid -> SmtCheckResult .
-  eq metaSmtCheck(M:Module, TERM:Term, LOGIC:Qid) = metaSmtCheck(M:Module, TERM:Term, LOGIC:Qid, false) .
+  op smtCheck : BooleanExpr Logic -> SmtCheckResult .
+  eq smtCheck(B:BooleanExpr, LO:Logic) = smtCheck(B:BooleanExpr, LO:Logic, false) .
 
-  op metaSmtCheck : Module Term Qid Bool -> SmtCheckResult
-  [special (id-hook MetaLevelSmtOpSymbol    (metaSmtCheck)
-            op-hook unknownResultSymbol     (unknown : ~> SmtCheckResult)
-            op-hook satAssnSetSymbol        ({_} : SatAssignmentSet ~> SmtCheckResult)
-            op-hook emptySatAssnSetSymbol   (empty : ~> SatAssignmentSet)
-            op-hook concatSatAssnSetSymbol  (_,_ : SatAssignmentSet SatAssignmentSet ~> SatAssignmentSet)
-            op-hook satAssnSymbol           (_|->_ : Term Term ~> SatAssignment)
-            op-hook satAssnAnySymbol        ({_|->_} : String String ~> SatAssignment)
+  op smtCheck : BooleanExpr Bool -> SmtCheckResult .
+  eq smtCheck(B:BooleanExpr, FLAG:Bool) = smtCheck(B:BooleanExpr, auto, FLAG:Bool) .
 
-            op-hook integerSymbol                      (<Integers> : ~> Integer)
-            op-hook realSymbol                         (<Reals> : ~> Real)
+  op smtCheck : BooleanExpr -> SmtCheckResult .
+  eq smtCheck(B:BooleanExpr) = smtCheck(B:BooleanExpr, false) .
 
-            term-hook trueTerm                         ((true).Boolean)
-            term-hook falseTerm                        ((false).Boolean)
-
-            op-hook notBoolSymbol                      (not_ : Boolean ~> Boolean)
-            op-hook andBoolSymbol                      (_and_ : Boolean Boolean ~> Boolean)
-            op-hook xorBoolSymbol                      (_xor_ : Boolean Boolean ~> Boolean)
-            op-hook orBoolSymbol                       (_or_ : Boolean Boolean ~> Boolean)
-            op-hook impliesBoolSymbol                  (_implies_ : Boolean Boolean ~> Boolean)
-            op-hook eqBoolSymbol                       (_===_ : Boolean Boolean ~> Boolean)
-            op-hook neqBoolSymbol                      (_=/==_ : Boolean Boolean ~> Boolean)
-            op-hook iteBoolSymbol                      (_?_:_ : Boolean Boolean Boolean ~> Boolean)
-
-            op-hook unaryMinusIntSymbol                (-_ : Integer ~> Integer)
-            op-hook plusIntSymbol                      (_+_ : Integer Integer ~> Integer)
-            op-hook minusIntSymbol                     (_-_ : Integer Integer ~> Integer)
-            op-hook divIntSymbol                       (_div_ : Integer Integer ~> Integer)
-            op-hook mulIntSymbol                       (_*_ : Integer Integer ~> Integer)
-            op-hook modIntSymbol                       (_mod_ : Integer Integer ~> Integer)
-            op-hook ltIntSymbol                        (_<_ : Integer Integer ~> Boolean)
-            op-hook leqIntSymbol                       (_<=_ : Integer Integer ~> Boolean)
-            op-hook gtIntSymbol                        (_>_ : Integer Integer ~> Boolean)
-            op-hook geqIntSymbol                       (_>=_ : Integer Integer ~> Boolean)
-            op-hook eqIntSymbol                        (_===_ : Integer Integer ~> Boolean)
-            op-hook neqIntSymbol                       (_=/==_ : Integer Integer ~> Boolean)
-            op-hook iteIntSymbol                       (_?_:_ : Boolean Integer Integer ~> Integer)
-            op-hook divisibleIntSymbol                 (_divisible_ : Integer Integer ~> Boolean)
-
-            op-hook unaryMinusRealSymbol               (-_ : Real ~> Real)
-            op-hook plusRealSymbol                     (_+_ : Real Real ~> Real)
-            op-hook minusRealSymbol                    (_-_ : Real Real ~> Real)
-            op-hook divRealSymbol                      (_/_ : Real Real ~> Real)
-            op-hook mulRealSymbol                      (_*_ : Real Real ~> Real)
-            op-hook ltRealSymbol                       (_<_ : Real Real ~> Boolean)
-            op-hook leqRealSymbol                      (_<=_ : Real Real ~> Boolean)
-            op-hook gtRealSymbol                       (_>_ : Real Real ~> Boolean)
-            op-hook geqRealSymbol                      (_>=_ : Real Real ~> Boolean)
-            op-hook eqRealSymbol                       (_===_ : Real Real ~> Boolean)
-            op-hook neqRealSymbol                      (_=/==_ : Real Real ~> Boolean)
-            op-hook iteRealSymbol                      (_?_:_ : Boolean Real Real ~> Real)
-            op-hook toRealSymbol                       (toReal : Integer ~> Real)
-            op-hook toIntegerSymbol                    (toInteger : Real ~> Integer)
-            op-hook isIntegerSymbol                    (isInteger : Real ~> Boolean)
-
-            op-hook shareWith               (metaReduce : Module Term ~> ResultPair))] .
+  op smtCheck : BooleanExpr Logic Bool -> SmtCheckResult [special (id-hook SmtOpSymbol (smtCheck))] .
 
 --- Will be supported later.
     --- op simplifyFormula : BooleanExpr -> BooleanExpr
@@ -149,9 +212,32 @@ fmod META-SMT-CHECK is
     --- )] .
 endfm
 
+fmod META-SATISFYING-ASSIGNMENTS is
+  pr META-LEVEL .
+  pr SATISFYING-ASSIGNMENTS .
+
+  op _|->_ : Term Term -> SatAssignment [ctor] .
+  op {_|->_} : String String -> SatAssignment [ctor] .
+endfm
+
+fmod META-SMT-CHECK is
+  pr SMT-LOGIC .
+  pr META-SATISFYING-ASSIGNMENTS .
+
+  op metaSmtCheck : Module Term Logic -> SmtCheckResult .
+  eq metaSmtCheck(M:Module, TERM:Term, LOGIC:Logic) = metaSmtCheck(M:Module, TERM:Term, LOGIC:Logic, false) .
+  
+  op metaSmtCheck : Module Term Bool -> SmtCheckResult .
+  eq metaSmtCheck(M:Module, TERM:Term, FLAG:Bool) = metaSmtCheck(M:Module, TERM:Term, auto, FLAG:Bool) .
+
+  op metaSmtCheck : Module Term Logic Bool -> SmtCheckResult
+  [special (id-hook MetaLevelSmtOpSymbol    (metaSmtCheck)
+            op-hook shareWith               (metaReduce : Module Term ~> ResultPair))] .
+endfm
+
 fmod ABST-BUILTIN is
-  protecting META-LEVEL .
-  protecting CONVERSION .
+  pr META-LEVEL .
+  pr CONVERSION .
 
   sort TermAbstraction .
   op {_,_,_} : TermList TermList Nat -> TermAbstraction [ctor format (b! o d d d d b! o)] .

@@ -1,5 +1,5 @@
 diff --git meson.build meson.build
-index 8033a65..07cce64 100644
+index 8033a65..111f9f7 100644
 --- meson.build
 +++ meson.build
 @@ -1,4 +1,4 @@
@@ -100,7 +100,7 @@ index 8033a65..07cce64 100644
 +	'src/Extension/rewriteSmtSearchState.cc',
 +	'src/Extension/rewriteSmtSequenceSearch.cc',
 +	'src/Extension/smtManager.cc',
-+	'src/Extension/smtCheckSymbol.cc',
++	'src/Extension/smtOpSymbol.cc',
 +	'src/Extension/simplifyFormulaSymbol.cc',
 +	'src/Extension/extensionSymbol.cc',
 +	'src/Extension/tacticApplySymbol.cc',

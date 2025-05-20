@@ -63,6 +63,7 @@ SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 
 	VariableGenerator* vg = dynamic_cast<VariableGenerator*>(engine);
 	connector = vg->getConnector();
+	connector2 = vg->getConnector2();
 	conv = vg->getConverter();
 }
 
@@ -275,14 +276,16 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 					{
 						Verbose("  check folding from " << c1 << " to " << constTerm->dag);
 						// check the conjunt dag is subsumed by an older one
-						bool isMatch = constTerm->findMatching(c1, conv, connector);
+						bool isMatch = constTerm->findMatching(c1, conv, connector2);
 
 						if (!isMatch)
 						{
 							IssueWarning("subsumption is wrong (" << constTerm->dag << " should be renaming equivalent with " << c1 << ")");
 						}
-
-						bool subsumedResult = connector->subsume(constTerm->subst, constTerm->constraint, acc, cur);
+						
+						connector2->push();
+						bool subsumedResult = connector2->subsume(constTerm->subst, constTerm->constraint, acc, cur);
+						connector2->pop();
 
 						if (subsumedResult){
 							Verbose("constraints subsumed by another");

@@ -120,6 +120,7 @@ protected:
 protected:
   Converter *conv;
   Connector *connector;
+  Connector *connector2;
 
   //
   // typedef map<const char *, PyObject *> SortMap;
