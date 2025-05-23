@@ -17,8 +17,7 @@ class Z3Connector(Connector):
     
     def check_sat(self, consts):
         for const in consts:
-            c = const.data()
-            self._s.add(c)
+            self._s.add(get_data(const))
 
         r = self._s.check()
 
@@ -41,9 +40,9 @@ class Z3Connector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            body = cur.data()
+            body = get_data(cur)
         else:
-            body = z3.And(acc.data(), cur.data())
+            body = z3.And(get_data(acc), get_data(cur))
 
         return SmtTerm(z3.simplify(body))
 
@@ -51,15 +50,15 @@ class Z3Connector(Connector):
         t_l = list()
         sub = subst.keys()
         for p in sub:
-            src = self._c.dag2term(p).data()
-            trg = self._c.dag2term(subst.get(p)).data()
+            src = get_data(self._c.dag2term(p))
+            trg = get_data(self._c.dag2term(subst.get(p)))
 
             t_l.append((src, trg))
 
-        prev_c = prev.data()
+        prev_c = get_data(prev)
 
-        acc_c = acc.data()
-        cur_c = cur.data()
+        acc_c = get_data(acc)
+        cur_c = get_data(cur)
     
         self._s.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
 

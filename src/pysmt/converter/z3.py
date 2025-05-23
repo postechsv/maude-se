@@ -186,7 +186,7 @@ class Z3Converter(Converter):
     
     def term2dag(self, term):
         try:
-            return self._module.parseTerm(self._term2dag(term.data()))
+            return self._module.parseTerm(self._term2dag(get_data(term)))
         except:
             return None
 

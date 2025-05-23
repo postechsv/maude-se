@@ -68,7 +68,7 @@ bool SmtOpSymbol::attachData(const Vector<Sort *> &opDeclaration,
     if (data.length() == 1)
     {
         const char *opName = data[0];
-        cout << "opName : " << opName << endl;
+        // cout << "opName : " << opName << endl;
 #define MACRO(SymbolName, NrArgs)                              \
     if (arity() == NrArgs && strcmp(opName, #SymbolName) == 0) \
         function = &SmtOpSymbol::SymbolName;                   \
@@ -106,7 +106,7 @@ bool SmtOpSymbol::attachTerm(const char *purpose, Term *term)
 
 void SmtOpSymbol::copyAttachments(Symbol *original, SymbolMap *map)
 {
-    cout << "copy attachment called" << endl;
+    // cout << "copy attachment called" << endl;
     SmtOpSymbol *orig = safeCast(SmtOpSymbol *, original);
     function = orig->function;
 #define MACRO(SymbolName, SymbolClass, RequiredFlags, NrArgs) \
