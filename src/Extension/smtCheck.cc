@@ -89,8 +89,8 @@ bool SmtOpSymbol::smtCheck(FreeDagNode *subject, RewritingContext &context)
 
 DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
 {
-    SmtModel *model = vg->getModel();
-    std::vector<SmtTerm *> *keys = model->keys();
+    SmtModel model = vg->getModel();
+    SmtTermVector keys = model->keys();
 
     ConnectedComponent *satAssnSetK = sg->getKind("SatAssignmentSet");
     ConnectedComponent *smtCheckResK = sg->getKind("SmtCheckResult");
@@ -105,7 +105,7 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
     dom.push_back(satAssnSetK);
     Symbol *concatSatAssnSet = sg->getSymbol("_,_", dom, satAssnSetK);
 
-    Converter *conv = vg->getConverter();
+    Converter conv = vg->getConverter();
     DagNode *result = emptySatAssnSet->makeDagNode();
     for (auto k : *keys)
     {
