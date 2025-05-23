@@ -69,7 +69,7 @@ public:
 		/**
 		 * Get the number of rewrites until this term has been found.
 		 */
-		SmtTerm* getStateConst(int stateNr) {
+		SmtTerm getStateConst(int stateNr) {
 			return $self->getStateConst(stateNr);
 		}
 	}
@@ -96,7 +96,7 @@ public:
 	 *
 	 * @return An SMT constraint
 	 */
-	SmtTerm* getStateConst(int stateNr);
+	SmtTerm getStateConst(int stateNr);
 
 	%unprotectDestructor(RewriteSmtSequenceSearch);
 };

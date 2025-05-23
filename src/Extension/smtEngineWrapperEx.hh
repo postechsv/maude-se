@@ -39,11 +39,10 @@
 #include "SMT_EngineWrapper.hh"
 
 
-#include "extensionSymbol.hh"
-#include "smtCheckSymbol.hh"
-#include "tacticApplySymbol.hh"
+// #include "extensionSymbol.hh"
+// #include "smtCheckSymbol.hh"
+// #include "tacticApplySymbol.hh"
 #include "smtInterface.hh"
-#include <map>
 
 /*
  * Extension of SMT_EngineWrapperInterface
@@ -53,14 +52,13 @@ class SmtEngineWrapperEx : virtual public SMT_EngineWrapper
 public:
 
     /*
-     * Dag2Term should throw ExtensionException when any error occurs.
-     *
-     * makeExtensionVariable : User should check smtCheckerSymbol is null or not.
-     * variableGenerator should know its dag parameter type before calling.
-     * checkDagExtension's result is different type compare to SMT_EngineWrapper result type.
+     * getConnector  : Connector for satisfiability check
+     * getConnector2 : Connector for folding check
+     * getConverter  : Converter
      */
-    virtual Connector* getConnector() = 0;
-    virtual Converter* getConverter() = 0;
+    virtual Connector getConnector() = 0;
+    virtual Connector getConnector2() = 0;
+    virtual Converter getConverter() = 0;
 };
 
 #endif

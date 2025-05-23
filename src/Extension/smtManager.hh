@@ -11,7 +11,7 @@ class VariableGenerator : public SmtEngineWrapperEx
 
 public:
     VariableGenerator(const SMT_Info &smtInfo, bool use_cur_module = true, bool use_folding_check = false);
-    ~VariableGenerator();
+    ~VariableGenerator(){};
     //
     //	Virtual functions for SMT solving.
     //
@@ -20,20 +20,20 @@ public:
     void clearAssertions();
     void push();
     void pop();
-    SmtModel *getModel();
+    SmtModel getModel();
     void setLogic(const char *logic);
 
     VariableDagNode *makeFreshVariable(Term *baseVariable, const mpz_class &number);
 
 public:
-    inline Converter *getConverter() { return conv; };
-    inline Connector *getConnector() { return conn; };
-    inline Connector *getConnector2() { return conn2; }; // for folding
+    inline Converter getConverter() { return conv; };
+    inline Connector getConnector() { return conn; };
+    inline Connector getConnector2() { return conn2; }; // for folding
 
 private:
-    Connector *conn;
-    Converter *conv;
-    Connector *conn2; // for folding check
+    Connector conn;
+    Converter conv;
+    Connector conn2; // for folding check
 };
 
 // Common auxiliary class and functions for dag generation.
@@ -99,20 +99,20 @@ class DummyConverter : public Converter
 public:
     ~DummyConverter() {};
     void prepareFor(VisibleModule *module) {};
-    SmtTerm *dag2term(DagNode *dag);
-    DagNode *term2dag(SmtTerm *term);
+    SmtTerm dag2term(DagNode *dag);
+    DagNode *term2dag(SmtTerm term);
 };
 
 class DummyConnector : public Connector
 {
 public:
-    DummyConnector(DummyConverter *conv) { conv = conv; };
+    DummyConnector(DummyConverter conv) : conv(conv) {};
     ~DummyConnector() {};
-    bool check_sat(std::vector<SmtTerm *> consts);
-    bool subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur);
-    TermSubst *mk_subst(std::map<DagNode *, DagNode *> &subst_dict);
-    SmtTerm *add_const(SmtTerm *acc, SmtTerm *cur);
-    SmtModel *get_model();
+    bool check_sat(SmtTermVector consts);
+    bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur);
+    TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict);
+    SmtTerm add_const(SmtTerm acc, SmtTerm cur);
+    SmtModel get_model();
     void push() {};
     void pop() {};
 
@@ -120,10 +120,10 @@ public:
     void set_logic(const char *logic);
     void reset() {};
 
-    Converter *get_converter() { return conv; };
+    Converter get_converter() { return conv; };
 
 private:
-    DummyConverter *conv;
+    DummyConverter conv;
 };
 
 class DummySmtManagerFactory : public SmtManagerFactory

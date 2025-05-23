@@ -2,18 +2,36 @@
 
 %{
 #include "pysmt.hh"
+#include "smtInterface.hh"
 #include "extGlobal.hh"
 %}
 
 %include "extGlobal.hh"
+%include <std_shared_ptr.i>
+%include <std_vector.i>
+%include <std_except.i>
 
-%include std_vector.i
-%include std_except.i
+// ------------------------
+// shared_ptr registrations
+// ------------------------
+%shared_ptr(_PySmtTerm)
+%shared_ptr(_PyTermSubst)
+%shared_ptr(_PySmtModel)
+%shared_ptr(_PyConverter)
+%shared_ptr(_PyConnector)
+%shared_ptr(_PySmtManagerFactory)
 
+// ------------------------
+// vector registrations
+// ------------------------
 namespace std {
-  %template (SmtTermVector) vector<PySmtTerm*>;
+  %template(_PySmtTermVector) vector<shared_ptr<_PySmtTerm>>;
 }
+// %shared_ptr(_PySmtTermVector)
 
+// ------------------------
+// Exception handling
+// ------------------------
 %feature("director:except") {
     if ($error != NULL) {
         throw Swig::DirectorMethodException();
@@ -25,36 +43,43 @@ namespace std {
     catch (Swig::DirectorException &e) { SWIG_fail; }
 }
 
-// No %newobject should be used
-// because we want to give the ownership to the C++-side
+// ------------------------
+// SWIG Renames (internal types only)
+// ------------------------
+%rename(SmtTerm) _PySmtTerm;
+%ignore PyDataContainer;
+%rename(SmtModel) _PySmtModel;
+%rename(TermSubst) _PyTermSubst;
 
-// Data classes
-%rename(SmtTerm) PySmtTerm;
-%rename(data) getData;
-
-%rename(SmtModel) PySmtModel;
-%rename(TermSubst) PyTermSubst;
-
-%feature("director") SmtResult;
-
-// Converter & Connector
-%feature("director") PyConverter;
-%rename(Converter) PyConverter;
-%rename(term2dag) pyTerm2dag;
+// --- Converter ---
+%feature("director") _PyConverter;
+%rename(Converter) _PyConverter;
 %rename(dag2term) pyDag2term;
+%rename(term2dag) pyTerm2dag;
 
-%feature("director") PyConnector;
-%rename(Connector) PyConnector;
+// --- Connector ---
+%feature("director") _PyConnector;
+%rename(Connector) _PyConnector;
 %rename(get_model) py_get_model;
 %rename(add_const) py_add_const;
 %rename(check_sat) py_check_sat;
 %rename(subsume) py_subsume;
 %rename(get_converter) py_get_converter;
 
-// ManagerFactory
+// --- ManagerFactory ---
 %feature("director") PySmtManagerFactory;
 %rename(SmtManagerFactory) PySmtManagerFactory;
 %rename(createConverter) py_createConverter;
 %rename(createConnector) py_createConnector;
 
+// ------------------------
+// Include C++ interface
+// ------------------------
 %include "pysmt.hh"
+
+%inline %{
+PyObject* get_data(const std::shared_ptr<_PySmtTerm>& term)
+{
+    return term->getData();
+}
+%}

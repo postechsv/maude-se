@@ -70,22 +70,12 @@ VariableGenerator::VariableGenerator(const SMT_Info &smtInfo, bool use_cur_modul
         conv->prepareFor(getCurrentModule());
 }
 
-VariableGenerator::~VariableGenerator()
-{
-    if (conn)
-        delete conn;
-    if (conn2)
-        delete conn2;
-    if (conv)
-        delete conv;
-}
-
 VariableGenerator::Result
 VariableGenerator::assertDag(DagNode *dag)
 {
-    SmtTerm *o = conv->dag2term(dag);
-    std::vector<SmtTerm *> formulas;
-    formulas.push_back(o);
+    SmtTerm o = conv->dag2term(dag);
+    SmtTermVector formulas = std::make_shared<std::vector<SmtTerm>>();
+    formulas->push_back(o);
 
     if (conn->check_sat(formulas))
     {
@@ -113,7 +103,7 @@ VariableGenerator::push() { conn->push(); }
 inline void
 VariableGenerator::pop() { conn->pop(); }
 
-SmtModel *VariableGenerator::getModel()
+SmtModel VariableGenerator::getModel()
 {
     return conn->get_model();
 }
@@ -188,43 +178,43 @@ int encodeEscapedToken(const char *str)
 
 // dummy
 
-SmtTerm *DummyConverter::dag2term(DagNode *dag)
+SmtTerm DummyConverter::dag2term(DagNode *dag)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-DagNode *DummyConverter::term2dag(SmtTerm *term)
+DagNode *DummyConverter::term2dag(SmtTerm term)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-bool DummyConnector::check_sat(std::vector<SmtTerm *> consts)
+bool DummyConnector::check_sat(SmtTermVector consts)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return false;
 }
 
-bool DummyConnector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur)
+bool DummyConnector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return false;
 }
 
-TermSubst *DummyConnector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
+TermSubst DummyConnector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-SmtTerm *DummyConnector::add_const(SmtTerm *acc, SmtTerm *cur)
+SmtTerm DummyConnector::add_const(SmtTerm acc, SmtTerm cur)
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
 }
 
-SmtModel *DummyConnector::get_model()
+SmtModel DummyConnector::get_model()
 {
     IssueWarning("No SMT solver connected at compile time.");
     return nullptr;
@@ -232,9 +222,10 @@ SmtModel *DummyConnector::get_model()
 
 VariableGenerator *DummySmtManagerFactory::create(const SMT_Info &smtInfo)
 {
-    DummyConnector *dummyConnector = new DummyConnector(new DummyConverter());
-    VariableGenerator *vg = new VariableGenerator(smtInfo, dummyConnector);
-    return vg;
+    // DummyConnector dummyConnector = std::make_shared<DummyConnector>(std::make_shared<DummyConverter>());
+    // VariableGenerator *vg = new VariableGenerator(smtInfo, dummyConnector);
+    // return vg;
+    return nullptr;
 }
 
 #endif

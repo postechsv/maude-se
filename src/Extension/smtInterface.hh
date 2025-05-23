@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 
 // forward decl
 class EasyTerm;
@@ -14,55 +15,64 @@ class DagNode;
 class VariableGenerator;
 class SMT_Info;
 
-class SmtTerm
+class _SmtTerm
 {
 public:
-    virtual ~SmtTerm() {};
+    virtual ~_SmtTerm() {};
 };
 
-class TermSubst
+class _TermSubst
 {
 public:
-    virtual ~TermSubst() {};
+    virtual ~_TermSubst() {};
 };
 
-class SmtModel
+using SmtTerm = std::shared_ptr<_SmtTerm>;
+using TermSubst = std::shared_ptr<_TermSubst>;
+using SmtTermVector = std::shared_ptr<std::vector<SmtTerm>>;
+
+class _SmtModel
 {
 public:
-    virtual ~SmtModel() {};
-    virtual SmtTerm *get(SmtTerm *k) = 0;
-    virtual std::vector<SmtTerm *> *keys() = 0;
+    virtual ~_SmtModel() {};
+    virtual SmtTerm get(SmtTerm k) = 0;
+    virtual SmtTermVector keys() = 0;
 };
 
-class SmtResult
+class _SmtResult
 {
 
 public:
-    virtual ~SmtResult() {};
+    virtual ~_SmtResult() {};
     virtual bool is_sat() = 0;
     virtual bool is_unsat() = 0;
     virtual bool is_unknown() = 0;
 };
 
-class Converter
+using SmtModel = std::shared_ptr<_SmtModel>;
+using SmtResult = std::shared_ptr<_SmtResult>;
+
+class _Converter
 {
 public:
-    virtual ~Converter() {};
+    virtual ~_Converter() {};
     virtual void prepareFor(VisibleModule *module) = 0;
-    virtual SmtTerm *dag2term(DagNode *dag) = 0;
-    virtual DagNode *term2dag(SmtTerm *term) = 0;
+    virtual SmtTerm dag2term(DagNode *dag) = 0;
+    virtual DagNode *term2dag(SmtTerm term) = 0;
 };
 
-class Connector
+using Converter = std::shared_ptr<_Converter>;
+
+class _Connector
 {
 public:
-    virtual ~Connector() {};
-    virtual bool check_sat(std::vector<SmtTerm *> consts) = 0;
-    virtual bool subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur) = 0;
-    virtual TermSubst *mk_subst(std::map<DagNode *, DagNode *> &subst_dict) = 0;
+    virtual ~_Connector() {};
+    virtual bool check_sat(SmtTermVector consts) = 0;
+    virtual bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur) = 0;
+    virtual TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict) = 0;
     // virtual PyObject* merge(PyObject* subst, PyObject* prev_const, std::vector<SmtTerm*> target_consts) = 0;
-    virtual SmtTerm *add_const(SmtTerm *acc, SmtTerm *cur) = 0;
-    virtual SmtModel *get_model() = 0;
+    virtual SmtTerm add_const(SmtTerm acc, SmtTerm cur) = 0;
+    virtual SmtModel get_model() = 0;
     virtual void push() = 0;
     virtual void pop() = 0;
 
@@ -70,20 +80,16 @@ public:
     virtual void set_logic(const char *logic) = 0;
     virtual void reset() = 0;
 
-    virtual Converter *get_converter() = 0;
+    virtual Converter get_converter() = 0;
 };
 
-// class SmtManagerFactory
-// {
-// public:
-//     virtual VariableGenerator* create(const SMT_Info& smtInfo) = 0;
-// };
+using Connector = std::shared_ptr<_Connector>;
 
 class SmtManagerFactory
 {
 public:
-    virtual Connector *createConnector(Converter *conv) = 0;
-    virtual Converter *createConverter(const SMT_Info &smtInfo) = 0;
+    virtual Connector createConnector(Converter conv) = 0;
+    virtual Converter createConverter(const SMT_Info &smtInfo) = 0;
 };
 
 class SmtManagerFactorySetterInterface
