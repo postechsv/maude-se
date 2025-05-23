@@ -56,7 +56,7 @@
 #include "visibleModule.hh"
 #include "freshVariableSource.hh"
 
-Z3Connector::Z3Connector(Z3Converter *conv)
+_Z3Connector::_Z3Connector(Z3Converter conv)
     : pushCount(0),
       conv(conv), ctx(std::move(conv->getContext())),
       s(std::make_unique<z3::solver>(*ctx, z3::solver::simple()))
@@ -68,16 +68,16 @@ Z3Connector::Z3Connector(Z3Converter *conv)
     s->set(p);
 }
 
-bool Z3Connector::check_sat(std::vector<SmtTerm *> consts)
+bool _Z3Connector::check_sat(SmtTermVector consts)
 {
-    std::vector<Z3SmtTerm *> zterms;
-    zterms.reserve(consts.size());
+    std::vector<Z3SmtTerm> zterms;
+    zterms.reserve(consts->size());
 
-    for (auto *t : consts)
-        zterms.push_back(static_cast<Z3SmtTerm *>(t));
+    for (const auto &t : *consts)
+        zterms.push_back(std::dynamic_pointer_cast<_Z3SmtTerm>(t));
 
     z3::expr_vector constraints(s->ctx());
-    for (auto *zt : zterms)
+    for (auto zt : zterms)
         constraints.push_back(translate(zt->expr()));
 
     s->add(constraints);
@@ -96,7 +96,7 @@ bool Z3Connector::check_sat(std::vector<SmtTerm *> consts)
     return false;
 }
 
-SmtTerm *Z3Connector::add_const(SmtTerm *acc, SmtTerm *cur)
+SmtTerm _Z3Connector::add_const(SmtTerm acc, SmtTerm cur)
 {
     if (acc == nullptr)
     {
@@ -104,13 +104,13 @@ SmtTerm *Z3Connector::add_const(SmtTerm *acc, SmtTerm *cur)
     }
     else
     {
-        Z3SmtTerm *z3Acc = dynamic_cast<Z3SmtTerm *>(acc);
-        Z3SmtTerm *z3Cur = dynamic_cast<Z3SmtTerm *>(cur);
-        return new Z3SmtTerm(ctx, translate(z3Acc->expr() && z3Cur->expr()));
+        Z3SmtTerm z3Acc = std::dynamic_pointer_cast<_Z3SmtTerm>(acc);
+        Z3SmtTerm z3Cur = std::dynamic_pointer_cast<_Z3SmtTerm>(cur);
+        return std::make_shared<_Z3SmtTerm>(ctx, translate(z3Acc->expr() && z3Cur->expr()));
     }
 }
 
-inline z3::expr Z3Connector::translate(z3::expr e)
+inline z3::expr _Z3Connector::translate(z3::expr e)
 {
     if (&(e.ctx()) == ctx.get())
     {
@@ -123,30 +123,29 @@ inline z3::expr Z3Connector::translate(z3::expr e)
     }
 }
 
-TermSubst *Z3Connector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
+TermSubst _Z3Connector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
 {
-    auto subst_map = std::make_shared<
-        std::map<std::shared_ptr<Z3SmtTerm>, std::shared_ptr<Z3SmtTerm>>>();
+    auto subst_map = std::make_shared<std::map<Z3SmtTerm, Z3SmtTerm>>();
 
     for (auto &[dag_lhs, dag_rhs] : subst_dict)
     {
-        Z3SmtTerm *lhs_raw = dynamic_cast<Z3SmtTerm *>(conv->dag2term(dag_lhs));
-        Z3SmtTerm *rhs_raw = dynamic_cast<Z3SmtTerm *>(conv->dag2term(dag_rhs));
+        Z3SmtTerm lhs_raw = std::dynamic_pointer_cast<_Z3SmtTerm>(conv->dag2term(dag_lhs));
+        Z3SmtTerm rhs_raw = std::dynamic_pointer_cast<_Z3SmtTerm>(conv->dag2term(dag_rhs));
 
         if (lhs_raw && rhs_raw)
         {
-            auto lhs = std::make_shared<Z3SmtTerm>(*lhs_raw); // use copy constructor
-            auto rhs = std::make_shared<Z3SmtTerm>(*rhs_raw);
+            auto lhs = std::make_shared<_Z3SmtTerm>(*lhs_raw); // use copy constructor
+            auto rhs = std::make_shared<_Z3SmtTerm>(*rhs_raw);
             (*subst_map)[lhs] = rhs;
         }
     }
 
-    return new Z3TermSubst(subst_map);
+    return std::make_shared<_Z3TermSubst>(subst_map);
 }
 
-bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm *cur)
+bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur)
 {
-    Z3TermSubst *z3subst = dynamic_cast<Z3TermSubst *>(subst);
+    Z3TermSubst z3subst = std::dynamic_pointer_cast<_Z3TermSubst>(subst);
 
     z3::expr_vector from(*ctx);
     z3::expr_vector to(*ctx);
@@ -157,9 +156,9 @@ bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm
         to.push_back(translate(it.second->expr()));
     }
 
-    z3::expr z3_acc = translate(dynamic_cast<Z3SmtTerm *>(acc)->expr());
-    z3::expr z3_cur = translate(dynamic_cast<Z3SmtTerm *>(cur)->expr());
-    z3::expr z3_prv = translate(dynamic_cast<Z3SmtTerm *>(prev)->expr());
+    z3::expr z3_acc = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(acc)->expr());
+    z3::expr z3_cur = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(cur)->expr());
+    z3::expr z3_prv = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(prev)->expr());
 
     z3::expr f = !(implies(z3_acc && z3_cur, z3_prv.substitute(from, to)));
 
@@ -194,31 +193,31 @@ bool Z3Connector::subsume(TermSubst *subst, SmtTerm *prev, SmtTerm *acc, SmtTerm
     }
 }
 
-SmtModel *Z3Connector::get_model()
+SmtModel _Z3Connector::get_model()
 {
-    return new Z3SmtModel(s->get_model(), ctx);
+    return std::make_shared<_Z3SmtModel>(s->get_model(), ctx);
 }
 
-void Z3Connector::push()
+void _Z3Connector::push()
 {
     s->push();
     ++pushCount;
 }
 
-void Z3Connector::pop()
+void _Z3Connector::pop()
 {
     Assert(pushCount > 0, "bad pop");
     s->pop();
     --pushCount;
 }
 
-void Z3Connector::reset()
+void _Z3Connector::reset()
 {
     pushCount = 0;
     s->reset();
 }
 
-void Z3Connector::set_logic(const char *logic)
+void _Z3Connector::set_logic(const char *logic)
 {
     try
     {
@@ -236,23 +235,31 @@ void Z3Connector::set_logic(const char *logic)
     }
 }
 
-Z3Converter::Z3Converter(const SMT_Info &smtInfo)
+_Z3Converter::_Z3Converter(const SMT_Info &smtInfo)
     : ctx(std::make_shared<z3::context>()), NativeSmtConverter(smtInfo) {}
 
-void Z3Converter::prepareFor(VisibleModule *module)
+void _Z3Converter::prepareFor(VisibleModule *module)
 {
     sg.setModule(module);
 }
 
-SmtTerm *Z3Converter::dag2term(DagNode *dag)
+SmtTerm _Z3Converter::dag2term(DagNode *dag)
 {
     z3::expr e = dag2termInternal(dag);
-    return new Z3SmtTerm(ctx, e);
+    auto a = std::make_shared<_Z3SmtTerm>(ctx, e);
+    if (!a)
+        throw std::runtime_error("cannot convert Maude term to SMT term");
+    
+    return a;
 }
 
-DagNode *Z3Converter::term2dag(SmtTerm *term)
+DagNode* _Z3Converter::term2dag(SmtTerm term)
 {
-    Z3SmtTerm *t = dynamic_cast<Z3SmtTerm *>(term);
+    Z3SmtTerm t = std::dynamic_pointer_cast<_Z3SmtTerm>(term);
+
+    if (!t)
+        throw std::runtime_error("cannot convert SMT term to Maude term");
+
     DagNode *d = term2dagInternal(t->expr());
     if (d->getSort() == nullptr)
     {
@@ -263,7 +270,7 @@ DagNode *Z3Converter::term2dag(SmtTerm *term)
     return d;
 }
 
-void Z3Converter::markReachableNodes()
+void _Z3Converter::markReachableNodes()
 {
     for (auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++)
     {
@@ -271,7 +278,7 @@ void Z3Converter::markReachableNodes()
     }
 }
 
-z3::expr Z3Converter::dag2termInternal(DagNode *dag)
+z3::expr _Z3Converter::dag2termInternal(DagNode *dag)
 {
     if (SMT_NumberDagNode *n = dynamic_cast<SMT_NumberDagNode *>(dag))
     {
@@ -470,7 +477,7 @@ fail:
     throw std::runtime_error("not a valid term, return original term instead");
 }
 
-z3::expr Z3Converter::makeVariable(DagNode *dag)
+z3::expr _Z3Converter::makeVariable(DagNode *dag)
 {
     // Two dag nodes are the same
     auto it = smtManagerVariableMap.find(dag);
@@ -590,7 +597,7 @@ z3::expr Z3Converter::makeVariable(DagNode *dag)
     return newVar;
 }
 
-DagNode *Z3Converter::term2dagInternal(z3::expr e)
+DagNode *_Z3Converter::term2dagInternal(z3::expr e)
 {
     ReverseSmtManagerVariableMap *rsv = generateReverseVariableMap();
     if (rsv != nullptr)
