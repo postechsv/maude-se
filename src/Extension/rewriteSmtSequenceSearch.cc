@@ -52,11 +52,11 @@ RewriteSmtSequenceSearch::RewriteSmtSequenceSearch(RewritingContext *initial,
   // SmtTerm *initRi = convDag2Term(trueDag);
 
   smtGoalConst = smtGoal->getLhs()->term2Dag();
-  SmtTerm *initRi = convDag2Term(smtGoalConst);
+  SmtTerm initRi = conv->dag2term(smtGoalConst);
   // SmtTerm *initRi = convDag2Term(initConst);
 
   // PyObject *next = PyObject_CallMethodObjArgs(connector, add_const, Py_None, initRi, NULL);
-  SmtTerm* next = connector->add_const(nullptr, initRi);
+  SmtTerm next = connector->add_const(nullptr, initRi);
   if (next == nullptr)
   {
     IssueWarning("failed to translate an initial SMT constraint to a solver term");
@@ -340,15 +340,15 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
   }
 
   ConstrainedTerm *constrained = consTermSeen[seen[stateNr]->hashConsIndex][seen[stateNr]->constTermIndex];
-  std::vector<SmtTerm*> ll;
-  ll.push_back(constrained->constraint);
-  SmtTerm* matchTerm = 0;
+  SmtTermVector ll = std::make_shared<std::vector<SmtTerm>>();
+  ll->push_back(constrained->constraint);
+  SmtTerm matchTerm = 0;
 
   if (matchConstraint)
   {
     Verbose("matchConstraint: " << matchConstraint);
-    matchTerm = convDag2Term(matchConstraint);
-    ll.push_back(matchTerm);
+    matchTerm = conv->dag2term(matchConstraint);
+    ll->push_back(matchTerm);
   } 
 
   connector->push();

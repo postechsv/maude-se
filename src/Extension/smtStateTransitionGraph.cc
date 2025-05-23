@@ -210,17 +210,17 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			Verbose("first argument is " << c1 << " and second is " << c2);
 
 			// accumulated constraints
-			SmtTerm *acc = consTermSeen[n->hashConsIndex][n->constTermIndex]->constraint;
+			SmtTerm acc = consTermSeen[n->hashConsIndex][n->constTermIndex]->constraint;
 			// we have pair of terms (norm, prev)
-			SmtTerm *cur = convDag2Term(c2);
+			SmtTerm cur = conv->dag2term(c2);
 
 			// Py_XINCREF(acc);
 
 			// PyObject *result = PyObject_CallMethodObjArgs(connector, check_sat, acc, cur, NULL);
 			connector->push();
-			std::vector<SmtTerm*> ll;
-			ll.push_back(acc);
-			ll.push_back(cur);
+			SmtTermVector ll = std::make_shared<std::vector<SmtTerm>>();
+			ll->push_back(acc);
+			ll->push_back(cur);
 
 			if (!connector->check_sat(ll)){
 				Verbose("constraint is unsatisfiable ... continue");
@@ -497,7 +497,7 @@ void SmtStateTransitionGraph::printStateConst(int depth)
 	// }
 }
 
-SmtStateTransitionGraph::ConstrainedTerm::ConstrainedTerm(DagNode *dag, SmtTerm *constraint)
+SmtStateTransitionGraph::ConstrainedTerm::ConstrainedTerm(DagNode *dag, SmtTerm constraint)
 	: dag(dag), constraint(constraint)
 {
 	Term *t = dag->symbol()->termify(dag);
@@ -530,7 +530,7 @@ SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
 		term->deepSelfDestruct();
 }
 
-bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Converter* converter, Connector *connector)
+bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Converter converter, Connector connector)
 {
 	MemoryCell::okToCollectGarbage(); // otherwise we have huge accumulation of junk from matching
 	// DO NOT: this will cause memory corruption
@@ -552,10 +552,9 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 	delete subproblem;
 
 	// delete old subst, if any exists
-	if (subst) {
-		delete subst;
-		subst = nullptr;
-	}
+	// if (subst) {
+	// 	subst = nullptr;
+	// }
 
 	if (result)
 	{

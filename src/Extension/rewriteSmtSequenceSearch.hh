@@ -106,7 +106,7 @@ inline DagNode *
 RewriteSmtSequenceSearch::getFinalConstraint()
 {
   // TODO
-  SmtTerm* finalConstTerm = this->getStateConst(stateNr);
+  SmtTerm finalConstTerm = this->getStateConst(stateNr);
   DagNode* finalConst = conv->term2dag(finalConstTerm);
 
   finalConst->computeTrueSort(*initial);

@@ -80,8 +80,8 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 
 DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m, SymbolGetter *sg)
 {
-	SmtModel *model = vg->getModel();
-	std::vector<SmtTerm *> *keys = model->keys();
+	SmtModel model = vg->getModel();
+	SmtTermVector keys = model->keys();
 
 	ConnectedComponent *satAssnSetK = sg->getKind("SatAssignmentSet");
 	ConnectedComponent *smtCheckResK = sg->getKind("SmtCheckResult");
@@ -103,7 +103,7 @@ DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m
 
 	Symbol *satAssn = sg->getSymbol("_|->_", dom, satAssnK);
 
-	Converter *conv = vg->getConverter();
+	Converter conv = vg->getConverter();
 
 	DagNode *result = emptySatAssnSet->makeDagNode();
 

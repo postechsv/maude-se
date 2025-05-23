@@ -37,7 +37,7 @@ public:
   int getNextState(int stateNr, int index);
   DagNode *getStateDag(int stateNr);
   DagNode *getStateConstDag(int stateNr);
-  SmtTerm* getStateConst(int stateNr);
+  SmtTerm getStateConst(int stateNr);
   std::map<DagNode*, DagNode*>* getStateModel(int stateNr);
   int getStateDepth(int stateNr) const;
   const ArcMap &getStateFwdArcs(int stateNr) const;
@@ -70,20 +70,20 @@ protected:
 
   struct ConstrainedTerm
   {
-    ConstrainedTerm(DagNode *dag, SmtTerm *constraint);
+    ConstrainedTerm(DagNode *dag, SmtTerm constraint);
     ~ConstrainedTerm();
 
     DagNode *dag;
-    SmtTerm *constraint;
-    SmtModel* model;
+    SmtTerm constraint;
+    SmtModel model;
     // for matching
     VariableInfo variableInfo;
     Term *term;
     LhsAutomaton *matchingAutomaton;
     int nrMatchingVariables; // number of variables needed for matching; includes any abstraction variables
 
-    bool findMatching(DagNode *other, Converter* converter, Connector *connector);
-    TermSubst *subst;
+    bool findMatching(DagNode *other, Converter converter, Connector connector);
+    TermSubst subst;
   };
 
   bool fold;
@@ -118,9 +118,9 @@ protected:
   void printStateConst(int depth);
 
 protected:
-  Converter *conv;
-  Connector *connector;
-  Connector *connector2;
+  Converter conv;
+  Connector connector;
+  Connector connector2;
 
   //
   // typedef map<const char *, PyObject *> SortMap;
@@ -132,9 +132,6 @@ protected:
   double nextTime;
   double rewriteTime;
   double elseTime;
-
-protected:
-  SmtTerm *convDag2Term(DagNode *dag);
 
 public:
   // Aux function
@@ -174,7 +171,7 @@ SmtStateTransitionGraph::getStateDag(int stateNr)
   return ct->dag;
 }
 
-inline SmtTerm *
+inline SmtTerm
 SmtStateTransitionGraph::getStateConst(int stateNr)
 {
   // TODO: return const DAG
@@ -197,7 +194,7 @@ inline DagNode *
 SmtStateTransitionGraph::getStateConstDag(int stateNr)
 {
   // TODO
-  SmtTerm* constTerm = getStateConst(stateNr);
+  SmtTerm constTerm = getStateConst(stateNr);
   DagNode* constDag = conv->term2dag(constTerm);
 
   constDag->computeTrueSort(*initial);
@@ -244,7 +241,7 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
     IssueWarning("bug occurred");
   }
 
-  std::vector<SmtTerm*>* ks = ct->model->keys();
+  SmtTermVector ks = ct->model->keys();
 
   for (auto &elem : *ks){
     DagNode* t = conv->term2dag(elem);
@@ -258,7 +255,6 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
     modelMap->insert(std::pair<DagNode*, DagNode*>(t, v));
   }
 
-  delete ks;
   return modelMap;
 }
 
@@ -289,23 +285,6 @@ inline int
 SmtStateTransitionGraph::getStateParent(int stateNr) const
 {
   return seen[stateNr]->parent;
-}
-
-inline SmtTerm *SmtStateTransitionGraph::convDag2Term(DagNode *dag)
-{
-  // call Python the dag2Term method of the Converter class
-  // PyObject *maudeTerm = dag2maudeTerm(dag);
-
-  clock_t loop_s = clock();
-  SmtTerm *term = conv->dag2term(dag);
-  clock_t loop_e = clock();
-  elseTime += (double)(loop_e - loop_s);
-
-  // if (term == nullptr)
-  // {
-  //   IssueWarning("failed to call Converter's dag2term for " << dag);
-  // }
-  return term;
 }
 
 #endif

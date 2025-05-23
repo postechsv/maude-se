@@ -50,9 +50,9 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         // Converter *conv = factory->createConverter();
                         // Connector *conn = factory->createConnector();
 
-                        Converter *conv = vg->getConverter();
-                        Connector *conn = vg->getConnector();
-                        Connector *conn2 = vg->getConnector2();
+                        Converter conv = vg->getConverter();
+                        Connector conn = vg->getConnector();
+                        Connector conn2 = vg->getConnector2();
                         // prepare for the current module
                         conv->prepareFor(m);
                         conn->set_logic(logic);
