@@ -146,70 +146,9 @@ fmod SMT-CHECK is
   eq smtCheck(B:BooleanExpr) = smtCheck(B:BooleanExpr, false) .
 
   op smtCheck : BooleanExpr Logic Bool -> SmtCheckResult [special (id-hook SmtOpSymbol (smtCheck))] .
-
---- Will be supported later.
-    --- op simplifyFormula : BooleanExpr -> BooleanExpr
-    --- [special (id-hook SimplifyFormulaSymbol
-    ---           op-hook intVarSymbol                       (i : SMTVarId ~> IntegerVar)
-    ---           op-hook boolVarSymbol                      (b : SMTVarId ~> BooleanVar)
-    ---           op-hook realVarSymbol                      (r : SMTVarId ~> RealVar)
-
-    ---           op-hook integerSymbol                      (<Integers> : ~> Integer)
-    ---           op-hook realSymbol                         (<Reals> : ~> Real)
-
-    ---           term-hook trueTerm                         ((true).Boolean)
-    ---           term-hook falseTerm                        ((false).Boolean)
-
-    ---           op-hook notBoolSymbol                      (not_ : BooleanExpr ~> BooleanExpr)
-    ---           op-hook andBoolSymbol                      (_and_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook xorBoolSymbol                      (_xor_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook orBoolSymbol                       (_or_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook impliesBoolSymbol                  (_implies_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook eqBoolSymbol                       (_===_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook neqBoolSymbol                      (_=/==_ : BooleanExpr BooleanExpr ~> BooleanExpr)
-    ---           op-hook iteBoolSymbol                      (_?_:_ : BooleanExpr BooleanExpr BooleanExpr ~> BooleanExpr)
-
-    ---           op-hook unaryMinusIntSymbol                (-_ : IntegerExpr ~> IntegerExpr)
-    ---           op-hook plusIntSymbol                      (_+_ : IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook minusIntSymbol                     (_-_ : IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook divIntSymbol                       (_div_ : IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook mulIntSymbol                       (_*_ : IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook modIntSymbol                       (_mod_ : IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook ltIntSymbol                        (_<_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook leqIntSymbol                       (_<=_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook gtIntSymbol                        (_>_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook geqIntSymbol                       (_>=_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook eqIntSymbol                        (_===_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook neqIntSymbol                       (_=/==_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-    ---           op-hook iteIntSymbol                       (_?_:_ : BooleanExpr IntegerExpr IntegerExpr ~> IntegerExpr)
-    ---           op-hook divisibleIntSymbol                 (_divisible_ : IntegerExpr IntegerExpr ~> BooleanExpr)
-
-    ---           op-hook unaryMinusRealSymbol               (-_ : RealExpr ~> RealExpr)
-    ---           op-hook plusRealSymbol                     (_+_ : RealExpr RealExpr ~> RealExpr)
-    ---           op-hook minusRealSymbol                    (_-_ : RealExpr RealExpr ~> RealExpr)
-    ---           op-hook divRealSymbol                      (_/_ : RealExpr RealExpr ~> RealExpr)
-    ---           op-hook mulRealSymbol                      (_*_ : RealExpr RealExpr ~> RealExpr)
-    ---           op-hook ltRealSymbol                       (_<_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook leqRealSymbol                      (_<=_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook gtRealSymbol                       (_>_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook geqRealSymbol                      (_>=_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook eqRealSymbol                       (_===_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook neqRealSymbol                      (_=/==_ : RealExpr RealExpr ~> BooleanExpr)
-    ---           op-hook iteRealSymbol                      (_?_:_ : BooleanExpr RealExpr RealExpr ~> Real)
-    ---           op-hook toRealSymbol                       (toReal : IntegerExpr ~> RealExpr)
-    ---           op-hook toIntegerSymbol                    (toInteger : RealExpr ~> IntegerExpr)
-    ---           op-hook isIntegerSymbol                    (isInteger : RealExpr ~> BooleanExpr)
-    --- )] .
-
-    --- op simplifyFormula : IntegerExpr -> IntegerExpr
-    --- [special (id-hook SimplifyFormulaSymbol
-    ---           op-hook shareWith                          (simplifyFormula : BooleanExpr ~> BooleanExpr)
-    --- )] .
-
-    --- op simplifyFormula : RealExpr -> RealExpr
-    --- [special (id-hook SimplifyFormulaSymbol
-    ---           op-hook shareWith                          (simplifyFormula : BooleanExpr ~> BooleanExpr)
-    --- )] .
+  op simplifyFormula : BooleanExpr -> BooleanExpr [special (id-hook SmtOpSymbol (simplify))] .
+  op simplifyFormula : IntegerExpr -> IntegerExpr [special (id-hook SmtOpSymbol (simplify))] .
+  op simplifyFormula : RealExpr -> RealExpr [special (id-hook SmtOpSymbol (simplify))] .
 endfm
 
 fmod META-SATISFYING-ASSIGNMENTS is

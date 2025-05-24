@@ -51,6 +51,7 @@
 
 #include "smtOpSymbol.hh"
 #include "smtCheck.cc"
+#include "simplify.cc"
 
 SmtOpSymbol::SmtOpSymbol(int id, int nrArgs, const Vector<int> &strategy)
     : FreeSymbol(id, nrArgs, strategy)

@@ -5,3 +5,4 @@
 //
 
 MACRO(smtCheck, 3)
+MACRO(simplify, 1)

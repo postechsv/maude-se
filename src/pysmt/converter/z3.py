@@ -45,6 +45,8 @@ class Z3Converter(Converter):
             "_>=_"          : z3.z3.ArithRef.__ge__,
 
             "toInteger"     : z3.z3.ToInt,
+            "toReal"        : z3.z3.ToReal,
+            "isInteger"     : z3.z3.IsInt,
         }
 
         self._const_dict = {
@@ -191,7 +193,6 @@ class Z3Converter(Converter):
             return None
 
     def _term2dag(self, term):
-
         t_hash = hash(term)
         if t_hash in self._var_map:
             return self._var_map[t_hash]
@@ -254,6 +255,12 @@ class Z3Converter(Converter):
         if z3.is_app_of(term, z3.Z3_OP_ITE):
             c, l, r = self._term2dag(term.arg(0)), self._term2dag(term.arg(1)), self._term2dag(term.arg(2))
             return f"({c} ? {l} : {r})"
+        
+        if z3.is_to_int(term):
+            return f"toInteger({self._term2dag(term.arg(0))})"
+    
+        if z3.is_to_real(term):
+            return f"toReal({self._term2dag(term.arg(0))})"
         
         # variable or function
         if isinstance(term, z3.z3.FuncDeclRef):

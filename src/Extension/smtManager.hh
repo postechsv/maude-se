@@ -54,7 +54,8 @@ public:
         checkModule();
         if (Symbol *s = this->module->findSymbol(encodeEscapedToken(name), domain, range))
             return s;
-        throw std::runtime_error("failed to find a target symbol");
+        IssueWarning("failed to find a symbol " << QUOTE(name));
+        throw std::runtime_error("failed to get target symbol");
     }
 
     inline Sort *getSort(const char *s)

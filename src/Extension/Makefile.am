@@ -35,7 +35,6 @@ libExtension_a_SOURCES = \
 	rewriteSmtSequenceSearch.cc \
 	smtManager.cc \
 	smtOpSymbol.cc \
-	simplifyFormulaSymbol.cc \
 	extensionSymbol.cc \
 	tacticApplySymbol.cc \
 	extGlobal.cc
@@ -53,6 +52,5 @@ noinst_HEADERS = \
     nativeSmt.hh \
 	smtManager.hh \
     smtOpSymbol.hh \
-    simplifyFormulaSymbol.hh \
     extensionSymbol.hh \
     tacticApplySymbol.hh

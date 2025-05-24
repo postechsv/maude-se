@@ -65,6 +65,7 @@ namespace std {
 %rename(check_sat) py_check_sat;
 %rename(subsume) py_subsume;
 %rename(get_converter) py_get_converter;
+%rename(simplify) py_simplify;
 
 // --- ManagerFactory ---
 %feature("director") PySmtManagerFactory;

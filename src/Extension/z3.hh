@@ -169,6 +169,7 @@ public:
     SmtModel get_model();
     void push();
     void pop();
+    SmtTerm simplify(SmtTerm term);
 
     void print_model() {};
     void set_logic(const char *logic);

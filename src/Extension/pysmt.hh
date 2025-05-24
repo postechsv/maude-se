@@ -6,6 +6,7 @@
 
 #include "Python.h"
 #include "easyTerm.hh"
+#include "userLevelRewritingContext.hh"
 #include "smtManager.hh"
 
 // --- Python data wrapper ---
@@ -173,6 +174,7 @@ public:
     virtual PySmtTerm py_add_const(PySmtTerm acc, PySmtTerm cur) = 0;
     virtual PySmtModel py_get_model() = 0;
     virtual PyConverter py_get_converter() = 0;
+    virtual PySmtTerm py_simplify(PySmtTerm term) = 0;
 
     bool check_sat(SmtTermVector consts) override
     {
@@ -215,6 +217,11 @@ public:
     Converter get_converter() override
     {
         return py_get_converter();
+    }
+
+    SmtTerm simplify(SmtTerm term)
+    {
+        return py_simplify(dynamic_pointer_cast<_PySmtTerm>(term));
     }
 
     virtual void push() override = 0;

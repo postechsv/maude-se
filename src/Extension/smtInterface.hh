@@ -75,6 +75,7 @@ public:
     virtual SmtModel get_model() = 0;
     virtual void push() = 0;
     virtual void pop() = 0;
+    virtual SmtTerm simplify(SmtTerm term) = 0;
 
     virtual void print_model() = 0;
     virtual void set_logic(const char *logic) = 0;

@@ -110,6 +110,14 @@ SmtTerm _Z3Connector::add_const(SmtTerm acc, SmtTerm cur)
     }
 }
 
+SmtTerm _Z3Connector::simplify(SmtTerm term)
+{
+    Z3SmtTerm z3t = std::dynamic_pointer_cast<_Z3SmtTerm>(term);
+    z3::expr e = z3t->expr();
+    e = e.simplify();
+    return std::make_shared<_Z3SmtTerm>(ctx, translate(e));
+}
+
 inline z3::expr _Z3Connector::translate(z3::expr e)
 {
     if (&(e.ctx()) == ctx.get())
@@ -862,6 +870,8 @@ DagNode *_Z3Converter::term2dagInternal(z3::expr e)
 
         ConnectedComponent *bk = sg.getKind("Boolean");
         Vector<ConnectedComponent *> domain;
+        domain.push_back(bk);
+
         if (e.arg(1).is_int())
         {
             ConnectedComponent *ik = sg.getKind("Integer");
@@ -869,17 +879,17 @@ DagNode *_Z3Converter::term2dagInternal(z3::expr e)
             domain.push_back(ik);
             domain.push_back(ik);
 
-            return sg.getSymbol("_?_:_", domain, bk)->makeDagNode(arg);
+            return sg.getSymbol("_?_:_", domain, ik)->makeDagNode(arg);
         }
 
         if (e.arg(1).is_real())
         {
-            ConnectedComponent *ik = sg.getKind("Real");
+            ConnectedComponent *rk = sg.getKind("Real");
 
-            domain.push_back(ik);
-            domain.push_back(ik);
+            domain.push_back(rk);
+            domain.push_back(rk);
 
-            return sg.getSymbol("_?_:_", domain, bk)->makeDagNode(arg);
+            return sg.getSymbol("_?_:_", domain, rk)->makeDagNode(arg);
         }
 
         if (e.arg(1).is_bool())

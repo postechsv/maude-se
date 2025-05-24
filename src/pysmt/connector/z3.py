@@ -46,6 +46,9 @@ class Z3Connector(Connector):
 
         return SmtTerm(z3.simplify(body))
 
+    def simplify(self, term):
+        return SmtTerm(z3.simplify(get_data(term)))
+
     def subsume(self, subst, prev, acc, cur):
         t_l = list()
         sub = subst.keys()
