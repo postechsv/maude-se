@@ -56,6 +56,7 @@ namespace std {
 %rename(Converter) _PyConverter;
 %rename(dag2term) pyDag2term;
 %rename(term2dag) pyTerm2dag;
+%ignore markReachableNodes;
 
 // --- Connector ---
 %feature("director") _PyConnector;
@@ -79,8 +80,20 @@ namespace std {
 %include "pysmt.hh"
 
 %inline %{
-PyObject* get_data(const std::shared_ptr<_PySmtTerm>& term)
+PyObject* get_data(PyObject* obj)
 {
-    return term->getData();
+    std::shared_ptr<_PySmtTerm> *ptr = 0;
+    int res = SWIG_ConvertPtr(obj, (void**)&ptr, SWIGTYPE_p_std__shared_ptrT__PySmtTerm_t, 0);
+    if (!SWIG_IsOK(res) || !ptr || !(*ptr)) {
+        PyErr_SetString(PyExc_TypeError, "Expected SmtTerm (PySmtTerm)");
+        return nullptr;
+    }
+    auto term = *ptr;
+    PyObject* data = term->getData();
+    if (!data) {
+        PyErr_SetString(PyExc_ValueError, "internal data is null");
+        return nullptr;
+    }
+    return data;
 }
 %}

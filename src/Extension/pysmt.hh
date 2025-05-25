@@ -6,6 +6,7 @@
 
 #include "Python.h"
 #include "easyTerm.hh"
+#include "nativeSmt.hh"
 #include "userLevelRewritingContext.hh"
 #include "smtManager.hh"
 
@@ -106,8 +107,16 @@ public:
 
 using PySmtModel = std::shared_ptr<_PySmtModel>;
 
+struct cmpExprById
+{
+    bool operator()(const PySmtTerm &lhs, const PySmtTerm &rhs) const
+    {
+        return lhs->getData() < rhs->getData();
+    }
+};
+
 // --- PyConverter ---
-class _PyConverter : public _Converter
+class _PyConverter : public _Converter, private SimpleRootContainer
 {
 public:
     virtual ~_PyConverter() = default;
@@ -154,6 +163,79 @@ public:
             {
                 PyErr_Print();
                 throw std::runtime_error("Python converter error");
+            }
+        }
+        return nullptr;
+    }
+
+    void markReachableNodes()
+    {
+        for (auto it = cache.begin(); it != cache.end(); it++)
+        {
+            it->first->mark();
+        }
+    }
+
+private:
+    typedef std::map<DagNode *, PySmtTerm> Cache;
+    typedef std::map<PySmtTerm, DagNode *, cmpExprById> ReverseCache;
+
+    Cache cache;
+    ReverseCache rcache;
+
+    void genRevCache()
+    {
+        for (auto it = cache.begin(); it != cache.end(); it++)
+        {
+            (rcache)[it->second] = it->first;
+        }
+    }
+
+    bool python_equal(PyObject *a, PyObject *b)
+    {
+        int result = PyObject_RichCompareBool(a, b, Py_EQ);
+        if (result < 0)
+            PyErr_Print();
+        return result == 1;
+    }
+
+public:
+    void cache_insert(EasyTerm *dag, PySmtTerm &term)
+    {
+        cache[dag->getDag()] = term;
+    }
+
+    EasyTerm *cache_find(PySmtTerm &term)
+    {
+
+        genRevCache();
+
+        PyObject *pyObj = term->getData();
+        for (auto &[key, val] : rcache)
+        {
+            if (python_equal(key->getData(), pyObj))
+            {
+
+                return new EasyTerm(val);
+            }
+        }
+
+        return nullptr;
+    }
+
+    PySmtTerm cache_find(EasyTerm *dag)
+    {
+        DagNode *d = dag->getDag();
+        auto it = cache.find(d);
+        if (it != cache.end())
+            return it->second;
+
+        for (auto it2 = cache.begin(); it2 != cache.end(); ++it2)
+        {
+            if (d->equal(it2->first))
+            {
+                cache.insert({d, it2->second});
+                return it2->second;
             }
         }
         return nullptr;
