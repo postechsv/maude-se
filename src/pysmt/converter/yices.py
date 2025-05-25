@@ -39,12 +39,16 @@ class YicesConverter(Converter):
             "_/_"           : Terms.division,
             "_mod_"         : Terms.imod,
 
-            # "_divisible_" : ?
+            "_divisible_"   : Terms.divides_atom,
 
             "_<_"           : Terms.arith_lt_atom,
             "_<=_"          : Terms.arith_leq_atom,
             "_>_"           : Terms.arith_gt_atom,
             "_>=_"          : Terms.arith_geq_atom,
+
+            "toInteger"     : Terms.floor,
+            # "toReal"        : yices_to_real,
+            "isInteger"     : Terms.is_int_atom,
         }
 
         self._bool_const = {
@@ -57,13 +61,16 @@ class YicesConverter(Converter):
             "<Reals>"       : Terms.parse_rational,
         }
 
+        self._special_var_sort = {
+            "IntegerVar"        : Types.int_type,
+            "RealVar"           : Types.real_type,
+            "BooleanVar"        : Types.bool_type,
+        }
+
         self._sort_dict = {
             "Integer"           : Types.int_type,
             "Real"              : Types.real_type,
             "Boolean"           : Types.bool_type,
-            "IntegerVar"        : Types.int_type,
-            "RealVar"           : Types.real_type,
-            "BooleanVar"        : Types.bool_type,
             "IntegerExpr"       : Types.int_type,
             "RealExpr"          : Types.real_type,
             "BooleanExpr"       : Types.bool_type,
@@ -189,12 +196,15 @@ class YicesConverter(Converter):
     
     def term2dag(self, term):
         try:
-            t, _, _ = term.data()
-            return self._module.parseTerm(self._term2dag(t))
+            return self._module.parseTerm(self._term2dag(get_data(term)))
         except:
             return None
 
     def _term2dag(self, term):
+        cached_dag = self.cache_find(SmtTerm(term))
+        if cached_dag:
+            return str(cached_dag)
+
         t, ty = term
 
         # variable or function
@@ -240,28 +250,16 @@ class YicesConverter(Converter):
             l = self._term2dag((ts[0], bool_type))
             r = self._term2dag((ts[1], bool_type))
             return f"({l} or {r})"
-
-        # case YICES_XOR_TERM: {
-        #     Vector < DagNode * > arg(2);
-
-        #     yices_term child1{};
-        #     yices_term child2{};
-
-        #     child1.term = yices_term_child(e.term, 0);
-        #     child1.type = yices_bool_type();
-
-        #     child2.term = yices_term_child(e.term, 1);
-        #     child2.type = yices_bool_type();
-
-        #     arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-        #     arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-        #     return extensionSymbol->xorBoolSymbol->makeDagNode(arg);
-        # }
-        if constructor == YICES_EQ_TERM:
+        
+        if constructor == YICES_XOR_TERM:
             ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
 
-            # l = self._term2dag((ts[0], bool_type))
-            # r = self._term2dag((ts[1], bool_type))
+            l = self._term2dag((ts[0], bool_type))
+            r = self._term2dag((ts[1], bool_type))
+            return f"({l} xor {r})"
+
+        if constructor == YICES_EQ_TERM:
+            ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
 
             # real type
             if Terms.type_of_term(ts[0]) == real_type or Terms.type_of_term(ts[1]) == real_type:
@@ -308,18 +306,10 @@ class YicesConverter(Converter):
                 l = self._term2dag((ts[0], int_type))
                 r = self._term2dag((ts[1], int_type))
                 return f"({l} >= {r})"
-        
 
-        # case YICES_IS_INT_ATOM: {
-        #     Vector < DagNode * > arg(1);
+        if constructor == YICES_IS_INT_ATOM:
+            return f"(isInteger({self._term2dag((yices_term_child(t, 0), real_type))}))"
 
-        #     yices_term child{};
-        #     child.term = yices_term_child(e.term, 0);
-        #     child.type = yices_real_type();
-
-        #     arg[0] = Term2Dag(child, extensionSymbol, rsv);
-        #     return extensionSymbol->isIntegerSymbol->makeDagNode(arg);
-        # }
         if constructor == YICES_IDIV:
             ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
  
@@ -334,31 +324,25 @@ class YicesConverter(Converter):
             r = self._term2dag((ts[1], int_type))
             return f"({l} / {r})"
 
-        # case YICES_IMOD: {
-        #     Vector < DagNode * > arg(2);
+        if constructor == YICES_IMOD:
+            ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
+ 
+            l = self._term2dag((ts[0], int_type))
+            r = self._term2dag((ts[1], int_type))
+            return f"({l} mod {r})"
+        
+        if constructor == YICES_DIVIDES_ATOM:
+            ts = [yices_term_child(t, 0), yices_term_child(t, 1)]
+ 
+            l = self._term2dag((ts[0], int_type))
+            r = self._term2dag((ts[1], int_type))
+            return f"({l} divisible {r})"
 
-        #     yices_term child1{};
-        #     yices_term child2{};
+        if constructor == YICES_FLOOR:
+            child = yices_term_child(t, 0)
+            r = self._term2dag((child, Terms.type_of_term(child)))
+            return f"toInteger({r})"
 
-        #     child1.term = yices_term_child(e.term, 0);
-        #     child2.term = yices_term_child(e.term, 1);
-        #     child1.type = yices_int_type();
-        #     child2.type = yices_int_type();
-
-        #     arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-        #     arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-        #     return extensionSymbol->modIntSymbol->makeDagNode(arg);
-        # }
-        # case YICES_FLOOR: {
-        #     Vector < DagNode * > arg(1);
-
-        #     yices_term child{};
-        #     child.term = yices_term_child(e.term, 0);
-        #     child.type = yices_real_type();
-
-        #     arg[0] = Term2Dag(child, extensionSymbol, rsv);
-        #     return extensionSymbol->toIntegerSymbol->makeDagNode(arg);
-	    # }
         if constructor == YICES_POWER_PRODUCT:
             child_num = yices_term_num_children(t)
             args = list()
@@ -404,35 +388,55 @@ class YicesConverter(Converter):
         :returns: A pair of
           an SMT solver term and its variables
         """
-        term, v_set = self._dag2term(t)
-        return SmtTerm([(term, Terms.type_of_term(term)), None, list(v_set)])
+        return SmtTerm(self._dag2term(t))
     
     def _dag2term(self, t: Term):
-        # if t in self._dag2term_memoize:
-        #     return self._dag2term_memoize[t]
+        cached_term = self.cache_find(t)
+        if cached_term:
+            return get_data(cached_term)
+
+        symbol, symbol_sort = str(t.symbol()), str(t.getSort())
+        
+        if symbol == "toReal":
+            child = list(t.arguments())
+            assert len(child) == 1
+            c, ty = self._dag2term(child[0])
+
+            assert ty == Types.int_type()
+            return c, Types.real_type()
+
+        if symbol_sort in self._special_var_sort:
+            self._special_id[t] = next(self._g)
+
+            # remove "var" from type for backward compatibility
+            name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
+            sort = self._special_var_sort[symbol_sort]()
+
+            v = Terms.new_uninterpreted_term(sort, name)
+
+            ns = (v, sort)
+            self.cache_insert(t, SmtTerm(ns))
+            return ns
 
         if t.isVariable():
-            v_sort, v_name = str(t.getSort()), t.getVarName()
+            v_name = t.getVarName()
 
-            key = (v_sort, v_name)
+            key = (symbol_sort, v_name)
 
             if key in self._var_dict:
                 v = self._var_dict[key]
-                term = tuple([v, set([v])])
-
-                # self._dag2term_memoize[t] = term
-                return term
+                return v, Terms.type_of_term(v)
 
             v = None
-            if v_sort in self._sort_dict:
-                sort = self._sort_dict[v_sort]()
+            if symbol_sort in self._sort_dict:
+                sort = self._sort_dict[symbol_sort]()
                 v = Terms.new_uninterpreted_term(sort, v_name)
             
-            if v_sort in self._user_sort_dict:
-                sort = self._user_sort_dict[v_sort]
+            if symbol_sort in self._user_sort_dict:
+                sort = self._user_sort_dict[symbol_sort]
                 v = Terms.new_uninterpreted_term(sort, v_name)
 
-            paramInfo = self._get_param_sort_info(v_sort)
+            paramInfo = self._get_param_sort_info(symbol_sort)
             if paramInfo is not None:
                 (name, *params) = paramInfo
                 param_sorts = [self._decl_sort(p_sort) for p_sort in params]
@@ -445,12 +449,9 @@ class YicesConverter(Converter):
             
             if v is not None:
                 self._var_dict[key] = v
-                term = tuple([v, set([v])])
+                return v, Terms.type_of_term(v)
 
-                # self._dag2term_memoize[t] = term
-                return term
-
-            raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
+            raise Exception("wrong variable {} with sort {}".format(v_name, symbol_sort))
 
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
 
@@ -464,7 +465,7 @@ class YicesConverter(Converter):
             sym, th, name = self._symbol_map[k]
 
             raw_args = list(map(lambda x: x[0], p_args))
-            v_s = reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())
+            # v_s = reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())
 
             fun_key = (sym, symbol)
             if th == "euf": 
@@ -495,15 +496,10 @@ class YicesConverter(Converter):
 
                     f = Terms.application(f, raw_args)
             
-            term = tuple([f, v_s])
-            # self._dag2term_memoize[t] = term
-            return term
+            return f, Terms.type_of_term(f)
 
         if symbol in self._bool_const:
-            c = self._bool_const[symbol]()
-            term = tuple([c, set()])
-            # self._dag2term_memoize[t] = term
-            return term
+            return self._bool_const[symbol](), Types.bool_type()
         
         if symbol in self._num_const:
             val = str(t)
@@ -514,23 +510,37 @@ class YicesConverter(Converter):
             # remove parenthesis 
             val = val.replace("(", "").replace(")", "")
             c = self._num_const[symbol](val)
+            ty = Types.real_type() if symbol == "<Reals>" else Types.int_type()
 
-            term = tuple([c, set()])
-            # self._dag2term_memoize[t] = term
-            return term
+            return c, ty
 
         if symbol in self._op_dict:
             p_args = [self._dag2term(arg) for arg in t.arguments()]
             op = self._op_dict[symbol]
 
+            raw_args = list(map(lambda x: x[0], p_args))
             # multinary
-            if symbol == "_and_" or symbol == "_or_":
-                t = op(list(map(lambda x: x[0], p_args)))
-            else:
-                t = op(*map(lambda x: x[0], p_args))
+            if symbol in ["_and_", "_or_", "_xor_"]:
+                return op(raw_args), Types.bool_type()
+            elif symbol == "_?_:_":
+                tys = list(map(lambda x: x[1], p_args))
+                assert tys[1] == tys[2]
 
-            term = tuple([t, reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())])
-            # self._dag2term_memoize[t] = term
-            return term
+                return op(*raw_args), tys[1]
+            elif symbol == "_divisible_":
+                raw_args.reverse()
+                st = op(*raw_args)
+                return st, Types.bool_type()
+            else:
+                symbs = ["-_", "_+_", "_-_", "_*_", "_/_"]
+                tys = list(map(lambda x: x[1], p_args))
+                st = op(*raw_args)
+
+                if symbol in symbs:
+                    ty = tys[0]
+                else:
+                    ty = Terms.type_of_term(st)
+
+                return st, ty
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")

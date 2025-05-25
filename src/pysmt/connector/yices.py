@@ -29,7 +29,7 @@ class YicesConnector(Connector):
     def check_sat(self, consts):
         fs = list()
         for const in consts:
-            (c, _), _, _ = const.data()
+            c, _ = get_data(const)
             fs.append(c)
 
         self._ctx.assert_formulas(fs)
@@ -54,14 +54,15 @@ class YicesConnector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            ((cur_t, _), _, cur_v) = cur.data()
-            body = cur_t
-
+            body, _ = get_data(cur)
         else:
-            ((acc_f, _), _, acc_v), ((cur_t, _), _, cur_v) = acc.data(), cur.data()
+            (acc_f, _), (cur_t, _) = get_data(acc), get_data(cur)
             body = Terms.yand([acc_f, cur_t])
 
-        return SmtTerm([(body, Terms.type_of_term(body)), None, None])
+        return SmtTerm((body, Terms.type_of_term(body)))
+    
+    def simplify(self, term):
+        return term
 
     def subsume(self, subst, prev, acc, cur):
         s = time.time()
@@ -70,8 +71,8 @@ class YicesConnector(Connector):
         t_v, t_l = list(), list()
         sub = subst.keys()
         for p in sub:
-            (src, _), _, _ = self._c.dag2term(p).data()
-            (trg, _), _, _ = self._c.dag2term(subst.get(p)).data()
+            src, _ = get_data(self._c.dag2term(p))
+            trg, _ = get_data(self._c.dag2term(subst.get(p)))
 
             t_v.append(src)
             t_l.append(trg)
@@ -80,10 +81,10 @@ class YicesConnector(Connector):
 
         self._dt += d_e - d_s
 
-        (prev_c, _), _, _ = prev.data()
+        prev_c, _ = get_data(prev)
 
-        (acc_c, _), _, _ = acc.data()
-        (cur_c, _), _, _ = cur.data()
+        acc_c, _ = get_data(acc)
+        cur_c, _ = get_data(cur)
     
         so_s = time.time()
         self._ctx.push()
@@ -115,7 +116,7 @@ class YicesConnector(Connector):
         for t in raw_m.collect_defined_terms():
             try:
                 ty = Terms.type_of_term(t)
-                k, v = [(t, ty), None, None], [(Terms.parse_term(str(raw_m.get_value(t)).lower()), ty), None, None]
+                k, v = (t, ty), (Terms.parse_term(str(raw_m.get_value(t)).lower()), ty)
                 m.set(k, v)
             except:
                 continue
@@ -135,86 +136,3 @@ class YicesConnector(Connector):
 
     def get_converter(self):
         return self._c
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class YicesConverter(Converter):
-#     """A term converter from Maude to Yices"""
-
-#     def __init__(self):
-#         self._cfg: Config = Config()
-#         self._cfg.default_config_for_logic("QF_LRA")
-
-#         self._ctx: Context = Context(self._cfg)
-#         self._model = None
-
-#     def __del__(self):
-#         self._ctx.dispose()
-#         self._cfg.dispose()
-
-#     def make_assignment(self):
-#         if self._model is None:
-#             raise Exception("Yices solver error occurred during making assignment (no model exists)")
-#         return YicesAssignment(self._model)
-
-#     def push(self):
-#         self._ctx.push()
-
-#     def pop(self):
-#         self._ctx.pop()
-
-#     def reset(self):
-#         self._ctx.reset_context()
-
-#     def add(self, formula: Formula):
-#         self._ctx.assert_formula(Terms.parse_term(translate(formula)))
-
-#     def assert_and_track(self, formula: Formula, track_id: str):
-#         pass
-
-#     def unsat_core(self):
-#         return self._ctx.get_unsat_core()
-
-#     def _clear_model(self):
-#         if self._model is not None:
-#             self._model.dispose()
-#             self._model = None
-
-
-
-# class YicesAssignment(Assignment):
-#     def __init__(self, _yices_model):
-#         self._yices_model = _yices_model
-#         Assignment.__init__(self)
-
-#     # solver_model_to_generalized_model
-#     def _get_assignments(self):
-#         new_dict = dict()
-#         for e in self._yices_model.collect_defined_terms():
-#             t, v = Terms.to_string(e), self._yices_model.get_float_value(e)
-#             if Terms.is_real(e):
-#                 new_dict[Real(t)] = RealVal(str(v))
-#             elif Terms.is_int(e):
-#                 new_dict[Int(t)] = IntVal(str(v))
-#             elif Terms.is_bool(e):
-#                 new_dict[Bool(t)] = BoolVal(str(v))
-#             else:
-#                 Exception("cannot generate assignments")
-#         return new_dict
