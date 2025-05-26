@@ -17,7 +17,6 @@ class YicesConverter(Converter):
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
-        self._var_dict = dict()
         self._fun_dict = dict()
 
         # smt.maude map
@@ -79,7 +78,6 @@ class YicesConverter(Converter):
 
         self._param_sort = dict()
         self._user_sort_dict = dict()
-        self._special_id = dict()
 
         # extra theory symbol map 
         self._theory_dict = {
@@ -100,8 +98,6 @@ class YicesConverter(Converter):
         self._func_dict.clear()
         self._symbol_map.clear()
         self._symbol_info.clear()
-        self._special_id.clear()
-        self._var_dict.clear()
         self._fun_dict.clear()
         self._dag2term_memoize.clear()
         self._module = None
@@ -351,7 +347,7 @@ class YicesConverter(Converter):
                 c_t = ctypes.c_int32()
                 exp = ctypes.c_int32()
                 yices_product_component(t, i, c_t, exp)
-                args.append(self._term2dag((c_t, Terms.type_of_term(t))))
+                args.append(self._term2dag((c_t.value, Terms.type_of_term(t))))
 
             r = " * ".join(args)
             return f"({r})"
@@ -372,7 +368,7 @@ class YicesConverter(Converter):
                     args.append(self._term2dag((coeff_t, Terms.type_of_term(t))))
                 else:
                     coc = self._term2dag((coeff_t, Terms.type_of_term(t)))
-                    c = self._term2dag((c_t, Terms.type_of_term(t)))
+                    c = self._term2dag((c_t.value, Terms.type_of_term(t)))
 
                     args.append(f"{coc} * {c}")
 
@@ -406,10 +402,8 @@ class YicesConverter(Converter):
             return c, Types.real_type()
 
         if symbol_sort in self._special_var_sort:
-            self._special_id[t] = next(self._g)
-
             # remove "var" from type for backward compatibility
-            name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
+            name = f"{symbol}_{symbol_sort[:-3]}_{next(self._g)}"
             sort = self._special_var_sort[symbol_sort]()
 
             v = Terms.new_uninterpreted_term(sort, name)
@@ -420,12 +414,6 @@ class YicesConverter(Converter):
 
         if t.isVariable():
             v_name = t.getVarName()
-
-            key = (symbol_sort, v_name)
-
-            if key in self._var_dict:
-                v = self._var_dict[key]
-                return v, Terms.type_of_term(v)
 
             v = None
             if symbol_sort in self._sort_dict:
@@ -448,8 +436,8 @@ class YicesConverter(Converter):
                     v = Terms.new_uninterpreted_term(sort, v_name)
             
             if v is not None:
-                self._var_dict[key] = v
-                return v, Terms.type_of_term(v)
+                self.cache_insert(t, SmtTerm((v, sort)))
+                return v, sort
 
             raise Exception("wrong variable {} with sort {}".format(v_name, symbol_sort))
 
@@ -495,7 +483,7 @@ class YicesConverter(Converter):
                     _f = self._func_dict[fun_key]
 
                     f = Terms.application(f, raw_args)
-            
+
             return f, Terms.type_of_term(f)
 
         if symbol in self._bool_const:
@@ -511,7 +499,6 @@ class YicesConverter(Converter):
             val = val.replace("(", "").replace(")", "")
             c = self._num_const[symbol](val)
             ty = Types.real_type() if symbol == "<Reals>" else Types.int_type()
-
             return c, ty
 
         if symbol in self._op_dict:

@@ -193,10 +193,15 @@ private:
 
     bool python_equal(PyObject *a, PyObject *b)
     {
-        int result = PyObject_RichCompareBool(a, b, Py_EQ);
-        if (result < 0)
+        Py_hash_t hash_a = PyObject_Hash(a);
+        Py_hash_t hash_b = PyObject_Hash(b);
+
+        if (hash_a == -1 || hash_b == -1)
+        {
             PyErr_Print();
-        return result == 1;
+            return false;
+        }
+        return hash_a == hash_b;
     }
 
 public:
@@ -215,7 +220,6 @@ public:
         {
             if (python_equal(key->getData(), pyObj))
             {
-
                 return new EasyTerm(val);
             }
         }

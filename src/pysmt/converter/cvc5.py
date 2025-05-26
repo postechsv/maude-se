@@ -17,7 +17,6 @@ class Cvc5Converter(Converter):
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
-        self._var_dict = dict()
         self._fun_dict = dict()
 
         # smt.maude map
@@ -45,6 +44,10 @@ class Cvc5Converter(Converter):
             "_<=_"          : [Kind.LEQ],
             "_>_"           : [Kind.GT],
             "_>=_"          : [Kind.GEQ],
+
+            "toInteger"     : [Kind.TO_INTEGER],
+            "toReal"        : [Kind.TO_REAL],
+            "isInteger"     : [Kind.IS_INTEGER],
         }
 
         self._bool_const = {
@@ -57,16 +60,24 @@ class Cvc5Converter(Converter):
             "<Reals>"       : self._s.mkReal,
         }
 
+        self._special_var_sort = {
+            "IntegerVar"        : self._s.getIntegerSort,
+            "RealVar"           : self._s.getRealSort,
+            "BooleanVar"        : self._s.getBooleanSort,
+        }
+
         self._sort_dict = {
             "Integer"           : self._s.getIntegerSort,
             "Real"              : self._s.getRealSort,
             "Boolean"           : self._s.getBooleanSort,
+            "IntegerExpr"       : self._s.getIntegerSort,
+            "RealExpr"          : self._s.getRealSort,
+            "BooleanExpr"       : self._s.getBooleanSort,
             "Array"             : self._s.mkArraySort,
         }
 
         self._param_sort = dict()
         self._user_sort_dict = dict()
-        self._special_id = dict()
 
         # extra theory symbol map 
         self._theory_dict = {
@@ -86,8 +97,6 @@ class Cvc5Converter(Converter):
         self._func_dict.clear()
         self._symbol_map.clear()
         self._symbol_info.clear()
-        self._special_id.clear()
-        self._var_dict.clear()
         self._fun_dict.clear()
         self._module = None
 
@@ -188,14 +197,15 @@ class Cvc5Converter(Converter):
     
     def term2dag(self, term):
         try:
-            t, _, _ = term.data()
-            return self._module.parseTerm(self._term2dag(t))
+            return self._module.parseTerm(self._term2dag(get_data(term)))
         except:
             return None
 
     def _term2dag(self, term):
-        # t, ty = term
-
+        cached_dag = self.cache_find(SmtTerm(term))
+        if cached_dag:
+            return str(cached_dag)
+    
         kind, sort = term.getKind(), term.getSort()
         if kind == Kind.AND:
             r = " and ".join([self._term2dag(c) for c in term])
@@ -204,6 +214,10 @@ class Cvc5Converter(Converter):
         if kind == Kind.OR:
             r = " or ".join([self._term2dag(c) for c in term])
             return f"{r}"
+        
+        if kind == Kind.XOR:
+            l, r = self._term2dag(term[0]), self._term2dag(term[1])
+            return f"({l} xor {r})"
         
         if kind == Kind.NOT:
             return f"(not {self._term2dag(term[0])})"
@@ -248,6 +262,15 @@ class Cvc5Converter(Converter):
             else:
                 return f"({l} / {r})"
             
+        if kind == Kind.IS_INTEGER:
+            return f"(isInteger({self._term2dag(term[0])}))"
+            
+        if kind == Kind.TO_INTEGER:
+            return f"(toInteger({self._term2dag(term[0])}))"
+        
+        if kind == Kind.TO_REAL:
+            return f"(toReal({self._term2dag(term[0])}))"
+
         if kind == Kind.ITE:
             c, l, r = self._term2dag(term[0]), self._term2dag(term[1]), self._term2dag(term[2])
             return f"({c} ? {l} : {r})"
@@ -284,30 +307,37 @@ class Cvc5Converter(Converter):
         :returns: A pair of
           an SMT solver term and its variables
         """
-        term, v_set = self._dag2term(t)
-        return SmtTerm([term, None, list(v_set)])
-    
+        return SmtTerm(self._dag2term(t))
+
     def _dag2term(self, t: Term):
+        cached_term = self.cache_find(t)
+        if cached_term:
+            return get_data(cached_term)
+
+        symbol, symbol_sort = str(t.symbol()), str(t.getSort())
+
+        if symbol_sort in self._special_var_sort:
+            # remove "var" from type for backward compatibility
+            name = f"{symbol}_{symbol_sort[:-3]}_{next(self._g)}"
+            sort = self._special_var_sort[symbol_sort]()
+
+            v = self._s.mkConst(sort, name)
+            self.cache_insert(t, SmtTerm(v))
+            return v
 
         if t.isVariable():
-            v_sort, v_name = str(t.getSort()), t.getVarName()
-
-            key = (v_sort, v_name)
-
-            if key in self._var_dict:
-                v = self._var_dict[key]
-                return tuple([v, set([v])])
+            v_name = t.getVarName()
 
             v = None
-            if v_sort in self._sort_dict:
-                sort = self._sort_dict[v_sort]()
+            if symbol_sort in self._sort_dict:
+                sort = self._sort_dict[symbol_sort]()
                 v = self._s.mkConst(sort, v_name)
             
-            if v_sort in self._user_sort_dict:
-                sort = self._user_sort_dict[v_sort]
+            if symbol_sort in self._user_sort_dict:
+                sort = self._user_sort_dict[symbol_sort]
                 v = self._s.mkConst(sort, v_name)
 
-            paramInfo = self._get_param_sort_info(v_sort)
+            paramInfo = self._get_param_sort_info(symbol_sort)
             if paramInfo is not None:
                 (name, *params) = paramInfo
                 param_sorts = [self._decl_sort(p_sort) for p_sort in params]
@@ -317,14 +347,12 @@ class Cvc5Converter(Converter):
                 if k in self._param_sort:
                     sort = self._param_sort[k]
                     v = self._s.mkConst(sort, v_name)
-            
+
             if v is not None:
-                self._var_dict[key] = v
-                return tuple([v, set([v])])
+                self.cache_insert(t, SmtTerm(v))
+                return v
 
-            raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
-
-        symbol, symbol_sort = str(t.symbol()), str(t.getSort())
+            raise Exception("wrong variable {} with sort {}".format(v_name, symbol_sort))
 
         sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
         sorts.append(self._decl_sort(str(t.symbol().getRangeSort())))
@@ -335,13 +363,10 @@ class Cvc5Converter(Converter):
 
             op_s, th = self._symbol_map[k]
 
-            raw_args = list(map(lambda x: x[0], p_args))
-            v_s = reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())
-
             # fun_key = (sym, symbol)
             if th == "euf": 
                 # we only know domains
-                doms, rng = list(map(lambda x: x.getSort(), raw_args)), None
+                doms, rng = list(map(lambda x: x.getSort(), p_args)), None
                 
                 # make sure to declare the function
                 self._decl_func(symbol, *doms, rng)
@@ -350,20 +375,20 @@ class Cvc5Converter(Converter):
 
                 _f = self._func_dict[fun_key]
 
-                f = self._s.mkTerm(Kind.APPLY_UF, _f, *raw_args)
+                f = self._s.mkTerm(Kind.APPLY_UF, _f, *p_args)
             else:
                 f = None
                 for op in op_s:
                     if f is None:
-                        f = self._s.mkTerm(op, *raw_args)
+                        f = self._s.mkTerm(op, *p_args)
                     else:
                         f = self._s.mkTerm(op, f)
             
-            return tuple([f, v_s])
+            return f
 
         if symbol in self._bool_const:
             c = self._bool_const[symbol]()
-            return tuple([c, set()])
+            return c
         
         if symbol in self._num_const:
             val = str(t)
@@ -374,22 +399,19 @@ class Cvc5Converter(Converter):
             # remove parenthesis 
             val = val.replace("(", "").replace(")", "")
             c = self._num_const[symbol](val)
-
-            return tuple([c, set()])
+            return c
 
         if symbol in self._op_dict:
             p_args = [self._dag2term(arg) for arg in t.arguments()]
             op_s = self._op_dict[symbol]
 
-            v_s = reduce(lambda acc, cur: acc.union(cur[1]), p_args, set())
-
             t = None
             for op in op_s:
                 if t is None:
-                    t = self._s.mkTerm(op, *map(lambda x: x[0], p_args))
+                    t = self._s.mkTerm(op, *p_args)
                 else:
                     t = self._s.mkTerm(op, t)
 
-            return tuple([t, v_s])
+            return t
         
         raise Exception(f"fail to apply dag2term to \"{t}\"")

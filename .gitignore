@@ -10,3 +10,4 @@
 maude-bindings/
 Maude/
 out/
+__pycache__/

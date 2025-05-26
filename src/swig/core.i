@@ -56,6 +56,7 @@ namespace std {
 %rename(Converter) _PyConverter;
 %rename(dag2term) pyDag2term;
 %rename(term2dag) pyTerm2dag;
+%newobject _PyConverter::cache_find;
 %ignore markReachableNodes;
 
 // --- Connector ---

@@ -16,7 +16,6 @@ class Z3Converter(Converter):
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
-        self._var_map = dict()
 
         # smt.maude map
         self._op_dict = {
@@ -78,7 +77,6 @@ class Z3Converter(Converter):
 
         self._param_sort = dict()
         self._user_sort_dict = dict()
-        self._special_id = dict()
 
         # extra theory symbol map 
         self._theory_dict = {
@@ -98,8 +96,6 @@ class Z3Converter(Converter):
         self._func_dict.clear()
         self._symbol_map.clear()
         self._symbol_info.clear()
-        self._special_id.clear()
-        self._var_map.clear()
         self._module = None
 
         # recreate the id generator
@@ -193,9 +189,9 @@ class Z3Converter(Converter):
             return None
 
     def _term2dag(self, term):
-        t_hash = hash(term)
-        if t_hash in self._var_map:
-            return self._var_map[t_hash]
+        cached_dag = self.cache_find(SmtTerm(term))
+        if cached_dag:
+            return str(cached_dag)
 
         if z3.is_and(term):
             r = " and ".join([self._term2dag(c) for c in term.children()])
@@ -318,6 +314,9 @@ class Z3Converter(Converter):
         return SmtTerm(self._dag2term(t))
 
     def _dag2term(self, t: Term):
+        cached_term = self.cache_find(t)
+        if cached_term:
+            return get_data(cached_term)
 
         if t.isVariable():
             v_sort, v_name = str(t.getSort()), t.getVarName()
@@ -343,9 +342,7 @@ class Z3Converter(Converter):
                     v = z3.Const(v_name, sort)
             
             if v is not None:
-                # v_hash = hash(v)
-                # if v_hash not in self._var_map:
-                #     self._var_map[v_hash] = t
+                self.cache_insert(t, SmtTerm(v))
                 return v
 
             raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
@@ -353,21 +350,14 @@ class Z3Converter(Converter):
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
 
         if symbol_sort in self._special_const:
-            if t not in self._special_id:
-                self._special_id[t] = next(self._g)
-
             # remove "var" from type for backward compatibility
-            name = f"{symbol}_{symbol_sort[:-3]}_{self._special_id[t]}"
+            name = f"{symbol}_{symbol_sort[:-3]}_{next(self._g)}"
             sort = self._special_const[symbol_sort]()
             
             # print(name, sort)
             v = z3.Const(name, sort)
 
-            # keep track of special const
-            v_hash = hash(v)
-            if v_hash not in self._var_map:
-                self._var_map[v_hash] = str(t)
-
+            self.cache_insert(t, SmtTerm(v))
             return v
 
         sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]

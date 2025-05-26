@@ -87,12 +87,10 @@ class YicesConnector(Connector):
         cur_c, _ = get_data(cur)
     
         so_s = time.time()
-        self._ctx.push()
         self._ctx.assert_formula(Terms.ynot(Terms.implies(Terms.yand([acc_c, cur_c]), Terms.subst(t_v, t_l, prev_c))))
 
         r = self._ctx.check_context()
 
-        self._ctx.pop()
         so_e = time.time()
         self._st += so_e - so_s
 

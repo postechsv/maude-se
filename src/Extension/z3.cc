@@ -170,7 +170,6 @@ bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm c
 
     z3::expr f = !(implies(z3_acc && z3_cur, z3_prv.substitute(from, to)));
 
-    s->push();
     s->add(f);
     z3::check_result r;
     try
@@ -187,7 +186,6 @@ bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm c
         s->reset();
         return false;
     }
-    s->pop();
 
     switch (r)
     {
@@ -1074,12 +1072,13 @@ DagNode *_Z3Converter::term2dagInternal(z3::expr e)
         Vector<DagNode *> arg(1);
         arg[0] = term2dagInternal(e.arg(0));
 
+        ConnectedComponent *ik = sg.getKind("Integer");
         ConnectedComponent *rk = sg.getKind("Real");
         Vector<ConnectedComponent *> domain;
 
         domain.push_back(rk);
 
-        return sg.getSymbol("toInteger", domain, rk)->makeDagNode(arg);
+        return sg.getSymbol("toInteger", domain, ik)->makeDagNode(arg);
     }
     if (e.is_int() && e.is_app() && Z3_OP_UMINUS == e.decl().decl_kind())
     {

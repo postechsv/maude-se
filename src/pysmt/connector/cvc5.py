@@ -30,8 +30,7 @@ class Cvc5Connector(Connector):
     
     def check_sat(self, consts):
         for const in consts:
-            c, _, _ = const.data()
-            self._s.assertFormula(c)
+            self._s.assertFormula(get_data(const))
         
         r = self._s.checkSat()
 
@@ -41,6 +40,9 @@ class Cvc5Connector(Connector):
             return False
         else:
             raise Exception("failed to handle check sat (solver give-up)")
+        
+    def simplify(self, term):
+        return SmtTerm(self._s.simplify(get_data(term)))
         
     def push(self):
         self._s.push()
@@ -56,8 +58,7 @@ class Cvc5Connector(Connector):
 
         m = SmtModel()
         for v in _vars:
-            k, v = [v, None, None], [self._s.getValue(v), None, None]
-            m.set(k, v)
+            m.set(v, self._s.getValue(v))
         return m
     
     def _get_vars(self):
@@ -78,24 +79,25 @@ class Cvc5Connector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            (cur_t, _, cur_v) = cur.data()
-            body = cur_t
-
+            body = get_data(cur)
         else:
-            (acc_f, _, acc_v), (cur_t, _, cur_v) = acc.data(), cur.data()
+            acc_f, cur_t = get_data(acc), get_data(cur)
             body = self._s.mkTerm(cvcKind.AND, acc_f, cur_t)
 
-        return SmtTerm([body, None, None])
+        return SmtTerm(body)
 
     def subsume(self, subst, prev, acc, cur):
+        arr = self._s.getAssertions()
+
+        assert len(arr) == 0
         s = time.time()
 
         d_s = time.time()
         t_v, t_l = list(), list()
         sub = subst.keys()
         for p in sub:
-            src, _, _ = self._c.dag2term(p).data()
-            trg, _, _ = self._c.dag2term(subst.get(p)).data()
+            src = get_data(self._c.dag2term(p))
+            trg = get_data(self._c.dag2term(subst.get(p)))
 
             t_v.append(src)
             t_l.append(trg)
@@ -104,13 +106,12 @@ class Cvc5Connector(Connector):
 
         self._dt += d_e - d_s
 
-        prev_c, _, _ = prev.data()
+        prev_c = get_data(prev)
 
-        acc_c, _, _ = acc.data()
-        cur_c, _, _ = cur.data()
+        acc_c = get_data(acc)
+        cur_c = get_data(cur)
     
         so_s = time.time()
-        self._s.push()
 
         # implication and its children
         l = self._s.mkTerm(cvcKind.AND, acc_c, cur_c)
@@ -121,7 +122,6 @@ class Cvc5Connector(Connector):
 
         r = self._s.checkSat()
 
-        self._s.pop()
         so_e = time.time()
         self._st += so_e - so_s
 
