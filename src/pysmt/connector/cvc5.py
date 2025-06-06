@@ -35,11 +35,11 @@ class Cvc5Connector(Connector):
         r = self._s.checkSat()
 
         if r.isSat():
-            return True
+            return sat
         elif r.isUnsat():
-            return False
+            return unsat
         else:
-            raise Exception("failed to handle check sat (solver give-up)")
+            return unknown
         
     def simplify(self, term):
         return SmtTerm(self._s.simplify(get_data(term)))

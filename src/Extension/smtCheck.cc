@@ -73,7 +73,8 @@ bool SmtOpSymbol::smtCheck(FreeDagNode *subject, RewritingContext &context)
             }
             else if (result == VariableGenerator::SAT_UNKNOWN)
             {
-                r = unknownResultSymbol->makeDagNode();
+                ConnectedComponent *smtCheckRes = sg.getKind("SmtCheckResult");
+                r = sg.getSymbol("unknown", dom, smtCheckRes)->makeDagNode();
             }
             else
             {

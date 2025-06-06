@@ -55,7 +55,7 @@ class _Z3TermSubst : public _TermSubst
 {
 public:
     explicit _Z3TermSubst(std::shared_ptr<std::map<Z3SmtTerm, Z3SmtTerm>>
-                             subst_dict)
+                              subst_dict)
         : subst(std::move(subst_dict)) {}
 
     std::shared_ptr<std::map<Z3SmtTerm, Z3SmtTerm>> subst;
@@ -162,7 +162,7 @@ class _Z3Connector : public _Connector
 {
 public:
     _Z3Connector(Z3Converter conv);
-    bool check_sat(SmtTermVector consts);
+    SmtResult check_sat(SmtTermVector consts);
     bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur);
     TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict);
     SmtTerm add_const(SmtTerm acc, SmtTerm cur);

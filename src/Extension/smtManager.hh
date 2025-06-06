@@ -109,7 +109,7 @@ class DummyConnector : public Connector
 public:
     DummyConnector(DummyConverter conv) : conv(conv) {};
     ~DummyConnector() {};
-    bool check_sat(SmtTermVector consts);
+    SmtResult check_sat(SmtTermVector consts);
     bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur);
     TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict);
     SmtTerm add_const(SmtTerm acc, SmtTerm cur);

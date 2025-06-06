@@ -57,7 +57,9 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 				}
 				else if (result == VariableGenerator::SAT_UNKNOWN)
 				{
-					r = this->unknownResultSymbol->makeDagNode();
+					ConnectedComponent *smtCheckRes = opSg.getKind("SmtCheckResult");
+					Vector<ConnectedComponent *> dom;
+					r = opSg.getSymbol("unknown", dom, smtCheckRes)->makeDagNode();
 				}
 				else
 				{

@@ -61,7 +61,7 @@ SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 	nextTime = 0.0;
 	rewriteTime = 0.0;
 
-	VariableGenerator* vg = dynamic_cast<VariableGenerator*>(engine);
+	VariableGenerator *vg = dynamic_cast<VariableGenerator *>(engine);
 	connector = vg->getConnector();
 	connector2 = vg->getConnector2();
 	conv = vg->getConverter();
@@ -77,8 +77,10 @@ SmtStateTransitionGraph::~SmtStateTransitionGraph()
 		delete seen[i];
 	}
 
-	for (auto& it : consTermSeen){
-		for (auto &ct : it.second){
+	for (auto &it : consTermSeen)
+	{
+		for (auto &ct : it.second)
+		{
 			delete ct;
 		}
 	}
@@ -222,7 +224,8 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			ll->push_back(acc);
 			ll->push_back(cur);
 
-			if (!connector->check_sat(ll)){
+			if (connector->check_sat(ll) != sat)
+			{
 				Verbose("constraint is unsatisfiable ... continue");
 				connector->pop();
 				continue;
@@ -282,12 +285,13 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 						{
 							IssueWarning("subsumption is wrong (" << constTerm->dag << " should be renaming equivalent with " << c1 << ")");
 						}
-						
+
 						connector2->push();
 						bool subsumedResult = connector2->subsume(constTerm->subst, constTerm->constraint, acc, cur);
 						connector2->pop();
 
-						if (subsumedResult){
+						if (subsumedResult)
+						{
 							Verbose("constraints subsumed by another");
 							nextState = map2seen[make_tuple(index2, cc)];
 							exists = true;
@@ -559,7 +563,7 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 	if (result)
 	{
 		int maxSize = matcher.nrFragileBindings();
-		std::map<DagNode*, DagNode*> subst_dict;
+		std::map<DagNode *, DagNode *> subst_dict;
 		for (int i = 0; i < maxSize; i++)
 		{
 			Term *v_term = variableInfo.index2Variable(i);
@@ -567,7 +571,7 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 			DagNode *left = v_term->term2Dag();
 			DagNode *right = matcher.value(i);
 
-			subst_dict.insert(std::pair<DagNode*, DagNode*>(left, right));
+			subst_dict.insert(std::pair<DagNode *, DagNode *>(left, right));
 		}
 		subst = connector->mk_subst(subst_dict);
 	}

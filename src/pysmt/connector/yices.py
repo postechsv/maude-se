@@ -36,11 +36,11 @@ class YicesConnector(Connector):
         r = self._ctx.check_context()
 
         if r == Status.SAT:
-            return True
+            return sat
         elif r == Status.UNSAT:
-            return False
+            return unsat
         else:
-            raise Exception("failed to handle check sat (solver give-up)")
+            return unknown
         
     def push(self):
         self._ctx.push()

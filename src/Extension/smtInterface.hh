@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include "smtConst.hh"
 
 // forward decl
 class EasyTerm;
@@ -39,18 +40,7 @@ public:
     virtual SmtTermVector keys() = 0;
 };
 
-class _SmtResult
-{
-
-public:
-    virtual ~_SmtResult() {};
-    virtual bool is_sat() = 0;
-    virtual bool is_unsat() = 0;
-    virtual bool is_unknown() = 0;
-};
-
 using SmtModel = std::shared_ptr<_SmtModel>;
-using SmtResult = std::shared_ptr<_SmtResult>;
 
 class _Converter
 {
@@ -67,7 +57,7 @@ class _Connector
 {
 public:
     virtual ~_Connector() {};
-    virtual bool check_sat(SmtTermVector consts) = 0;
+    virtual SmtResult check_sat(SmtTermVector consts) = 0;
     virtual bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur) = 0;
     virtual TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict) = 0;
     // virtual PyObject* merge(PyObject* subst, PyObject* prev_const, std::vector<SmtTerm*> target_consts) = 0;

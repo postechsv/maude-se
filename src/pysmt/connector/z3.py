@@ -22,11 +22,11 @@ class Z3Connector(Connector):
         r = self._s.check()
 
         if r == z3.sat:
-            return True
+            return sat
         elif r == z3.unsat:
-            return False
+            return unsat
         else:
-            raise Exception("failed to handle check sat (solver give-up)")
+            return unknown
 
     def push(self):
         self._s.push()

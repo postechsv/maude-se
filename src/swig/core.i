@@ -79,6 +79,7 @@ namespace std {
 // Include C++ interface
 // ------------------------
 %include "pysmt.hh"
+%include "smtConst.hh"
 
 %inline %{
 PyObject* get_data(PyObject* obj)

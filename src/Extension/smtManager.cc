@@ -77,11 +77,15 @@ VariableGenerator::assertDag(DagNode *dag)
     SmtTermVector formulas = std::make_shared<std::vector<SmtTerm>>();
     formulas->push_back(o);
 
-    if (conn->check_sat(formulas))
+    switch (conn->check_sat(formulas))
     {
+    case sat:
         return SAT;
+    case unsat:
+        return UNSAT;
+    default:
+        return SAT_UNKNOWN;
     }
-    return UNSAT;
 }
 
 VariableGenerator::Result
@@ -190,10 +194,10 @@ DagNode *DummyConverter::term2dag(SmtTerm term)
     return nullptr;
 }
 
-bool DummyConnector::check_sat(SmtTermVector consts)
+SmtResult DummyConnector::check_sat(SmtTermVector consts)
 {
     IssueWarning("No SMT solver connected at compile time.");
-    return false;
+    return unknown;
 }
 
 bool DummyConnector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur)

@@ -255,14 +255,14 @@ class _PyConnector : public _Connector
 public:
     virtual ~_PyConnector() = default;
 
-    virtual bool py_check_sat(std::vector<PySmtTerm> &consts) = 0;
+    virtual SmtResult py_check_sat(std::vector<PySmtTerm> &consts) = 0;
     virtual bool py_subsume(PyTermSubst subst, PySmtTerm prev, PySmtTerm acc, PySmtTerm cur) = 0;
     virtual PySmtTerm py_add_const(PySmtTerm acc, PySmtTerm cur) = 0;
     virtual PySmtModel py_get_model() = 0;
     virtual PyConverter py_get_converter() = 0;
     virtual PySmtTerm py_simplify(PySmtTerm term) = 0;
 
-    bool check_sat(SmtTermVector consts) override
+    SmtResult check_sat(SmtTermVector consts) override
     {
         if (!consts)
             throw std::invalid_argument("check_sat received null SmtTermVector");

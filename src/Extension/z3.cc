@@ -68,7 +68,7 @@ _Z3Connector::_Z3Connector(Z3Converter conv)
     s->set(p);
 }
 
-bool _Z3Connector::check_sat(SmtTermVector consts)
+SmtResult _Z3Connector::check_sat(SmtTermVector consts)
 {
     std::vector<Z3SmtTerm> zterms;
     zterms.reserve(consts->size());
@@ -85,15 +85,15 @@ bool _Z3Connector::check_sat(SmtTermVector consts)
     switch (s->check())
     {
     case z3::unsat:
-        return false;
+        return unsat;
     case z3::sat:
-        return true;
+        return sat;
     case z3::unknown:
         IssueWarning("Z3 reported an error - giving up:");
-        return false;
+        return unknown;
     }
     IssueWarning("Z3 not able to determine satisfiability  - giving up.");
-    return false;
+    return unknown;
 }
 
 SmtTerm _Z3Connector::add_const(SmtTerm acc, SmtTerm cur)
@@ -255,11 +255,11 @@ SmtTerm _Z3Converter::dag2term(DagNode *dag)
     auto a = std::make_shared<_Z3SmtTerm>(ctx, e);
     if (!a)
         throw std::runtime_error("cannot convert Maude term to SMT term");
-    
+
     return a;
 }
 
-DagNode* _Z3Converter::term2dag(SmtTerm term)
+DagNode *_Z3Converter::term2dag(SmtTerm term)
 {
     Z3SmtTerm t = std::dynamic_pointer_cast<_Z3SmtTerm>(term);
 
