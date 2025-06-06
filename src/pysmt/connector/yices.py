@@ -90,16 +90,13 @@ class YicesConnector(Connector):
         m = SmtModel()
         for t in raw_m.collect_defined_terms():
             try:
-                v = Terms.parse_term(str(raw_m.get_value(t)).lower())
-                ty1, ty2 = Terms.type_of_term(t), Terms.type_of_term(v)
+                ty = Terms.type_of_term(t)
 
-                if ty1 != ty2:
-                    continue
-
-                k, v = (t, ty1), (v, ty2)
+                k, v = (t, ty), (raw_m.get_value_as_term(t), ty)
                 m.set(k, v)
             except:
                 continue
+        raw_m.dispose()
         return m
     
     def print_model(self):

@@ -135,7 +135,7 @@ public:
         catch (...)
         {
             PyErr_Print();
-            throw std::runtime_error("Python converter error");
+            throw std::runtime_error("Python dag2term error");
         }
     }
 
@@ -162,7 +162,7 @@ public:
             catch (...)
             {
                 PyErr_Print();
-                throw std::runtime_error("Python converter error");
+                throw std::runtime_error("Python term2dag error");
             }
         }
         return nullptr;
@@ -261,6 +261,7 @@ public:
     virtual PySmtModel py_get_model() = 0;
     virtual PyConverter py_get_converter() = 0;
     virtual PySmtTerm py_simplify(PySmtTerm term) = 0;
+    virtual void py_set_logic(const char *logic) = 0;
 
     SmtResult check_sat(SmtTermVector consts) override
     {
@@ -271,19 +272,44 @@ public:
         for (auto &c : *consts)
             pyConsts.push_back(std::dynamic_pointer_cast<_PySmtTerm>(c));
 
-        return py_check_sat(pyConsts);
+        try
+        {
+            return py_check_sat(pyConsts);
+        }
+        catch (...)
+        {
+            // handle error as unknown case
+            PyErr_Clear();
+            return unknown;
+        }
     }
 
     SmtTerm add_const(SmtTerm acc, SmtTerm cur) override
     {
         auto pyAcc = std::dynamic_pointer_cast<_PySmtTerm>(acc);
         auto pyCur = std::dynamic_pointer_cast<_PySmtTerm>(cur);
-        return py_add_const(pyAcc, pyCur);
+        try
+        {
+            return py_add_const(pyAcc, pyCur);
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python add_const error");
+        }
     }
 
     SmtModel get_model() override
     {
-        return py_get_model();
+        try
+        {
+            return py_get_model();
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python get_model error");
+        }
     }
 
     TermSubst mk_subst(std::map<DagNode *, DagNode *> &subst_dict) override
@@ -296,25 +322,62 @@ public:
 
     bool subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm cur) override
     {
-        return py_subsume(dynamic_pointer_cast<_PyTermSubst>(subst), dynamic_pointer_cast<_PySmtTerm>(prev),
-                          dynamic_pointer_cast<_PySmtTerm>(acc), dynamic_pointer_cast<_PySmtTerm>(cur));
+        try
+        {
+            return py_subsume(dynamic_pointer_cast<_PyTermSubst>(subst), dynamic_pointer_cast<_PySmtTerm>(prev),
+                              dynamic_pointer_cast<_PySmtTerm>(acc), dynamic_pointer_cast<_PySmtTerm>(cur));
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python subsume error");
+        }
     }
 
     Converter get_converter() override
     {
-        return py_get_converter();
+        try
+        {
+
+            return py_get_converter();
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python get_converter error");
+        }
     }
 
     SmtTerm simplify(SmtTerm term)
     {
-        return py_simplify(dynamic_pointer_cast<_PySmtTerm>(term));
+        try
+        {
+            return py_simplify(dynamic_pointer_cast<_PySmtTerm>(term));
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python simplify error");
+        }
+    }
+
+    void set_logic (const char *logic)
+    {
+        try
+        {
+            return py_set_logic(logic);
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python set_logic error");
+        }
     }
 
     virtual void push() override = 0;
     virtual void pop() override = 0;
     virtual void reset() override = 0;
     virtual void print_model() override = 0;
-    virtual void set_logic(const char *logic) override = 0;
 };
 using PyConnector = std::shared_ptr<_PyConnector>;
 
@@ -329,12 +392,28 @@ public:
 
     Connector createConnector(Converter conv) override
     {
-        return py_createConnector(std::dynamic_pointer_cast<_PyConverter>(conv));
+        try
+        {
+            return py_createConnector(std::dynamic_pointer_cast<_PyConverter>(conv));
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python createConnector error");
+        }
     }
 
     Converter createConverter(const SMT_Info &) override
     {
-        return py_createConverter();
+        try
+        {
+            return py_createConverter();
+        }
+        catch (...)
+        {
+            PyErr_Print();
+            throw std::runtime_error("Python createConverter error");
+        }
     }
 };
 

@@ -68,6 +68,7 @@ namespace std {
 %rename(subsume) py_subsume;
 %rename(get_converter) py_get_converter;
 %rename(simplify) py_simplify;
+%rename(set_logic) py_set_logic;
 
 // --- ManagerFactory ---
 %feature("director") PySmtManagerFactory;
