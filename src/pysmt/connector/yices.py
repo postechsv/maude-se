@@ -1,5 +1,3 @@
-import time
-
 from yices import *
 from maudeSE.maude import *
 from maudeSE.util import id_gen
@@ -12,12 +10,6 @@ class YicesConnector(Connector):
         self._g = id_gen()
 
         _logic = "QF_LRA" if logic is None else logic
-
-        # time
-        self._tt = 0.0
-        self._dt = 0.0
-        self._st = 0.0
-        self._mt = 0.0
 
         # set solver
         self._cfg: Config = Config()
@@ -65,9 +57,6 @@ class YicesConnector(Connector):
         return term
 
     def subsume(self, subst, prev, acc, cur):
-        s = time.time()
-
-        d_s = time.time()
         t_v, t_l = list(), list()
         sub = subst.keys()
         for p in sub:
@@ -77,30 +66,18 @@ class YicesConnector(Connector):
             t_v.append(src)
             t_l.append(trg)
 
-        d_e = time.time()
-
-        self._dt += d_e - d_s
-
         prev_c, _ = get_data(prev)
 
         acc_c, _ = get_data(acc)
         cur_c, _ = get_data(cur)
     
-        so_s = time.time()
         self._ctx.assert_formula(Terms.ynot(Terms.implies(Terms.yand([acc_c, cur_c]), Terms.subst(t_v, t_l, prev_c))))
 
         r = self._ctx.check_context()
 
-        so_e = time.time()
-        self._st += so_e - so_s
-
         if r == Status.UNSAT:
-            e = time.time()
-            self._tt += e - s
             return True
         elif r == Status.SAT:
-            e = time.time()
-            self._tt += e - s
             return False
         else:
             raise Exception("failed to apply subsumption (give-up)")
@@ -113,8 +90,13 @@ class YicesConnector(Connector):
         m = SmtModel()
         for t in raw_m.collect_defined_terms():
             try:
-                ty = Terms.type_of_term(t)
-                k, v = (t, ty), (Terms.parse_term(str(raw_m.get_value(t)).lower()), ty)
+                v = Terms.parse_term(str(raw_m.get_value(t)).lower())
+                ty1, ty2 = Terms.type_of_term(t), Terms.type_of_term(v)
+
+                if ty1 != ty2:
+                    continue
+
+                k, v = (t, ty1), (v, ty2)
                 m.set(k, v)
             except:
                 continue

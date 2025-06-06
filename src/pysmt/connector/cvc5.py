@@ -1,5 +1,4 @@
 import cvc5
-import time
 
 from cvc5 import Kind as cvcKind
 from maudeSE.maude import *
@@ -14,16 +13,9 @@ class Cvc5Connector(Connector):
 
         _logic = "ALL" if logic is None else logic
 
-        # time
-        self._tt = 0.0
-        self._dt = 0.0
-        self._st = 0.0
-        self._mt = 0.0
-
         # set solver
         self._s = cvc5.Solver()
         self._s.setOption("produce-models", "true")
-        # self._s.setOption("produce-unsat-cores", "true")
         self._s.setLogic(_logic)
 
         self._m = None
@@ -90,9 +82,7 @@ class Cvc5Connector(Connector):
         arr = self._s.getAssertions()
 
         assert len(arr) == 0
-        s = time.time()
 
-        d_s = time.time()
         t_v, t_l = list(), list()
         sub = subst.keys()
         for p in sub:
@@ -102,16 +92,10 @@ class Cvc5Connector(Connector):
             t_v.append(src)
             t_l.append(trg)
 
-        d_e = time.time()
-
-        self._dt += d_e - d_s
-
         prev_c = get_data(prev)
 
         acc_c = get_data(acc)
         cur_c = get_data(cur)
-    
-        so_s = time.time()
 
         # implication and its children
         l = self._s.mkTerm(cvcKind.AND, acc_c, cur_c)
@@ -122,16 +106,9 @@ class Cvc5Connector(Connector):
 
         r = self._s.checkSat()
 
-        so_e = time.time()
-        self._st += so_e - so_s
-
         if r.isUnsat():
-            e = time.time()
-            self._tt += e - s
             return True
         elif r.isSat():
-            e = time.time()
-            self._tt += e - s
             return False
         else:
             raise Exception("failed to apply subsumption (give-up)")
