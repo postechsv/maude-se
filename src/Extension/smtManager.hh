@@ -31,8 +31,8 @@ public:
     inline Connector getConnector2() { return conn2; }; // for folding
 
 private:
-    Connector conn;
     Converter conv;
+    Connector conn;
     Connector conn2; // for folding check
 };
 

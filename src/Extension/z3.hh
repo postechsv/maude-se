@@ -38,15 +38,12 @@
 
 class _Z3SmtTerm : public _SmtTerm
 {
-    std::shared_ptr<z3::context> ctx_;
     z3::expr expr_;
 
 public:
-    _Z3SmtTerm(std::shared_ptr<z3::context> c, const z3::expr &e)
-        : ctx_(std::move(c)), expr_(e) {}
+    _Z3SmtTerm(const z3::expr &e) : expr_(e) {}
 
     z3::expr expr() const { return expr_; }
-    std::shared_ptr<z3::context> context() const { return ctx_; }
 };
 
 using Z3SmtTerm = std::shared_ptr<_Z3SmtTerm>;
@@ -54,9 +51,8 @@ using Z3SmtTerm = std::shared_ptr<_Z3SmtTerm>;
 class _Z3TermSubst : public _TermSubst
 {
 public:
-    explicit _Z3TermSubst(std::shared_ptr<std::map<Z3SmtTerm, Z3SmtTerm>>
-                              subst_dict)
-        : subst(std::move(subst_dict)) {}
+    explicit _Z3TermSubst(std::shared_ptr<std::map<Z3SmtTerm, Z3SmtTerm>> subst_dict)
+        : subst(subst_dict) {}
 
     std::shared_ptr<std::map<Z3SmtTerm, Z3SmtTerm>> subst;
 };
@@ -66,8 +62,8 @@ using Z3TermSubst = std::shared_ptr<_Z3TermSubst>;
 class _Z3SmtModel : public _SmtModel
 {
 public:
-    _Z3SmtModel(const z3::model &m, std::shared_ptr<z3::context> ctx)
-        : model_(m), ctx_(std::move(ctx))
+    _Z3SmtModel(const z3::model &m)
+        : model_(m)
     {
         int num = m.num_consts();
         for (int i = 0; i < num; ++i)
@@ -75,8 +71,8 @@ public:
             z3::func_decl c = m.get_const_decl(i);
             z3::expr r = m.get_const_interp(c);
 
-            auto lhs = std::make_shared<_Z3SmtTerm>(ctx_, c());
-            auto rhs = std::make_shared<_Z3SmtTerm>(ctx_, r);
+            auto lhs = std::make_shared<_Z3SmtTerm>(c());
+            auto rhs = std::make_shared<_Z3SmtTerm>(r);
 
             model_map_[lhs] = rhs;
         }
@@ -88,15 +84,10 @@ public:
         if (!z3k)
             return nullptr;
 
-        unsigned id = z3k->expr().id();
+        auto it = model_map_.find(z3k);
+        if (it != model_map_.end())
+            return it->second;
 
-        for (const auto &[lhs, rhs] : model_map_)
-        {
-            if (id == lhs->expr().id())
-            {
-                return rhs;
-            }
-        }
         return nullptr;
     }
 
@@ -111,9 +102,16 @@ public:
     }
 
 private:
+    struct TermCompareByExprId
+    {
+        bool operator()(const Z3SmtTerm &a, const Z3SmtTerm &b) const
+        {
+            return a->expr().id() < b->expr().id();
+        }
+    };
+
     z3::model model_;
-    std::shared_ptr<z3::context> ctx_;
-    std::map<Z3SmtTerm, Z3SmtTerm> model_map_;
+    std::map<Z3SmtTerm, Z3SmtTerm, TermCompareByExprId> model_map_;
 };
 
 using Z3SmtModel = std::shared_ptr<_Z3SmtModel>;
@@ -138,10 +136,10 @@ public:
     DagNode *term2dag(SmtTerm term);
 
 public:
-    inline std::shared_ptr<z3::context> getContext() { return ctx; };
+    inline z3::context &getContext() { return ctx; };
 
 private:
-    std::shared_ptr<z3::context> ctx;
+    z3::context ctx;
     SymbolGetter sg;
 
 private:
@@ -178,10 +176,8 @@ public:
     Converter get_converter() { return conv; };
 
 private:
-    z3::expr translate(z3::expr e);
 
-    std::shared_ptr<z3::context> ctx; // context shared
-    std::unique_ptr<z3::solver> s;    // solver from external context
+    z3::solver solver;
     Z3Converter conv;
     int pushCount;
 };

@@ -58,14 +58,13 @@
 
 _Z3Connector::_Z3Connector(Z3Converter conv)
     : pushCount(0),
-      conv(conv), ctx(std::move(conv->getContext())),
-      s(std::make_unique<z3::solver>(*ctx, z3::solver::simple()))
+      conv(conv), solver(z3::solver(conv->getContext(), z3::solver::simple()))
 {
-    z3::params p(*ctx);
+    z3::params p(solver.ctx());
     // for better performance
     p.set("auto_config", false); // do not use, automatic configuration
     p.set("mbqi", false);        // do not use, model-based quantifier instantiation
-    s->set(p);
+    solver.set(p);
 }
 
 SmtResult _Z3Connector::check_sat(SmtTermVector consts)
@@ -76,13 +75,13 @@ SmtResult _Z3Connector::check_sat(SmtTermVector consts)
     for (const auto &t : *consts)
         zterms.push_back(std::dynamic_pointer_cast<_Z3SmtTerm>(t));
 
-    z3::expr_vector constraints(s->ctx());
+    z3::expr_vector constraints(solver.ctx());
     for (auto zt : zterms)
-        constraints.push_back(translate(zt->expr()));
+        constraints.push_back(zt->expr());
 
-    s->add(constraints);
+    solver.add(constraints);
 
-    switch (s->check())
+    switch (solver.check())
     {
     case z3::unsat:
         return unsat;
@@ -106,7 +105,7 @@ SmtTerm _Z3Connector::add_const(SmtTerm acc, SmtTerm cur)
     {
         Z3SmtTerm z3Acc = std::dynamic_pointer_cast<_Z3SmtTerm>(acc);
         Z3SmtTerm z3Cur = std::dynamic_pointer_cast<_Z3SmtTerm>(cur);
-        return std::make_shared<_Z3SmtTerm>(ctx, translate(z3Acc->expr() && z3Cur->expr()));
+        return std::make_shared<_Z3SmtTerm>(z3Acc->expr() && z3Cur->expr());
     }
 }
 
@@ -115,20 +114,7 @@ SmtTerm _Z3Connector::simplify(SmtTerm term)
     Z3SmtTerm z3t = std::dynamic_pointer_cast<_Z3SmtTerm>(term);
     z3::expr e = z3t->expr();
     e = e.simplify();
-    return std::make_shared<_Z3SmtTerm>(ctx, translate(e));
-}
-
-inline z3::expr _Z3Connector::translate(z3::expr e)
-{
-    if (&(e.ctx()) == ctx.get())
-    {
-        return e;
-    }
-    else
-    {
-        Z3_ast translated = Z3_translate(e.ctx(), e, *ctx);
-        return z3::expr(*ctx, translated);
-    }
+    return std::make_shared<_Z3SmtTerm>(e);
 }
 
 TermSubst _Z3Connector::mk_subst(std::map<DagNode *, DagNode *> &subst_dict)
@@ -155,26 +141,26 @@ bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm c
 {
     Z3TermSubst z3subst = std::dynamic_pointer_cast<_Z3TermSubst>(subst);
 
-    z3::expr_vector from(*ctx);
-    z3::expr_vector to(*ctx);
+    z3::expr_vector from(solver.ctx());
+    z3::expr_vector to(solver.ctx());
 
     for (auto it : *z3subst->subst)
     {
-        from.push_back(translate(it.first->expr()));
-        to.push_back(translate(it.second->expr()));
+        from.push_back(it.first->expr());
+        to.push_back(it.second->expr());
     }
 
-    z3::expr z3_acc = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(acc)->expr());
-    z3::expr z3_cur = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(cur)->expr());
-    z3::expr z3_prv = translate(std::dynamic_pointer_cast<_Z3SmtTerm>(prev)->expr());
+    z3::expr z3_acc = std::dynamic_pointer_cast<_Z3SmtTerm>(acc)->expr();
+    z3::expr z3_cur = std::dynamic_pointer_cast<_Z3SmtTerm>(cur)->expr();
+    z3::expr z3_prv = std::dynamic_pointer_cast<_Z3SmtTerm>(prev)->expr();
 
     z3::expr f = !(implies(z3_acc && z3_cur, z3_prv.substitute(from, to)));
 
-    s->add(f);
+    solver.add(f);
     z3::check_result r;
     try
     {
-        r = s->check();
+        r = solver.check();
     }
     catch (z3::exception &ex)
     {
@@ -183,7 +169,7 @@ bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm c
         // ofs.open("debug.smt2");
         // ofs << s_v->to_smt2() << std::endl;
         // ofs.close();
-        s->reset();
+        solver.reset();
         return false;
     }
 
@@ -201,39 +187,39 @@ bool _Z3Connector::subsume(TermSubst subst, SmtTerm prev, SmtTerm acc, SmtTerm c
 
 SmtModel _Z3Connector::get_model()
 {
-    return std::make_shared<_Z3SmtModel>(s->get_model(), ctx);
+    return std::make_shared<_Z3SmtModel>(solver.get_model());
 }
 
 void _Z3Connector::push()
 {
-    s->push();
+    solver.push();
     ++pushCount;
 }
 
 void _Z3Connector::pop()
 {
     Assert(pushCount > 0, "bad pop");
-    s->pop();
+    solver.pop();
     --pushCount;
 }
 
 void _Z3Connector::reset()
 {
     pushCount = 0;
-    s->reset();
+    solver.reset();
 }
 
 void _Z3Connector::set_logic(const char *logic)
 {
     try
     {
-        s = std::make_unique<z3::solver>(*ctx, logic);
+        solver = z3::solver(solver.ctx(), logic);
 
-        z3::params p(*ctx);
+        z3::params p(solver.ctx());
         // for better performance
         p.set("auto_config", false); // do not use, automatic configuration
         p.set("mbqi", false);        // do not use, model-based quantifier instantiation
-        s->set(p);
+        solver.set(p);
     }
     catch (z3::exception &ex)
     {
@@ -242,7 +228,7 @@ void _Z3Connector::set_logic(const char *logic)
 }
 
 _Z3Converter::_Z3Converter(const SMT_Info &smtInfo)
-    : ctx(std::make_shared<z3::context>()), NativeSmtConverter(smtInfo) {}
+    : ctx(), NativeSmtConverter(smtInfo) {}
 
 void _Z3Converter::prepareFor(VisibleModule *module)
 {
@@ -252,7 +238,7 @@ void _Z3Converter::prepareFor(VisibleModule *module)
 SmtTerm _Z3Converter::dag2term(DagNode *dag)
 {
     z3::expr e = dag2termInternal(dag);
-    auto a = std::make_shared<_Z3SmtTerm>(ctx, e);
+    auto a = std::make_shared<_Z3SmtTerm>(e);
     if (!a)
         throw std::runtime_error("cannot convert Maude term to SMT term");
 
@@ -292,11 +278,11 @@ z3::expr _Z3Converter::dag2termInternal(DagNode *dag)
         Sort *sort = n->symbol()->getRangeSort();
         if (smtInfo.getType(sort) == SMT_Info::INTEGER)
         {
-            return ctx->int_val(value.get_str().c_str());
+            return ctx.int_val(value.get_str().c_str());
         }
         else if (smtInfo.getType(sort) == SMT_Info::REAL)
         {
-            return ctx->real_val(value.get_str().c_str());
+            return ctx.real_val(value.get_str().c_str());
         }
     }
 
@@ -325,20 +311,20 @@ z3::expr _Z3Converter::dag2termInternal(DagNode *dag)
         exprs.push_back(dag2termInternal(f->getArgument(i)));
     }
 
-    if (SMT_Symbol *s = dynamic_cast<SMT_Symbol *>(dag->symbol()))
+    if (SMT_Symbol *smt_symbol = dynamic_cast<SMT_Symbol *>(dag->symbol()))
     {
-        switch (s->getOperator())
+        switch (smt_symbol->getOperator())
         {
         //
         //	Boolean stuff.
         //
         case SMT_Symbol::CONST_TRUE:
         {
-            return ctx->bool_val(true);
+            return ctx.bool_val(true);
         }
         case SMT_Symbol::CONST_FALSE:
         {
-            return ctx->bool_val(false);
+            return ctx.bool_val(false);
         }
         case SMT_Symbol::NOT:
         {
@@ -499,14 +485,14 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
             return it->second;
         }
     }
-    z3::sort type(*ctx);
+    z3::sort type(ctx);
     string name;
 
     if (VariableDagNode *v = dynamic_cast<VariableDagNode *>(dag))
     {
-        Symbol *s = v->symbol();
+        Symbol *symbol = v->symbol();
 
-        Sort *sort = s->getRangeSort();
+        Sort *sort = symbol->getRangeSort();
         int id = v->id();
         name = Token::name(id);
 
@@ -519,19 +505,19 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
         }
         case SMT_Info::BOOLEAN:
         {
-            type = ctx->bool_sort();
+            type = ctx.bool_sort();
             name = name + "_" + string("Boolean");
             break;
         }
         case SMT_Info::INTEGER:
         {
-            type = ctx->int_sort();
+            type = ctx.int_sort();
             name = name + "_" + string("Integer");
             break;
         }
         case SMT_Info::REAL:
         {
-            type = ctx->real_sort();
+            type = ctx.real_sort();
             name = name + "_" + string("Real");
             break;
         }
@@ -557,7 +543,7 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
         {
             if (symbol == sg.getSymbol("b", dom, bvS->component()))
             {
-                type = ctx->bool_sort();
+                type = ctx.bool_sort();
                 name = "b_";
 
                 varSet = true;
@@ -568,7 +554,7 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
         {
             if (symbol == sg.getSymbol("i", dom, ivS->component()))
             {
-                type = ctx->int_sort();
+                type = ctx.int_sort();
                 name = "i_";
 
                 varSet = true;
@@ -579,7 +565,7 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
         {
             if (symbol == sg.getSymbol("r", dom, rvS->component()))
             {
-                type = ctx->real_sort();
+                type = ctx.real_sort();
                 name = "r_";
 
                 varSet = true;
@@ -598,7 +584,7 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
         name += varId;
     }
 
-    z3::expr newVar = ctx->constant(name.c_str(), type);
+    z3::expr newVar = ctx.constant(name.c_str(), type);
     smtManagerVariableMap.insert(SmtManagerVariableMap::value_type(dag, newVar));
     return newVar;
 }
