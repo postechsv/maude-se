@@ -47,6 +47,7 @@ def main():
         load(args.file)
 
         if cfg["no-meta"] == False:
+            load('smt-check.maude')
             load('maude-se-meta.maude')
 
     except Exception as err:

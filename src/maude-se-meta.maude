@@ -1,7 +1,7 @@
 load file
 load metaInterpreter
 --- load smt
-load smt-check
+--- load smt-check
 
 fmod MAUDE-SE-SYNTAX is
   pr QID-LIST .
@@ -230,7 +230,7 @@ omod MAUDE-SE-META-INTERPRETER is
   eq MAUDE-SE-VERSION = "0.0.3" .
 
   op MAUDE-SE-BUILT : -> String .
-  eq MAUDE-SE-BUILT = "May 25 2025" .
+  eq MAUDE-SE-BUILT = "June 6 2025" .
   
   op MAUDE-SE-BANNER : -> String .
   eq MAUDE-SE-BANNER = 

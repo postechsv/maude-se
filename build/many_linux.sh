@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# failed on any error 
+set -euo pipefail
+
 top_dir="$(pwd)"
 build_dir="$top_dir/.build"
 

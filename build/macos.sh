@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# failed on any error 
+set -euo pipefail
+
 brew install bison
 brew install flex
 

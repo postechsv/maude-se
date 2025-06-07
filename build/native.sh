@@ -3,8 +3,8 @@
 # Settings/Utilities
 # ------------------
 
-# error if an variable is referenced before being set
-set -u
+# failed on any error
+set -euo pipefail
 
 # set variables
 top_dir="$(pwd)"
@@ -26,6 +26,22 @@ lib_dir="$build_dir/lib"
 # functionality
 progress() { echo "===== " $@; }
 
+setup_build() {
+  progress "Setup build essentials"
+
+  # for GitHub CI/CD
+  if [[ "$os" == "Darwin" ]]; then
+    brew install bison flex autoconf automake
+
+    export PATH="$(brew --prefix bison)/bin:$PATH"
+    export PATH="$(brew --prefix flex)/bin:$PATH"
+    export PATH="$(brew --prefix autoconf)/bin:$PATH"
+    export PATH="$(brew --prefix automake)/bin:$PATH"
+  else
+    yum install flex bison zip -y
+  fi
+}
+
 build_deps() {
 
   build_libsigsegv
@@ -36,7 +52,7 @@ build_deps() {
 
   # # get smt solver
   get_z3
-  get_yices
+  # get_yices
   # # get_cvc5
 
   rm -rf "$build_dir"/lib/*.so*
@@ -63,35 +79,64 @@ make_patch() {
   git diff --no-prefix >$top_dir/src/patch/e-$(git log -1 --pretty=format:"%h").patch
 }
 
+build_all() {
+  setup_build
+  prepare
+  build_deps
+  build_maude_se "$1"
+}
+
 build_maude_se() {
-  build_maude "z3" "--with-yices2=no --with-cvc4=no --with-z3=yes" "-pthread"
-  build_maude "yices" "--with-yices2=yes --with-cvc4=no --with-z3=no" ""
+  build_maude "z3" "--with-yices2=no --with-cvc4=no --with-z3=yes" "-pthread" "$1"
+  # build_maude "yices" "--with-yices2=yes --with-cvc4=no --with-z3=no" ""
   # build_maude yices --with-yices2=yes --with-cvc4=no --with-z3=no
   # build_maude cvc4 --with-yices2=no --with-cvc4=yes --with-z3=no
   # Z3_LIB="$lib_dir/libz3.a" \
 }
 
 build_maude() {
-  local name="$1"              # First argument: build name or tag
-  local config_opts="$2"       # Second argument: configure option bundle (string)
-  local extra_ldflags="$3"     # Third argument: additional LDFLAGS (string)
+  local name="$1"          # First argument: build name or tag
+  local config_opts="$2"   # Second argument: configure option bundle (string)
+  local extra_ldflags="$3" # Third argument: additional LDFLAGS (string)
+  local version="${4#v}"
 
   progress "Build MaudeSE ($name)"
   cp -r "$top_dir/src/Extension" "$maude_dir/src"
-  local out_name="maude-se-$name"
+
+  if [[ "$os" == "Darwin" ]]; then
+    os_n="macosx"
+    if [[ "$arch" == "x86_64" ]]; then
+      arch_n="x86_64"
+    else
+      arch_n="arm64"
+    fi
+  else
+    os_n="manylinux"
+    arch_n="x86_64"
+  fi
+
+  local out_name="maude_se_$name-$version-$os_n-$arch_n"
 
   cd "$maude_dir"
   autoreconf -i
 
+  rm -rf "$maude_dir/Out"
   mkdir -p "$maude_dir/Out"
   cd "$maude_dir/Out"
+
+  CXXFLAGS="-std=c++17 -Wall -O3 -fno-stack-protector"
+  LDFLAGS="-L$lib_dir $extra_ldflags"
+  if [[ "$os" == "Linux" ]]; then
+    CXXFLAGS+=" -static-libstdc++ -static-libgcc"
+    LDFLAGS+=" -static-libstdc++ -static-libgcc"
+  fi
 
   ../configure \
     $config_opts \
     --enable-compiler \
     CPPFLAGS="-I$include_dir" \
-    CXXFLAGS="-g -Wall -O3 -fno-stack-protector -static-libstdc++ -static-libgcc" \
-    LDFLAGS="-static-libstdc++ -static-libgcc -L$lib_dir $extra_ldflags" \
+    CXXFLAGS="$CXXFLAGS" \
+    LDFLAGS="$LDFLAGS" \
     TECLA_LIBS="$lib_dir/libtecla.a $lib_dir/libncursesw.a" \
     GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a"
 
@@ -100,9 +145,14 @@ build_maude() {
   cd src/Main
   mkdir -p "$out_name"
   strip maude
-  cp maude "$out_name/$out_name"
+  cp maude "$out_name/maude-se-$name"
   cp $maude_dir/src/Main/*.maude ./"$out_name"
   cp $top_dir/src/*.maude ./"$out_name"
+
+  zip -r "$out_name.zip" "$out_name"
+
+  mkdir -p "$top_dir/out"
+  mv "$out_name.zip" "$top_dir/out"
 }
 
 # build gmp
@@ -187,8 +237,7 @@ build_ncurses() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
   if [[ "$os" == "Darwin" ]]; then
-    # build_from_brew "libtecla"
-    echo "TODO..."
+    build_from_brew "ncurses"
   else
     progress "Downloading Ncurses 6.1"
     get_gnu "ncurses" "6.1" "tar.gz"
@@ -258,19 +307,19 @@ get_z3() {
   mkdir -p "$build_dir/include"
 
   if [[ "$os" == "Darwin" ]]; then
-    z3_os="osx"
+    z3_os="osx.11.*"
     if [[ "$arch" == "x86_64" ]]; then
       z3_arch="x64"
     else
       z3_arch="arm64"
     fi
   else
-    z3_os="glibc"
+    z3_os="glibc.*2.31"
     z3_arch="x64"
   fi
 
   # get the version that is compatiable with GLIBC 2.31 (Ubuntu 20.04)
-  url=$(git_tag "Z3Prover" "z3" "$z3_arch.*$z3_os.*2.31" "z3-4.13.0")
+  url=$(git_tag "Z3Prover" "z3" "$z3_arch.*$z3_os" "z3-4.13.0")
 
   z3_tmp="$third_party/z3.zip"
   z3_dir=$(get_smt "$url" "$z3_tmp")
@@ -344,9 +393,8 @@ build_from_brew() {
   brew_dir=$(get_brew_pkg $1)
 
   # copy
-  cp $brew_dir/include/* $build_dir/include
-  cp $brew_dir/lib/* $build_dir/lib
-
+  copy_files_only "$brew_dir/include" "$build_dir/include"
+  copy_files_only "$brew_dir/lib" "$build_dir/lib"
 }
 
 get_brew_pkg() {
@@ -399,6 +447,17 @@ git_tag() {
   echo $url
 }
 
+copy_files_only() {
+  local src_dir="$1"
+  local dst_dir="$2"
+
+  for f in "$src_dir"/*; do
+    if [ -f "$f" ]; then
+      cp "$f" "$dst_dir/"
+    fi
+  done
+}
+
 # Follow the below steps
 #  1. prepare
 #  2. build_deps
@@ -412,9 +471,11 @@ git_tag() {
 build_command="$1"
 shift
 case "$build_command" in
+set-env) setup_build "$@" ;;
 prep) prepare "$@" ;;
 deps) build_deps "$@" ;;
 build-maude-se) build_maude_se "$@" ;;
+build) build_all "$@" ;;
 make-patch) make_patch "$@" ;;
 
 *) echo "

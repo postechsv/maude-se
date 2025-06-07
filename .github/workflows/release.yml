@@ -55,6 +55,52 @@ jobs:
         name: py-package-dist-${{ strategy.job-index }}
         path: out/
 
+  manylinux_native:
+    name: Linux native build (manylinux_2_28)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Build MaudeSE
+      env:
+        TAG: ${{ github.ref_name }}
+      run: |
+        docker run --rm \
+          -v $(pwd):/work -w /work \
+          -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+          quay.io/pypa/manylinux_2_28_x86_64 \
+          bash -c "./build/native.sh build \"$TAG\""
+
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-dist-many-linux
+        path: out/
+
+  macos_native:
+    name: MacOS native build 📦
+    strategy:
+      matrix:
+        os: ['macos-latest','macos-13']
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build MaudeSE
+      env:
+        TAG: ${{ github.ref_name }}
+      run: |
+        export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+        ./build/native.sh build "$TAG"
+
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-dist-${{ strategy.job-index }}
+        path: out/
+
   publish-to-pypi:
     name: >-
       Publish Python 🐍 distribution 📦 to PyPI
@@ -93,6 +139,8 @@ jobs:
     needs: 
       - manylinux_2_28
       - macos
+      - manylinux_native
+      - macos_native
 
     permissions:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
@@ -102,15 +150,14 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
-        pattern: py-package-dist-*
+        pattern: '*-dist-*'
         merge-multiple: true
         path: out/
 
     - name: Sign the dists with Sigstore
       uses: sigstore/gh-action-sigstore-python@v3.0.0
       with:
-        inputs: >-
-          ./out/*.whl
+        inputs: ./out/*.whl
 
     - name: Create GitHub Release
       env:
@@ -121,7 +168,7 @@ jobs:
         --repo '${{ github.repository }}'
         --notes ""
 
-    - name: Upload artifact signatures to GitHub Release
+    - name: Upload all artifacts (.whl, .zip) to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
       # Upload to GitHub Release using the `gh` CLI.
@@ -129,7 +176,7 @@ jobs:
       # sigstore-produced signatures and certificates.
       run: >-
         gh release upload
-        '${{ github.ref_name }}' out/*.whl
+        '${{ github.ref_name }}' out/*.whl out/*.zip
         --repo '${{ github.repository }}'
 
 

@@ -3,8 +3,8 @@
 # Settings/Utilities
 # ------------------
 
-# error if an variable is referenced before being set
-set -u
+# failed on any error
+set -euo pipefail
 
 # set variables
 top_dir="$(pwd)"
@@ -106,10 +106,13 @@ prep_build_maude_se() {
   mkdir -p $smc_dir/installdir/lib
 
   cp $smc_dir/release/config.h $smc_dir/build
-  cp $smc_dir/release/libmaude.so $smc_dir/installdir/lib
-  cp $smc_dir/release/libmaude.dylib $smc_dir/installdir/lib
 
-  strip $smc_dir/installdir/lib/*.so # only for Linux
+  if [[ "$os" == "Darwin" ]]; then
+    cp $smc_dir/release/libmaude.dylib $smc_dir/installdir/lib
+  else
+    cp $smc_dir/release/libmaude.so $smc_dir/installdir/lib
+    strip $smc_dir/installdir/lib/*.so # only for Linux
+  fi
 
   cp "$top_dir/src/pyproject.toml" $top_dir/maude-bindings
   cp "$top_dir/README.md" $top_dir/maude-bindings
@@ -126,7 +129,7 @@ build_maude_se() {
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
     CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
-    ARCHFLAGS="-arch $arch" \
+      ARCHFLAGS="-arch $arch" \
       python -m pip wheel -w dist --no-deps .
   )
 
@@ -247,8 +250,8 @@ build_from_brew() {
   brew_dir=$(get_brew_pkg $1)
 
   # copy
-  cp $brew_dir/include/* $build_dir/include
-  cp $brew_dir/lib/* $build_dir/lib
+  copy_files_only "$brew_dir/include" "$build_dir/include"
+  copy_files_only "$brew_dir/lib" "$build_dir/lib"
 
 }
 
@@ -265,6 +268,17 @@ get_gnu() {
   curl -o "$third_party/$libname.$ext" https://ftp.gnu.org/gnu/$name/$libname.$ext
   tar -xvf "$third_party/$libname.$ext" -C "$third_party"
   rm -rf "$third_party/$libname.$ext"
+}
+
+copy_files_only() {
+  local src_dir="$1"
+  local dst_dir="$2"
+
+  for f in "$src_dir"/*; do
+    if [ -f "$f" ]; then
+      cp "$f" "$dst_dir/"
+    fi
+  done
 }
 
 # Follow the below steps
