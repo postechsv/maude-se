@@ -1,0 +1,66 @@
+load smt
+load smt-check
+
+mod GCD is
+  pr INTEGER .
+
+  sorts GcdResult .
+  op gcd : Integer Integer -> GcdResult [ctor] .
+  op return : Integer -> GcdResult [ctor] .
+
+  vars X Y : Integer .
+
+  crl [r1] : gcd(X, Y) => gcd(X - Y, Y) if X > Y = true [nonexec] .
+  crl [r2] : gcd(X, Y) => gcd(X, Y - X) if X < Y = true [nonexec] .
+  rl [r3] : gcd(X, X) => return (X) .
+endm
+
+--- smt-search [1] in GCD : gcd(X:Integer, Y:Integer) =>* return(Z:Integer) such that Z:Integer === 3 and X:Integer + Y:Integer === 27 using QF_LRA .
+--- smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) such that I:Integer > 0 and I:Integer < 9 using QF_LRA .
+
+omod ROBOT is
+  pr REAL .
+
+  class Robot | pos : Vector, vel : Vector, 
+  				acc : Vector, time : Real .
+
+  sort Vector .
+  op [_,_] : Real Real -> Vector [ctor] .
+endom
+
+omod ROBOT-DYNAMICS is
+  pr ROBOT .
+
+  vars O : Oid .
+  vars CONST CONST' : Boolean .
+  vars PX VX AX PY VY AY PX' VX' AX' PY' VY' AY' T T' TAU : Real .
+
+  crl [move]:
+      < O : Robot | pos  : [PX,  PY], vel  : [VX,  VY],
+                    acc  : [AX,  AY], time : T >
+   => < O : Robot | pos  : [PX', PY'], vel  : [VX', VY'],
+                    time : T + TAU >
+   if TAU >= 0/1 and VX' === VX + AX * TAU and VY' === VY + AY * TAU
+  and PX' === 1/2 * AX * TAU * TAU + VX * TAU + PX
+  and PY' === 1/2 * AY * TAU * TAU + VY * TAU + PY = true [nonexec] .
+
+  crl [accX]:
+      < O : Robot | acc : [AX,  AY] >
+   => < O : Robot | acc : [AX', AY] >
+   if AY === 0/1 = true [nonexec] .
+
+  crl [accY]:
+      < O : Robot | acc : [AX, AY] >
+   => < O : Robot | acc : [AX, AY'] >
+   if AX === 0/1 = true [nonexec] .
+
+  op r : -> Oid [ctor] .
+endom
+
+***(
+smt-search [1] in ROBOT-DYNAMICS :
+              < r : Robot | pos : [IPX:Real, IPY:Real], vel : [IVX:Real, IVY:Real], acc : [IAX:Real, IAY:Real], time : CLK:Real >
+          =>* < r : Robot | pos : [NPX:Real, NPY:Real], ATTRSET:AttributeSet > such that NPX:Real === 10/1 and NPY:Real === 10/1 
+          and IPX:Real === 0/1 and IPY:Real === 0/1 and IVX:Real === 0/1 and IVY:Real === 0/1 
+          and IAX:Real === 0/1 and IAY:Real === 0/1 and CLK:Real === 0/1 using QF_NRA .
+)

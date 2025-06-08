@@ -1,0 +1,27 @@
+load smt-search-ex
+
+mod GCD-ANALYSIS is
+  pr GCD .
+  pr BOOL .
+  pr META-SMT-SEARCH .
+
+  vars I J : Integer .
+endm
+
+red metaSmtSearch(upModule('GCD, false), upTerm(gcd(10, I)), upTerm(return(J)), 
+                  upTerm(I < 9 and I > 0) = upTerm((true).Boolean), '*, unbounded, 0, 'QF_LRA) .
+
+mod ROBOT-ANALYSIS is
+  pr ROBOT-DYNAMICS .
+  pr BOOL .
+  pr META-SMT-SEARCH .
+
+  vars IPX IPY IVX IVY IAX IAY CLK NPX NPY : Real .
+  var ATTRSET : AttributeSet .
+endm
+
+red metaSmtSearch(upModule('ROBOT-DYNAMICS, false), 
+      upTerm(< r : Robot | pos : [IPX, IPY], vel : [IVX, IVY], acc : [IAX, IAY], time : CLK >), 
+      upTerm(< r : Robot | pos : [NPX, NPY], ATTRSET >), 
+      upTerm(NPX === 10/1 and NPY === 10/1 and IPX === 0/1 and IPY === 0/1 
+      and IVX === 0/1 and IVY === 0/1 and IAX === 0/1 and IAY === 0/1 and CLK === 0/1) = upTerm((true).Boolean), '*, unbounded, 0, 'QF_NRA) .

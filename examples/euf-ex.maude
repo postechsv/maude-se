@@ -1,0 +1,10 @@
+load smt
+
+fmod EUF-EX is
+  protecting INTEGER .
+  sort A .
+
+  op f : A -> A [metadata "smt euf"] .
+  op _xor_ : Integer Integer -> A [prec 30 metadata "smt euf"] .
+  op _===_ : A A -> Boolean .
+endfm

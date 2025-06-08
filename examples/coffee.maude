@@ -1,0 +1,49 @@
+load smt .
+
+mod COFFEE-MACHINE is
+  protecting REAL .
+
+  sorts State Location .
+
+  vars T X Y X' Y' P1 P2 P3 : Real .
+  vars L L' : Location .
+  var PHI : Boolean .
+
+  ops idle addsugar preparingcoffee cdone : -> Location [ctor] .
+
+  op <_;_;_> <_;_;_> : Location Real Real Real Real Real -> State [ctor] .
+  op [_;_;_] <_;_;_> : Location Real Real Real Real Real -> State [ctor] .
+
+  sort Tuple{Location,Real,Real,Boolean} .
+  op {_,_,_,_} : Location Real Real Boolean -> Tuple{Location,Real,Real,Boolean} [ctor] .
+
+
+  crl [tick] : [ L ; X ; Y ] < P1 ; P2 ; P3 > 
+            => < L ; X + T ; Y + T > < P1 ; P2 ; P3 > 
+   if PHI := tickCond(L, T, X, Y, P2, P3) /\ (T >= 0/1 and PHI) = true [nonexec] .
+
+  op tickCond : Location Real Real Real Real Real -> Boolean .
+  eq tickCond(idle, T, X, Y, P2, P3) = true .
+  eq tickCond(addsugar, T, X, Y, P2, P3) = Y + T <= P2 .
+  eq tickCond(preparingcoffee, T, X, Y, P2, P3) = Y + T <= P3 .
+  eq tickCond(cdone, T, X, Y, P2, P3) = X + T <= 10/1 .
+
+
+  crl [toAddsugar] : < L  ; X  ; Y  > < P1 ; P2 ; P3 > 
+                  => [ L' ; X' ; Y' ] < P1 ; P2 ; P3 >   
+   if {L', X', Y', PHI} := nextAddSugar(L, X, Y, P1, P2) /\ PHI = true .
+
+  op nextAddSugar : Location Real Real Real Real -> Tuple{Location,Real,Real,Boolean} .
+  eq nextAddSugar(idle, X, Y, P1, P2) = {addsugar, 0/1, 0/1, 0/1 <= P2} .
+  eq nextAddSugar(addsugar, X, Y, P1, P2) = {addsugar, 0/1, Y, Y <= P2 and X >= P1} .
+  eq nextAddSugar(cdone, X, Y, P1, P2) = {addsugar, 0/1, 0/1, 0/1 <= P2} .
+
+  crl [toOther] : < L  ; X  ; Y  > < P1 ; P2 ; P3 > 
+               => [ L' ; X' ; Y' ] < P1 ; P2 ; P3 > 
+   if {L', X', Y', PHI} := nextOther(L, X, Y, P2, P3) /\ PHI = true .
+
+  op nextOther : Location Real Real Real Real -> Tuple{Location,Real,Real,Boolean} .
+  eq nextOther(addsugar, X, Y, P2, P3) = {preparingcoffee, X, Y, Y <= P3 and Y === P2} .
+  eq nextOther(preparingcoffee, X, Y, P2, P3) = {cdone, 0/1, Y, 0/1 <= 10/1 and Y === P3} .
+  eq nextOther(cdone, X, Y, P2, P3) = {idle, X, Y, X === 10/1} .
+endm

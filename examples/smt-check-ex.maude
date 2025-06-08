@@ -1,0 +1,41 @@
+load smt
+load smt-check
+
+fmod SIMPLE is
+  pr REAL-INTEGER .
+  pr META-SMT-CHECK .
+endfm
+
+--- check X:Integer > 4 using QF_LRA .
+
+fmod EUF is
+  pr BOOLEAN .
+
+  sort A .
+
+  op _===_ : A A -> Boolean .
+  op f : A -> A [ctor metadata "smt euf"] .
+endfm
+
+--- check f(f(X:A)) === X:A and f(X:A) === Y:A and not (X:A === Y:A) using QF_UF .
+
+fmod ARRAY is
+  pr REAL-INTEGER .
+
+  sort Array{Integer,Integer} .
+
+  op _===_ : Array{Integer,Integer} Array{Integer,Integer} -> Boolean .
+  op select : Array{Integer,Integer} Integer -> Integer [metadata "smt array:select"] .
+  op _[_] : Array{Integer,Integer} Integer -> Integer [metadata "smt array:select"] .
+  op store : Array{Integer,Integer} Integer Integer -> Array{Integer,Integer} [metadata "smt array:store"] . 
+endfm
+
+--- check select(A1:Array{Integer,Integer}, X:Integer) === X:Integer and store(A1:Array{Integer,Integer}, X:Integer, Y:Integer) === A1:Array{Integer,Integer} using QF_AUFLIA .
+
+fmod EUF-XOR is
+  pr INTEGER .
+  op _xor_ : Integer Integer -> Integer [metadata "smt euf"] .
+endfm
+
+--- check not(I:Integer === 0) and 0 <= I:Integer and 0 <= (I:Integer xor 255) and I:Integer < 256 and not (0 <= (I:Integer xor 255)) using QF_UFLIA .
+--- check 0 <= (I:Integer xor 255) using QF_UFLIA .

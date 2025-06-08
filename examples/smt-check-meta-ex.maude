@@ -1,0 +1,40 @@
+load smt-check-ex
+
+select SIMPLE .
+
+check X:Integer > 4 . --- testing basic command
+red metaSmtCheck(upModule('SIMPLE, false), upTerm(X:Integer > 4), 'QF_LRA, true) .
+red metaCheck(upModule('INTEGER, false), upTerm(X:Integer > 4)) .
+red metaSmtCheck(upModule('INTEGER, false), upTerm(X:Integer > 4), 'QF_LRA, true) .
+red metaSmtCheck(upModule('REAL, false), upTerm(X:Real > 4/3), 'QF_LRA, true) .
+red metaSmtCheck(upModule('BOOLEAN, false), upTerm(B:Boolean), 'QF_LRA, true) .
+
+fmod EUF-CHECK is
+  pr EUF .
+  pr META-SMT-CHECK .
+
+  vars X Y : A .
+endfm
+
+red metaSmtCheck(upModule('EUF, false), upTerm(f(f(X)) === X and f(X) === Y and not (X === Y)), 'QF_UF) .
+
+fmod ARRAY-CHECK is
+  pr ARRAY .
+  pr META-SMT-CHECK .
+
+  var A1 : Array{Integer,Integer} .
+  vars X Y : Integer .
+endfm
+
+red metaSmtCheck(upModule('ARRAY, false), upTerm(select(A1, X) === X and store(A1, X, Y) === A1), 'QF_AUFLIA) .
+red metaSmtCheck(upModule('ARRAY, false), upTerm(A1[X] === X and store(A1, X, Y) === A1), 'QF_AUFLIA) .
+
+fmod EUF-XOR-CHECK is
+  pr EUF-XOR .
+  pr META-SMT-CHECK .
+  var I : Integer .
+endfm
+
+red metaSmtCheck(upModule('EUF-XOR, false), upTerm(not(I === 0) and 0 <= I and 0 <= (I xor 255) and I < 256 and not (0 <= (I xor 255))), 'QF_UFLIA) .
+red metaSmtCheck(upModule('EUF-XOR, false), upTerm(0 <= (I xor 255)), 'QF_UFLIA) .
+red metaSmtCheck(upModule('EUF-XOR, false), upTerm(0 <= (I xor 255)), 'QF_UFLIA, true) .

@@ -11,3 +11,5 @@ maude-bindings/
 Maude/
 out/
 __pycache__/
+docs/build/
+docs/source/assets/
