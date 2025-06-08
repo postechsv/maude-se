@@ -8,6 +8,7 @@
 #include "cacheableState.hh"
 #include "positionState.hh"
 #include "rewritingContext.hh"
+#include "SMT_EngineWrapper.hh"
 #include <map>
 
 class RewriteSmtSearchState : public CacheableState, public PositionState
@@ -35,6 +36,7 @@ public:
   //	UNBOUNDED to indicate no bound.
   //
   RewriteSmtSearchState(RewritingContext *context,
+                        SMT_EngineWrapper *engine,
                         FreshVariableGenerator *freshVariableGenerator,
                         const mpz_class &avoidVariableNumber,
                         int label = UNDEFINED,
@@ -93,6 +95,8 @@ private:
   const int label;
   const bool withExtension;
   int ruleIndex;
+
+  SMT_EngineWrapper *engine;
 };
 
 inline const mpz_class &

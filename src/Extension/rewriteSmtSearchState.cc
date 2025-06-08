@@ -32,13 +32,14 @@
 
 RewriteSmtSearchState::RewriteSmtSearchState(
     RewritingContext *context,
+    SMT_EngineWrapper *engine,
     FreshVariableGenerator *freshVariableGenerator,
     const mpz_class &avoidVariableNumber,
     int label,
     int flags,
     int minDepth,
     int maxDepth)
-    : freshVariableGenerator(freshVariableGenerator), avoidVariableNumber(avoidVariableNumber),
+    : freshVariableGenerator(freshVariableGenerator), engine(engine), avoidVariableNumber(avoidVariableNumber),
       label(label), withExtension(maxDepth >= 0), PositionState(context->root(), flags | RESPECT_FROZEN, minDepth, maxDepth),
       context(context)
 {
@@ -212,16 +213,8 @@ bool RewriteSmtSearchState::initSubstitution(const VariableInfo &varInfo)
       if (unboundSet.contains(k))
       {
         ++newVariableNumber;
-        Symbol *baseSymbol = varInfo.index2Variable(k)->symbol();
-
-        string newNameString = "%%ubVar$";
-        char *name = mpz_get_str(0, 10, newVariableNumber.get_mpz_t());
-        newNameString += name;
-        free(name);
-        int newId = Token::encode(newNameString.c_str());
-        
-        DagNode *v = new VariableDagNode(baseSymbol, newId, NONE);
-        v->computeTrueSort(*context);
+        DagNode *v = engine->makeFreshVariable(varInfo.index2Variable(k), newVariableNumber);
+        // v->computeTrueSort(*context);
         context->bind(k, v);
         Verbose("      unbound Variable " << varInfo.index2Variable(k) << " is bound to " << (DagNode *)v);
       }

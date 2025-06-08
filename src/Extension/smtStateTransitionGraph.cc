@@ -19,6 +19,7 @@
 //	interface class definitions
 #include "symbol.hh"
 #include "dagNode.hh"
+#include "variableDagNode.hh"
 #include "rawDagArgumentIterator.hh"
 #include "term.hh"
 #include "lhsAutomaton.hh"
@@ -108,7 +109,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 		Verbose("  make a new rewrite state with " << canonicalStateDag);
 
 		RewritingContext *newContext = initial->makeSubcontext(canonicalStateDag);
-		n->rewriteState = new RewriteSmtSearchState(newContext, freshVariableGenerator,
+		n->rewriteState = new RewriteSmtSearchState(newContext, engine, freshVariableGenerator,
 													n->avoidVariableNumber,
 													NONE,
 													RewriteSmtSearchState::GC_CONTEXT |

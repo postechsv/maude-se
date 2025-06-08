@@ -253,6 +253,8 @@ omod MAUDE-SE-META-INTERPRETER is
   eq error(4) = { "Should execute smt-search first."      } .
   eq error(5) = { "Failed to parse term for smt-search."  } .
   eq error(6) = { "Failed to parse term for check."       } .
+  eq error(7) = { "No model exists."                      } .
+  eq error(8) = { "No path exists."                       } .
   --- ...
 
   op error : String -> Error .
@@ -424,6 +426,9 @@ omod MAUDE-SE-META-INTERPRETER is
 
   rl < O : MaudeSE | check-history : [MN, LO, RES], status : parse-cmd, cmd : 'show`model`..Command >
   => < O : MaudeSE | status : wait > write(stdout, O, toString(upModule(MN, false), RES)) .
+
+  rl < O : MaudeSE | check-history : null, status : parse-cmd, cmd : 'show`model`..Command >
+  => < O : MaudeSE | error-msg : error(7), status : error > .
 
   op toString : Module SmtCheckResult -> String .
   eq toString(MO, unknown) = "No assignment.\n\n" .
@@ -641,18 +646,18 @@ omod MAUDE-SE-META-INTERPRETER is
   => < O : MaudeSE | status : smt-search-path-concrete > 
     reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, BOUND, mkSolNum(N), LO, B))) .
 
-  rl < O : MaudeSE | mi : MI, status : smt-search-path-concrete,
+  crl < O : MaudeSE | mi : MI, status : smt-search-path-concrete,
                      search-history : [N, BOUND, MN, KEY, B, LO]:: < T > < T' > < T'' > :: [SRES] > reducedTerm(O, MI, C, PT, TY)
-  => < O : MaudeSE | status : wait > write(stdout, O, toString(upModule(MN, false), downTerm(PT, (failure).Trace2Result?), false) + "\n") .
+  => < O : MaudeSE | status : wait > write(stdout, O, toString(upModule(MN, false), downTerm(PT, (failure).Trace2Result?), false) + "\n") if PT =/= 'failure.Trace2Result? .
 
   rl < O : MaudeSE | mi : MI, status : parse-cmd, cmd : 'show`smt-path`symbolic`..Command,
                      search-history : [N, BOUND, MN, KEY, B, LO]:: < T > < T' > < T'' > :: [SRES] >
   => < O : MaudeSE | status : smt-search-path-symbolic > 
     reduceTerm(MI, O, 'MAUDE-SE-PRELUDE, upTerm(metaSmtSearchPath(upModule(MN, false), T, T', T'' = 'true.Boolean, '*, BOUND, mkSolNum(N), LO, B))) .
 
-  rl < O : MaudeSE | mi : MI, status : smt-search-path-symbolic,
+  crl < O : MaudeSE | mi : MI, status : smt-search-path-symbolic,
                      search-history : [N, BOUND, MN, KEY, B, LO]:: < T > < T' > < T'' > :: [SRES] > reducedTerm(O, MI, C, PT, TY)
-  => < O : MaudeSE | status : wait > write(stdout, O, toString(upModule(MN, false), downTerm(PT, (failure).Trace2Result?), true) + "\n") .
+  => < O : MaudeSE | status : wait > write(stdout, O, toString(upModule(MN, false), downTerm(PT, (failure).Trace2Result?), true) + "\n") if PT =/= 'failure.Trace2Result? .
 
 --- error
 
@@ -662,8 +667,14 @@ omod MAUDE-SE-META-INTERPRETER is
   rl < O : MaudeSE | mi : MI, status : parse-cmd, cmd : 'show`smt-path`symbolic`..Command, search-history : null >
   => < O : MaudeSE | status : error, error-msg : error(4), cmd : noCmd, in : nil > .
 
+  rl < O : MaudeSE | mi : MI, status : smt-search-path-concrete > reducedTerm(O, MI, C, 'failure.Trace2Result?, 'Trace2Result?)
+  => < O : MaudeSE | status : error, error-msg : error(8) > .
+
+  rl < O : MaudeSE | mi : MI, status : smt-search-path-symbolic > reducedTerm(O, MI, C, 'failure.Trace2Result?, 'Trace2Result?)
+  => < O : MaudeSE | status : error, error-msg : error(8) > .
+
   op toString : Module Trace2Result? Bool -> String .
-  eq toString(MO, failure, B) = "Failed to get path.\n\n" .
+  eq toString(MO, failure, B) = "Failed to get path.\n" . --- outdated
   eq toString(MO, {TR, SUBS}, false) = toString(MO, TR, SUBS) .
 
   op toString : Module Trace2 Substitution -> String .
