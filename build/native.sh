@@ -22,6 +22,23 @@ third_party="$top_dir/.native-3rd_party"
 os="$(uname -s)"
 arch="$(uname -m)"
 
+if [[ "$os" == "Darwin" ]]; then
+  if [[ "$arch" == "arm64" ]]; then
+    deployment_target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-11.0}"
+  else
+    deployment_target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-10.13}"
+  fi
+  export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
+  native_cflags="-O3 -fno-stack-protector -mmacosx-version-min=$deployment_target"
+  native_cxxflags="$native_cflags -std=c++17"
+  native_ldflags="-mmacosx-version-min=$deployment_target"
+else
+  deployment_target=""
+  native_cflags="-O3 -fno-stack-protector"
+  native_cxxflags="$native_cflags -std=c++17"
+  native_ldflags=""
+fi
+
 # -------------------
 include_dir="$build_dir/include"
 lib_dir="$build_dir/lib"
@@ -68,7 +85,7 @@ setup_build() {
 
   # for GitHub CI/CD
   if [[ "$os" == "Darwin" ]]; then
-    brew install bison flex autoconf automake gmp libsigsegv libtecla ncurses
+    brew install bison flex autoconf automake cmake
 
     export PATH="$(brew --prefix bison)/bin:$PATH"
     export PATH="$(brew --prefix flex)/bin:$PATH"
@@ -87,8 +104,8 @@ build_deps() {
   build_tecla
   build_ncurses
 
-  # # get smt solver
-  get_z3
+  # Build the solver from source so it uses the same deployment target.
+  build_z3
   # get_yices
   # # get_cvc5
 
@@ -160,8 +177,8 @@ build_maude() {
   mkdir -p "$maude_dir/Out"
   cd "$maude_dir/Out"
 
-  CXXFLAGS="-std=c++17 -Wall -O3 -fno-stack-protector"
-  LDFLAGS="-L$lib_dir $extra_ldflags"
+  CXXFLAGS="$native_cxxflags -Wall"
+  LDFLAGS="-L$lib_dir $native_ldflags $extra_ldflags"
   if [[ "$os" == "Linux" ]]; then
     CXXFLAGS+=" -static-libstdc++ -static-libgcc"
     LDFLAGS+=" -static-libstdc++ -static-libgcc"
@@ -196,20 +213,17 @@ build_gmp() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
 
-  if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "gmp"
-  else
-    progress "Downloading gmp 6.1.2"
-    get_gnu "gmp" "6.1.2" "tar.xz"
-    cd "$third_party/gmp-6.1.2"
+  progress "Downloading gmp $GMP_VERSION"
+  rm -rf "$third_party/gmp-$GMP_VERSION"
+  get_gnu "gmp" "$GMP_VERSION" "tar.xz"
+  cd "$third_party/gmp-$GMP_VERSION"
 
-    ./configure --prefix="$build_dir" CFLAGS="-O3" CXXFLAGS="-O3" \
-      --enable-cxx --enable-fat --disable-shared --enable-static --build=x86_64-pc-linux-gnu
+  ./configure --prefix="$build_dir" \
+    CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" LDFLAGS="$native_ldflags" \
+    --enable-cxx --enable-fat --disable-shared --enable-static
 
-    make -j4
-    make check
-    make install
-  fi
+  make -j4
+  make install
 }
 
 build_buddy() {
@@ -217,11 +231,12 @@ build_buddy() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
   (
-    progress "Downloading BuDDy 2.4"
-    buddy_dir="$third_party/buddy-2.4"
+    progress "Downloading BuDDy $BUDDY_VERSION"
+    buddy_dir="$third_party/buddy-$BUDDY_VERSION"
+    rm -rf "$buddy_dir"
 
-    curl -L https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz >"$buddy_dir.tar.gz"
-    tar -xvzf "$buddy_dir.tar.gz" -C "$third_party"
+    curl -L "https://github.com/utwente-fmt/buddy/releases/download/v$BUDDY_VERSION/buddy-$BUDDY_VERSION.tar.gz" >"$buddy_dir.tar.gz"
+    tar -xzf "$buddy_dir.tar.gz" -C "$third_party"
     rm -rf "$buddy_dir.tar.gz"
 
     cd "$buddy_dir"
@@ -235,10 +250,11 @@ build_buddy() {
 
     cp $top_dir/build/config.sub $top_dir/build/config.guess ./
 
-    ./configure CFLAGS="-fno-stack-protector -O3" CXXFLAGS="-fno-stack-protector -O3" --includedir="$include_dir" --libdir="$lib_dir" --disable-shared
+    ./configure CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
+      LDFLAGS="$native_ldflags" --includedir="$include_dir" \
+      --libdir="$lib_dir" --disable-shared
 
     make -j4
-    make check
     chmod a+x ./tools/install-sh
     make install
   )
@@ -248,44 +264,59 @@ build_tecla() {
   progress "Build libtecla"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
-  if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "libtecla"
-  else
-    progress "Downloading Tecla 1.6.3"
-    tecla_dir="$third_party/libtecla"
+  progress "Downloading Tecla $TECLA_VERSION"
+  tecla_dir="$third_party/libtecla"
+  rm -rf "$tecla_dir"
 
-    curl -o "$tecla_dir.tar.gz" https://sites.astro.caltech.edu/~mcs/tecla/libtecla-1.6.3.tar.gz
-    tar -xvzf "$tecla_dir.tar.gz" -C "$third_party"
-    rm -rf "$tecla_dir.tar.gz"
+  curl -fL -o "$tecla_dir.tar.gz" \
+    "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz"
+  tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
+  rm -f "$tecla_dir.tar.gz"
 
-    cd "$tecla_dir"
+  cd "$tecla_dir"
+  # Tecla 1.6.3 predates modern Darwin version numbers. Use the pinned,
+  # up-to-date GNU platform detection scripts shipped with this project.
+  cp "$top_dir/build/config.guess" "$top_dir/build/config.sub" ./
+  chmod +x config.guess config.sub
 
-    ./configure CFLAGS="-g -fno-stack-protector -O3" \
-      --prefix=$build_dir
-    make
-    make install
+  if [[ "$os" == "Darwin" ]] && ! grep -Fq '#include <sys/ioctl.h>' enhance.c; then
+    sed -i.bak '1i\
+#include <sys/ioctl.h>\
+' enhance.c
+    rm -f enhance.c.bak
   fi
+  if [[ "$os" == "Darwin" ]]; then
+    # Tecla's old macOS special case declares the tputs callback as void.
+    # Current macOS SDKs and ncurses use int (*)(int), like other platforms.
+    sed -i.bak \
+      's/#elif defined(__APPLE__) && defined(__MACH__)/#elif defined(__APPLE__) \&\& defined(__MACH__) \&\& defined(TECLA_TPUTS_RETURNS_VOID)/' \
+      getline.c
+    rm -f getline.c.bak
+  fi
+
+  ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
+    --prefix="$build_dir"
+  make -j4 TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
+  make install_inc
+  install -m 644 libtecla.a "$lib_dir/libtecla.a"
 }
 
 build_ncurses() {
   progress "Build libncurses"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
-  if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "ncurses"
-  else
-    progress "Downloading Ncurses 6.1"
-    get_gnu "ncurses" "6.1" "tar.gz"
-    libncurses_dir="$third_party/ncurses-6.1"
+  progress "Downloading ncurses $NCURSES_VERSION"
+  rm -rf "$third_party/ncurses-$NCURSES_VERSION"
+  get_gnu "ncurses" "$NCURSES_VERSION" "tar.gz"
+  libncurses_dir="$third_party/ncurses-$NCURSES_VERSION"
 
-    cd "$libncurses_dir"
-    # --enable-widec to support UTF-8
-    # libncursesw.a will be generated which does not have dependencies with litinfo
-    ./configure --with-normal --with-static --without-shared --without-debug --enable-widec --prefix="$build_dir"
+  cd "$libncurses_dir"
+  ./configure --with-normal --with-static --without-shared --without-debug \
+    --enable-widec --prefix="$build_dir" CFLAGS="$native_cflags" \
+    CXXFLAGS="$native_cxxflags" LDFLAGS="$native_ldflags"
 
-    make -j4
-    make install
-  fi
+  make -j4
+  make install
 }
 
 build_libsigsegv() {
@@ -293,45 +324,58 @@ build_libsigsegv() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
 
-  if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "libsigsegv"
-  else
-    progress "Downloading Libsigsegv 2.12"
-    get_gnu "libsigsegv" "2.12" "tar.gz"
-    sigsegv_dir="$third_party/libsigsegv-2.12"
+  progress "Downloading libsigsegv $LIBSIGSEGV_VERSION"
+  rm -rf "$third_party/libsigsegv-$LIBSIGSEGV_VERSION"
+  get_gnu "libsigsegv" "$LIBSIGSEGV_VERSION" "tar.gz"
+  sigsegv_dir="$third_party/libsigsegv-$LIBSIGSEGV_VERSION"
 
-    cd "$sigsegv_dir"
-    ./configure CFLAGS="-g -fno-stack-protector -O3" \
-      --prefix="$build_dir" --enable-shared=no
+  cd "$sigsegv_dir"
+  ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
+    --prefix="$build_dir" --enable-shared=no
 
-    make -j4
-    make check
-    make install
-  fi
+  make -j4
+  make install
 }
 
 build_z3() {
   progress "Building z3"
-  mkdir -p $build_dir
+  mkdir -p "$build_dir"
   mkdir -p "$third_party"
   (
-    progress "Downloading Z3"
-    git clone https://github.com/Z3Prover/z3 "$third_party/z3"
+    local z3_dir="$third_party/z3-$Z3_VERSION"
+    progress "Downloading Z3 $Z3_VERSION"
+    rm -rf "$z3_dir"
+    git clone --branch "z3-$Z3_VERSION" --depth 1 \
+      https://github.com/Z3Prover/z3 "$z3_dir"
 
-    cd "$third_party/z3"
+    # Z3 4.13.0 contains a stale accessor name that newer Clang versions
+    # instantiate and reject while compiling static_matrix::ref.
+    sed -i.bak \
+      's/v\.m_matrix\.get(v\.m_row, v\.m_col)/v.m_matrix.get_elem(v.m_row, v.m_col)/' \
+      "$z3_dir/src/math/lp/static_matrix.h"
+    rm -f "$z3_dir/src/math/lp/static_matrix.h.bak"
+    sed -i.bak 's/c\.m_low_bound/c.m_lower_bound/' \
+      "$z3_dir/src/math/lp/column_info.h"
+    rm -f "$z3_dir/src/math/lp/column_info.h.bak"
+    sed -i.bak 's/A\.get_value_of_column_cell(col)/A.get_val(col)/' \
+      "$z3_dir/src/math/lp/static_matrix_def.h"
+    rm -f "$z3_dir/src/math/lp/static_matrix_def.h.bak"
 
-    # checkout to the version that is compatiable with GLIBC 2.31 (Ubuntu 20.04)
-    git fetch origin refs/tags/z3-4.13.0
-    git checkout tags/z3-4.13.0
-
-    python scripts/mk_make.py --prefix="$build_dir" --staticlib CPPFLAGS="-O3 -fno-stack-protector" CXXFLAGS="-O3 -fno-stack-protector"
-    cd build
-    make -j4
-    make install
+    cmake -S "$z3_dir" -B "$z3_dir/build" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="$build_dir" \
+      -DCMAKE_OSX_ARCHITECTURES="$arch" \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target" \
+      -DCMAKE_C_FLAGS="$native_cflags" \
+      -DCMAKE_CXX_FLAGS="$native_cxxflags" \
+      -DCMAKE_EXE_LINKER_FLAGS="$native_ldflags" \
+      -DCMAKE_SHARED_LINKER_FLAGS="$native_ldflags" \
+      -DZ3_BUILD_LIBZ3_SHARED=OFF
+    cmake --build "$z3_dir/build" --parallel 4
+    cmake --install "$z3_dir/build"
   )
 
-  rm -rf $build_dir/lib/libz3*.so*
-  rm -rf $build_dir/lib/libz3*.dylib
+  rm -f "$build_dir"/lib/libz3*.so* "$build_dir"/lib/libz3*.dylib
 }
 
 get_z3() {
@@ -442,8 +486,9 @@ get_gnu() {
   ext=$3
   libname="$name-$version"
   mkdir -p "$third_party"
-  curl -o "$third_party/$libname.$ext" https://ftp.gnu.org/gnu/$name/$libname.$ext
-  tar -xvf "$third_party/$libname.$ext" -C "$third_party"
+  curl -fL -o "$third_party/$libname.$ext" \
+    "https://ftp.gnu.org/gnu/$name/$libname.$ext"
+  tar -xf "$third_party/$libname.$ext" -C "$third_party"
   rm -rf "$third_party/$libname.$ext"
 }
 

@@ -52,16 +52,24 @@ To include the additional standalone-build prerequisites in the check, run:
 ```
 
 The macOS build requires Xcode Command Line Tools, Python 3.8 or newer, and
-Homebrew. The required Homebrew packages are:
+Homebrew. Wheel builds use these Homebrew packages:
 
 - `bison`
 - `flex`
 - `gmp`
 - `libsigsegv`
 - `libtecla`
+
+Standalone builds use Homebrew only for build tools:
+
+- `bison`
+- `flex`
 - `autoconf`
 - `automake`
-- `ncurses`
+- `cmake`
+
+The standalone libraries—Z3, GMP, BuDDy, Tecla, ncurses, and libsigsegv—are
+built from pinned source versions instead of Homebrew bottles.
 
 Install missing Homebrew packages explicitly with:
 
@@ -132,6 +140,9 @@ patch, builds its native libraries, and creates
 of the wheel and does not require a Python virtual environment. It keeps the
 official Maude feature defaults and adds the MaudeSE SMT extension with a
 statically linked Z3; the experimental integrated compiler remains disabled.
+On macOS, all native dependencies use the same deployment target: 10.13 for
+x86_64 and 11.0 for arm64. Override it with
+`MAUDE_SE_MACOS_DEPLOYMENT_TARGET` when required.
 
 `test-standalone` does not rebuild. It extracts the existing ZIP into a
 temporary directory, runs a calculation plus Z3 SAT and UNSAT checks through

@@ -104,10 +104,10 @@ doctor() {
 
   if have_command brew; then
     installed_formulae="$(brew list --formula -1 2>/dev/null || true)"
-    local formulae=(bison flex gmp libsigsegv libtecla)
+    local formulae=(bison flex)
     if [[ "$profile" == "standalone" ]]; then
-      formulae+=(autoconf automake ncurses)
-      for command_name in autoreconf zip unzip; do
+      formulae+=(autoconf automake cmake)
+      for command_name in autoreconf cmake zip unzip; do
         if have_command "$command_name"; then
           printf 'ok      %s\n' "$command_name"
         else
@@ -115,6 +115,8 @@ doctor() {
           failed=1
         fi
       done
+    else
+      formulae+=(gmp libsigsegv libtecla)
     fi
     for formula in "${formulae[@]}"; do
       if grep -Fxq "$formula" <<<"$installed_formulae"; then
@@ -139,7 +141,7 @@ install_deps() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "install-deps supports macOS only"
   have_command brew || fail "Homebrew is required: https://brew.sh"
 
-  brew install bison flex gmp libsigsegv libtecla autoconf automake ncurses
+  brew install bison flex gmp libsigsegv libtecla autoconf automake cmake ncurses
   note "Homebrew dependencies are installed"
 }
 
