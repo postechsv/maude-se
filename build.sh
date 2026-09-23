@@ -10,6 +10,9 @@ set -u
 top_dir="$(pwd)"
 src_dir="$(pwd)/src"
 
+# shellcheck source=build/versions.env
+source "$top_dir/build/versions.env"
+
 # maudesmc
 smc_dir="maude-bindings/subprojects/maudesmc"
 
@@ -89,18 +92,14 @@ build_deps() {
 patch_src() {
   progress "Apply patchings"
   maude_src_dir="$top_dir/maude-bindings"
-  patch_src_dir="$top_dir/src/patch"
 
-  cd "$maude_src_dir/"
-  (
-    patch -p0 < $top_dir/src/patch/b-*.patch
-  )
+  git -C "$maude_src_dir" apply -p0 --check "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
+  git -C "$maude_src_dir" apply -p0 "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
 
-  cd "$maude_src_dir/subprojects/maudesmc/"
-  (
-    patch -p0 < $top_dir/src/patch/c-*.patch
-    patch -p0 < $top_dir/src/patch/d-*.patch
-  )
+  git -C "$smc_dir" apply -p0 --check "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
+  git -C "$smc_dir" apply -p0 --check "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
+  git -C "$smc_dir" apply -p0 "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
+  git -C "$smc_dir" apply -p0 "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
 }
 
 mk_patch() {
@@ -121,10 +120,9 @@ mk_patch() {
 prepare() {
   pip install scikit-build ninja cmake meson===1.4.1 swig build
   git clone https://github.com/fadoss/maude-bindings.git
-
-  # currently use specific version
-  cd maude-bindings
-  git submodule update --init
+  git -C "$top_dir/maude-bindings" checkout --detach "$MAUDE_BINDINGS_REF"
+  git -C "$top_dir/maude-bindings" submodule update --init
+  git -C "$smc_dir" checkout --detach "$MAUDESMC_REF"
 }
 
 build_maude_lib() {

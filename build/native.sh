@@ -9,6 +9,9 @@ set -euo pipefail
 # set variables
 top_dir="$(pwd)"
 
+# shellcheck source=versions.env
+source "$top_dir/build/versions.env"
+
 maude_dir="$top_dir/Maude"
 
 build_dir="$top_dir/.native-build"
@@ -61,15 +64,15 @@ build_deps() {
 
 prepare() {
   git clone https://github.com/maude-lang/Maude.git
-  cd Maude
+  git -C "$maude_dir" checkout --detach "$MAUDE_REF"
   patch_maude
 }
 
 patch_maude() {
   progress "Apply patching"
 
-  cd "$top_dir/Maude"
-  patch -p0 <$top_dir/src/patch/e-*.patch
+  git -C "$maude_dir" apply -p0 --check "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
+  git -C "$maude_dir" apply -p0 "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
 }
 
 make_patch() {
