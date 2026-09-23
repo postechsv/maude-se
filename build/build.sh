@@ -55,9 +55,9 @@ apply_patch_once() {
   local dir="$1"
   local patch_file="$2"
 
-  if git -C "$dir" apply -p0 --check "$patch_file"; then
+  if git -C "$dir" apply -p0 --check "$patch_file" 2>/dev/null; then
     git -C "$dir" apply -p0 "$patch_file"
-  elif git -C "$dir" apply -p0 --reverse --check "$patch_file"; then
+  elif git -C "$dir" apply -p0 --reverse --check "$patch_file" 2>/dev/null; then
     progress "Patch already applied: $(basename "$patch_file")"
   else
     echo "error: patch does not apply cleanly: $patch_file" >&2

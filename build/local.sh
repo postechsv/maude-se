@@ -106,6 +106,8 @@ ensure_build_venv() {
   fi
 
   "$build_venv/bin/python" -m pip install --disable-pip-version-check \
+    "pip==25.0.1"
+  "$build_venv/bin/python" -m pip install --disable-pip-version-check \
     -r "$top_dir/build/requirements.txt"
 
   export PATH="$build_venv/bin:$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
@@ -138,11 +140,14 @@ test_wheel() {
   note "creating isolated smoke-test environment"
   python3 -m venv --clear "$test_venv"
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
-    "${wheels[0]}" z3-solver
+    "pip==25.0.1"
+  "$test_venv/bin/python" -m pip install --disable-pip-version-check \
+    "${wheels[0]}" "pyyaml==6.0.3" "z3-solver==4.13.0.0"
 
   "$test_venv/bin/python" -c 'import maudeSE'
   "$test_venv/bin/maude-se" --help >/dev/null
-  "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
+  printf 'quit\n' | \
+    "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
   note "wheel smoke tests passed"
 }
 
