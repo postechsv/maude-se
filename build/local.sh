@@ -115,8 +115,6 @@ doctor() {
           failed=1
         fi
       done
-    else
-      formulae+=(gmp libsigsegv libtecla)
     fi
     for formula in "${formulae[@]}"; do
       if grep -Fxq "$formula" <<<"$installed_formulae"; then
@@ -141,7 +139,7 @@ install_deps() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "install-deps supports macOS only"
   have_command brew || fail "Homebrew is required: https://brew.sh"
 
-  brew install bison flex gmp libsigsegv libtecla autoconf automake cmake ncurses
+  brew install bison flex autoconf automake cmake
   note "Homebrew dependencies are installed"
 }
 
@@ -230,6 +228,7 @@ test_standalone() {
 
 test_wheel() {
   local wheels=("$top_dir"/out/*.whl)
+  local output
 
   if [[ ! -e "${wheels[0]}" ]]; then
     fail "no wheel found in $top_dir/out; run ./build.sh wheel first"
@@ -243,12 +242,16 @@ test_wheel() {
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
     "pip==25.0.1"
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
-    "${wheels[0]}" "pyyaml==6.0.3" "z3-solver==4.13.0.0"
+    "${wheels[0]}"
 
   "$test_venv/bin/python" -c 'import maudeSE'
   "$test_venv/bin/maude-se" --help >/dev/null
-  printf 'quit\n' | \
-    "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
+  output="$(
+    printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\ncheck in SIMPLE : X:Integer > 4 and X:Integer < 3 using QF_LRA .\nquit\n' | \
+      "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
+  )"
+  grep -Fq 'result: sat' <<<"$output" || fail "wheel Z3 SAT smoke test failed"
+  grep -Fq 'result: unsat' <<<"$output" || fail "wheel Z3 UNSAT smoke test failed"
   while IFS= read -r binary; do
     audit_macos_linkage "$binary"
   done < <(find "$test_venv" -type f \( -name '*.so' -o -name '*.dylib' \) \

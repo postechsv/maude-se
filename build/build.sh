@@ -24,6 +24,28 @@ third_party="$top_dir/.3rd_party"
 os="$(uname -s)"
 arch="$(uname -m)"
 
+if [[ "$os" == "Darwin" ]]; then
+  if [[ "$arch" == "arm64" ]]; then
+    deployment_target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-11.0}"
+  else
+    deployment_target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-10.13}"
+  fi
+  export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
+  native_cflags="-O3 -fPIC -fno-stack-protector -mmacosx-version-min=$deployment_target"
+  native_cxxflags="$native_cflags -std=c++17"
+  native_ldflags="-mmacosx-version-min=$deployment_target"
+  native_meson_cflags="$native_cflags"
+  if [[ "$arch" == "arm64" ]]; then
+    native_meson_cflags+=" -mno-thumb"
+  fi
+else
+  deployment_target=""
+  native_cflags="-O3 -fPIC -fno-stack-protector"
+  native_cxxflags="$native_cflags -std=c++17"
+  native_ldflags=""
+  native_meson_cflags="$native_cflags"
+fi
+
 # -------------------
 include_dir="$build_dir/include"
 lib_dir="$build_dir/lib"
@@ -129,16 +151,16 @@ build_maude() {
     $arch_opt meson setup release --buildtype=release \
       -Db_lto=true \
       -Dstrip=true \
-      -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
+      -Dcpp_args="$native_cxxflags -fstrict-aliasing" \
       -Dextra-lib-dirs="$build_dir/lib" \
       -Dextra-include-dirs="$build_dir/include, $py_inc, $top_dir/maude-bindings/src" \
       -Dstatic-libs='buddy, gmp, sigsegv' \
       -Dwith-smt='pysmt' \
       -Dwith-ltsmin=disabled \
       -Dwith-simaude=disabled \
-      -Dc_args='-mno-thumb' \
+      -Dc_args="$native_meson_cflags" \
       -Dc_link_args="-Wl,--export-dynamic" \
-      -Dcpp_link_args="-Wl,-x -u $undef_symb -L"$build_dir"/lib -lgmp" \
+      -Dcpp_link_args="$native_ldflags -Wl,-x -u $undef_symb -L"$build_dir"/lib -lgmp" \
       -Dcpp_std=c++17
     cd release && ninja
   )
@@ -169,12 +191,19 @@ prep_build_maude_se() {
 }
 
 build_maude_se() {
+  local cmake_args
+
   prep_build_maude_se
+
+  cmake_args="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src"
+  if [[ "$os" == "Darwin" ]]; then
+    cmake_args+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=$deployment_target"
+  fi
 
   cd maude-bindings
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
-    CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
+    CMAKE_ARGS="$cmake_args" \
       ARCHFLAGS="-arch $arch" \
       python -m pip wheel -w dist --no-deps --no-build-isolation .
   )
@@ -191,7 +220,16 @@ build_gmp() {
   mkdir -p "$third_party"
 
   if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "gmp"
+    progress "Downloading gmp $GMP_VERSION"
+    rm -rf "$third_party/gmp-$GMP_VERSION"
+    get_gnu "gmp" "$GMP_VERSION" "tar.xz"
+    cd "$third_party/gmp-$GMP_VERSION"
+    ./configure --prefix="$build_dir" \
+      CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
+      LDFLAGS="$native_ldflags" \
+      --enable-cxx --enable-fat --disable-shared --enable-static
+    make -j4
+    make install
   else
     progress "Downloading gmp 6.1.2"
     get_gnu "gmp" "6.1.2" "tar.xz"
@@ -213,9 +251,10 @@ build_buddy() {
   (
     progress "Downloading BuDDy 2.4"
     buddy_dir="$third_party/buddy-2.4"
+    rm -rf "$buddy_dir"
 
-    curl -L https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz >"$buddy_dir.tar.gz"
-    tar -xvzf "$buddy_dir.tar.gz" -C "$third_party"
+    curl -fL https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz >"$buddy_dir.tar.gz"
+    tar -xzf "$buddy_dir.tar.gz" -C "$third_party"
     rm -rf "$buddy_dir.tar.gz"
 
     cd "$buddy_dir"
@@ -229,7 +268,9 @@ build_buddy() {
 
     cp $top_dir/build/config.sub $top_dir/build/config.guess ./
 
-    ./configure CFLAGS="-fPIC" CXXFLAGS="-fPIC" --includedir="$include_dir" --libdir="$lib_dir" --disable-shared
+    ./configure CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
+      LDFLAGS="$native_ldflags" --includedir="$include_dir" \
+      --libdir="$lib_dir" --disable-shared
 
     make -j4
     make check
@@ -244,7 +285,31 @@ build_tecla() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
   if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "libtecla"
+    progress "Downloading Tecla $TECLA_VERSION"
+    tecla_dir="$third_party/libtecla"
+    rm -rf "$tecla_dir"
+    curl -fL -o "$tecla_dir.tar.gz" \
+      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz"
+    tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
+    rm -f "$tecla_dir.tar.gz"
+    cd "$tecla_dir"
+    cp "$top_dir/build/config.guess" "$top_dir/build/config.sub" ./
+    chmod +x config.guess config.sub
+    if ! grep -Fq '#include <sys/ioctl.h>' enhance.c; then
+      sed -i.bak '1i\
+#include <sys/ioctl.h>\
+' enhance.c
+      rm -f enhance.c.bak
+    fi
+    sed -i.bak \
+      's/#elif defined(__APPLE__) && defined(__MACH__)/#elif defined(__APPLE__) \&\& defined(__MACH__) \&\& defined(TECLA_TPUTS_RETURNS_VOID)/' \
+      getline.c
+    rm -f getline.c.bak
+    ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
+      --prefix="$build_dir"
+    make -j4 TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
+    make install_inc
+    install -m 644 libtecla.a "$lib_dir/libtecla.a"
   else
     progress "Downloading Tecla 1.6.3"
     tecla_dir="$third_party/libtecla"
@@ -269,7 +334,15 @@ build_libsigsegv() {
   mkdir -p "$third_party"
 
   if [[ "$os" == "Darwin" ]]; then
-    build_from_brew "libsigsegv"
+    progress "Downloading libsigsegv $LIBSIGSEGV_VERSION"
+    rm -rf "$third_party/libsigsegv-$LIBSIGSEGV_VERSION"
+    get_gnu "libsigsegv" "$LIBSIGSEGV_VERSION" "tar.gz"
+    sigsegv_dir="$third_party/libsigsegv-$LIBSIGSEGV_VERSION"
+    cd "$sigsegv_dir"
+    ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
+      --prefix="$build_dir" --enable-shared=no
+    make -j4
+    make install
   else
     progress "Downloading Libsigsegv 2.12"
     get_gnu "libsigsegv" "2.12" "tar.gz"

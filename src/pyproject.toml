@@ -8,11 +8,14 @@ classifiers     = [
 	'Programming Language :: Python',
 	'Programming Language :: Python :: 3',
 	'Topic :: Scientific/Engineering',
-	'Operating System :: OS Independent',
+	'Operating System :: MacOS',
+	'Operating System :: POSIX :: Linux',
 ]
 readme = 'README.md'
+requires-python = '>=3.8'
 dependencies = [
 	"pyyaml",
+	"z3-solver==4.13.0.0",
 ]
 authors = [
 	{name = "Geunyeol Yu", email = "maude-se@postech.ac.kr"},
