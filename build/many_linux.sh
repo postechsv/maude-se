@@ -5,6 +5,7 @@ set -euo pipefail
 
 top_dir="$(pwd)"
 build_dir="$top_dir/.build"
+package_src_dir="$build_dir/package-src"
 
 yum install flex bison -y
 
@@ -25,7 +26,7 @@ cd maude-bindings
 (
     for version in "${versions[@]}"; do
         /opt/python/${version}/bin/python -m pip install --upgrade scikit-build-core scikit-build ninja cmake meson swig build
-        CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
+        CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$package_src_dir" \
             /opt/python/${version}/bin/python -m pip wheel -w dist --no-deps .
     done
 

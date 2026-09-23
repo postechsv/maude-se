@@ -21,6 +21,18 @@ Check the installation with:
 maude-se --help
 ```
 
+## Change the MaudeSE version
+
+The MaudeSE release version has one source of truth:
+`src/pyproject.toml`. Change only its `version` field. Wheel names,
+standalone ZIP names, Python package metadata, and the MaudeSE banner derive
+their version from that value during the build. The banner build date is also
+generated at build time, so building does not modify tracked source files.
+
+Release tags must use the matching `v<version>` form. For example, version
+`0.1.0` must be released with tag `v0.1.0`; the standalone release build fails
+early when the tag and package version differ.
+
 ## Build locally on macOS
 
 The local build uses two isolated Python environments:

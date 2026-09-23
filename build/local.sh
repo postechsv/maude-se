@@ -6,6 +6,9 @@ top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 build_venv="$top_dir/.venv-build"
 test_venv="$top_dir/.venv-test"
 
+# shellcheck source=version.sh
+source "$top_dir/build/version.sh"
+
 usage() {
   cat <<'EOF'
 Usage: ./build.sh <command>
@@ -171,17 +174,11 @@ build_wheel() {
   note "wheel artifacts are available in $top_dir/out"
 }
 
-project_version() {
-  sed -n "s/^version[[:space:]]*=[[:space:]]*'\([^']*\)'.*/\1/p" \
-    "$top_dir/src/pyproject.toml"
-}
-
 build_standalone() {
   local version
 
   doctor standalone
-  version="$(project_version)"
-  [[ -n "$version" ]] || fail "could not read the project version"
+  version="$(maude_se_version)"
   export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
 
   "$top_dir/build/native.sh" prep

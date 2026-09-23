@@ -12,6 +12,9 @@ top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
 
+# shellcheck source=version.sh
+source "$top_dir/build/version.sh"
+
 maude_dir="$top_dir/Maude"
 
 build_dir="$top_dir/.native-build"
@@ -132,10 +135,13 @@ make_patch() {
 }
 
 build_all() {
+  local release_tag="${1:-$(maude_se_release_tag)}"
+
+  validate_maude_se_release_tag "$release_tag"
   setup_build
   prepare
   build_deps
-  build_maude_se "$1"
+  build_maude_se "$release_tag"
 }
 
 build_maude_se() {
@@ -151,8 +157,10 @@ build_maude() {
   local config_opts="$2"   # Second argument: configure option bundle (string)
   local extra_ldflags="$3" # Third argument: additional LDFLAGS (string)
   local version="${4#v}"
+  local package_src_dir="$build_dir/package-src"
 
   progress "Build MaudeSE ($name)"
+  prepare_maude_se_package_sources "$package_src_dir"
   rm -rf "$maude_dir/src/Extension"
   cp -r "$top_dir/src/Extension" "$maude_dir/src"
 
@@ -199,7 +207,7 @@ build_maude() {
   strip maude
   cp maude "$out_name/maude-se-$name"
   cp $maude_dir/src/Main/*.maude ./"$out_name"
-  cp $top_dir/src/*.maude ./"$out_name"
+  cp "$package_src_dir"/*.maude ./"$out_name"
 
   zip -r "$out_name.zip" "$out_name"
 

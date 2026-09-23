@@ -13,11 +13,15 @@ src_dir="$top_dir/src"
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
 
+# shellcheck source=version.sh
+source "$top_dir/build/version.sh"
+
 # maudesmc
 smc_dir="$top_dir/maude-bindings/subprojects/maudesmc"
 
 build_dir="$top_dir/.build"
 third_party="$top_dir/.3rd_party"
+package_src_dir="$build_dir/package-src"
 
 # OS & architecture detection
 
@@ -169,6 +173,8 @@ build_maude() {
 prep_build_maude_se() {
   swig_src_dir="$top_dir/maude-bindings/swig"
 
+  prepare_maude_se_package_sources "$package_src_dir"
+
   mkdir -p $smc_dir/build
   mkdir -p $smc_dir/installdir/lib
 
@@ -195,7 +201,7 @@ build_maude_se() {
 
   prep_build_maude_se
 
-  cmake_args="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src"
+  cmake_args="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$package_src_dir"
   if [[ "$os" == "Darwin" ]]; then
     cmake_args+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=$deployment_target"
   fi
