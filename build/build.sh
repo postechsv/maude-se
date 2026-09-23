@@ -111,6 +111,7 @@ build_deps() {
 }
 
 build_maude() {
+  rm -rf "$smc_dir/src/Extension"
   cp -r "$src_dir/Extension" "$smc_dir/src"
   py_inc="$(python -c "from sysconfig import get_paths; print(get_paths()['include'])")"
 
@@ -125,7 +126,10 @@ build_maude() {
   cd $smc_dir
   (
     rm -rf release
-    $arch_opt meson setup release -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
+    $arch_opt meson setup release --buildtype=release \
+      -Db_lto=true \
+      -Dstrip=true \
+      -Dcpp_args="-fno-stack-protector -fstrict-aliasing" \
       -Dextra-lib-dirs="$build_dir/lib" \
       -Dextra-include-dirs="$build_dir/include, $py_inc, $top_dir/maude-bindings/src" \
       -Dstatic-libs='buddy, gmp, sigsegv' \
@@ -150,6 +154,7 @@ prep_build_maude_se() {
 
   if [[ "$os" == "Darwin" ]]; then
     cp $smc_dir/release/libmaude.dylib $smc_dir/installdir/lib
+    strip -x "$smc_dir/installdir/lib/libmaude.dylib"
   else
     cp $smc_dir/release/libmaude.so $smc_dir/installdir/lib
     strip $smc_dir/installdir/lib/*.so # only for Linux
@@ -321,6 +326,7 @@ copy_files_only() {
 
   for f in "$src_dir"/*; do
     if [ -f "$f" ]; then
+      rm -f "$dst_dir/$(basename "$f")"
       cp "$f" "$dst_dir/"
     fi
   done

@@ -32,6 +32,10 @@ The local build uses two isolated Python environments:
 
 Both directories and all generated build artifacts are ignored by Git.
 
+The standalone build does not use either Python environment. It produces a ZIP
+containing the MaudeSE executable with Z3 statically linked and the required
+Maude modules.
+
 ### 1. Check prerequisites
 
 ```bash
@@ -41,6 +45,12 @@ Both directories and all generated build artifacts are ignored by Git.
 This command only inspects the environment. It does not install or modify
 anything.
 
+To include the additional standalone-build prerequisites in the check, run:
+
+```bash
+./build.sh doctor standalone
+```
+
 The macOS build requires Xcode Command Line Tools, Python 3.8 or newer, and
 Homebrew. The required Homebrew packages are:
 
@@ -49,6 +59,9 @@ Homebrew. The required Homebrew packages are:
 - `gmp`
 - `libsigsegv`
 - `libtecla`
+- `autoconf`
+- `automake`
+- `ncurses`
 
 Install missing Homebrew packages explicitly with:
 
@@ -78,7 +91,8 @@ It is safe to run `setup` repeatedly.
 ```
 
 This runs `setup`, builds the native dependencies and Maude core, and writes
-the resulting wheel to `out/`.
+the resulting wheel to `out/`. The native Maude library is built in release
+mode with compiler optimization, link-time optimization, and symbol stripping.
 
 ### 4. Test the wheel
 
@@ -91,7 +105,12 @@ This command does not rebuild the wheel. It expects exactly one wheel in
 
 - `import maudeSE`;
 - `maude-se --help`; and
-- the Z3-based `examples/smt-check-ex.maude` smoke test.
+- the Z3-based `examples/smt-check-ex.maude` smoke test;
+- native modules have no non-system dynamic-library dependencies.
+
+On macOS, the Python extension and the operating system itself remain dynamic.
+Third-party libraries are linked statically where supported; the wheel-bundled
+`libmaude` reference is allowed because it is shipped inside the wheel.
 
 To build and then test, run:
 
@@ -100,7 +119,25 @@ To build and then test, run:
 ./build.sh test
 ```
 
-### 5. Use the installed development build
+### 5. Build and test the standalone executable
+
+```bash
+./build.sh standalone
+./build.sh test-standalone
+```
+
+`standalone` checks out the pinned Maude source, applies the native MaudeSE
+patch, builds its native libraries, and creates
+`out/maude_se_z3-<version>-macosx-<architecture>.zip`. The ZIP is independent
+of the wheel and does not require a Python virtual environment. It keeps the
+official Maude feature defaults and adds the MaudeSE SMT extension with a
+statically linked Z3; the experimental integrated compiler remains disabled.
+
+`test-standalone` does not rebuild. It extracts the existing ZIP into a
+temporary directory, runs a calculation through the packaged executable, and
+rejects non-system dynamic-library dependencies.
+
+### 6. Use the installed development build
 
 Open an isolated shell containing the tested MaudeSE installation:
 
@@ -132,7 +169,7 @@ To inspect the build tools instead, open the build environment:
 The build shell is intended for debugging CMake, Meson, Ninja, SWIG, or the
 wheel build. It does not represent a clean MaudeSE installation.
 
-### 6. Clean generated files
+### 7. Clean generated files
 
 ```bash
 ./build.sh clean
@@ -146,10 +183,13 @@ native build products, and `out/`. It does not uninstall Homebrew packages.
 | Command | Purpose | Changes the system |
 | --- | --- | --- |
 | `./build.sh doctor` | Check macOS build prerequisites | No |
+| `./build.sh doctor standalone` | Check wheel and standalone prerequisites | No |
 | `./build.sh install-deps` | Install required Homebrew packages | Yes |
 | `./build.sh setup` | Prepare pinned sources and `.venv-build` | Repository only |
 | `./build.sh wheel` | Build a wheel into `out/` | Repository only |
 | `./build.sh test` | Recreate `.venv-test` and test the existing wheel | Repository only |
+| `./build.sh standalone` | Build a standalone executable ZIP into `out/` | Repository only |
+| `./build.sh test-standalone` | Test the existing standalone ZIP | Temporary files only |
 | `./build.sh shell` | Open the MaudeSE test environment | No persistent changes |
 | `./build.sh shell build` | Open the build-tool environment | No persistent changes |
 | `./build.sh clean` | Remove generated local build files | Repository only |

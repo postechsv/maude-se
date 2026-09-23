@@ -29,12 +29,46 @@ lib_dir="$build_dir/lib"
 # functionality
 progress() { echo "===== " $@; }
 
+ensure_repo() {
+  local url="$1"
+  local dir="$2"
+  local ref="$3"
+  local current_ref
+
+  if [[ ! -e "$dir/.git" ]]; then
+    git clone "$url" "$dir"
+  fi
+
+  current_ref="$(git -C "$dir" rev-parse HEAD)"
+  if [[ "$current_ref" != "$ref" ]]; then
+    if [[ -n "$(git -C "$dir" status --porcelain)" ]]; then
+      echo "error: $dir has local changes at unexpected revision $current_ref" >&2
+      return 1
+    fi
+    git -C "$dir" checkout --detach "$ref"
+  fi
+}
+
+apply_patch_once() {
+  local dir="$1"
+  local patch_file="$2"
+
+  if git -C "$dir" apply -p0 --check "$patch_file" 2>/dev/null; then
+    git -C "$dir" apply -p0 "$patch_file"
+  elif git -C "$dir" apply -p0 --reverse --check "$patch_file" 2>/dev/null; then
+    progress "Patch already applied: $(basename "$patch_file")"
+  else
+    echo "error: patch does not apply cleanly: $patch_file" >&2
+    return 1
+  fi
+}
+
 setup_build() {
   progress "Setup build essentials"
 
   # for GitHub CI/CD
   if [[ "$os" == "Darwin" ]]; then
-    brew install bison flex autoconf automake
+    brew install bison flex autoconf automake gmp libsigsegv libtecla ncurses
 
     export PATH="$(brew --prefix bison)/bin:$PATH"
     export PATH="$(brew --prefix flex)/bin:$PATH"
@@ -63,16 +97,14 @@ build_deps() {
 }
 
 prepare() {
-  git clone https://github.com/maude-lang/Maude.git
-  git -C "$maude_dir" checkout --detach "$MAUDE_REF"
+  ensure_repo "https://github.com/maude-lang/Maude.git" "$maude_dir" "$MAUDE_REF"
   patch_maude
 }
 
 patch_maude() {
   progress "Apply patching"
 
-  git -C "$maude_dir" apply -p0 --check "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
-  git -C "$maude_dir" apply -p0 "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
+  apply_patch_once "$maude_dir" "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
 }
 
 make_patch() {
@@ -104,6 +136,7 @@ build_maude() {
   local version="${4#v}"
 
   progress "Build MaudeSE ($name)"
+  rm -rf "$maude_dir/src/Extension"
   cp -r "$top_dir/src/Extension" "$maude_dir/src"
 
   if [[ "$os" == "Darwin" ]]; then
@@ -136,7 +169,6 @@ build_maude() {
 
   ../configure \
     $config_opts \
-    --enable-compiler \
     CPPFLAGS="-I$include_dir" \
     CXXFLAGS="$CXXFLAGS" \
     LDFLAGS="$LDFLAGS" \
@@ -420,14 +452,14 @@ get_brew_pkg() {
 }
 
 git_latest_name() {
-  echo $(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$1/$2/releases/latest" |
+  echo $(github_curl "https://api.github.com/repos/$1/$2/releases/latest" |
     grep '"tag_name":' |
     head -n1 |
     cut -d '"' -f 4)
 }
 
 git_latest() {
-  latest_release=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$1/$2/releases/latest")
+  latest_release=$(github_curl "https://api.github.com/repos/$1/$2/releases/latest")
   url=$(echo "$latest_release" | grep "browser_download_url" | grep -E "$3" | cut -d '"' -f 4)
 
   if [[ -z "$url" ]]; then
@@ -439,7 +471,7 @@ git_latest() {
 }
 
 git_tag() {
-  release=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$1/$2/releases/tags/$4")
+  release=$(github_curl "https://api.github.com/repos/$1/$2/releases/tags/$4")
   url=$(echo "$release" | grep "browser_download_url" | grep -E "$3" | cut -d '"' -f 4)
 
   if [[ -z "$url" ]]; then
@@ -450,12 +482,23 @@ git_tag() {
   echo $url
 }
 
+github_curl() {
+  local url="$1"
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "$url"
+  else
+    curl -sS "$url"
+  fi
+}
+
 copy_files_only() {
   local src_dir="$1"
   local dst_dir="$2"
 
   for f in "$src_dir"/*; do
     if [ -f "$f" ]; then
+      rm -f "$dst_dir/$(basename "$f")"
       cp "$f" "$dst_dir/"
     fi
   done

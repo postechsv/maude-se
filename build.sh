@@ -19,6 +19,8 @@ install-deps) install_deps "$@" ;;
 setup | prep) setup_build "$@" ;;
 wheel) build_wheel "$@" ;;
 test) test_wheel "$@" ;;
+standalone) build_standalone "$@" ;;
+test-standalone) test_standalone "$@" ;;
 shell) open_venv_shell "$@" ;;
 clean) clean_build "$@" ;;
 deps | patch | build-maude | build-maude-se | prep-build-maude-se | make-patch)

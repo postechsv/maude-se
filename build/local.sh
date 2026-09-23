@@ -11,12 +11,17 @@ usage() {
 Usage: ./build.sh <command>
 
 Commands:
-  doctor        Check the local macOS build environment without changing it
+  doctor [standalone]
+                Check the local macOS build environment without changing it
   install-deps  Install required Homebrew packages
   setup         Create the build virtualenv and prepare pinned upstream sources
   wheel         Build a macOS wheel into out/
   test          Install the wheel in an isolated environment and run smoke tests
-  shell [test]  Open a shell using the test or build virtualenv
+  standalone    Build a self-contained macOS executable ZIP into out/
+  test-standalone
+                Extract and smoke-test the standalone ZIP
+  shell [test|build]
+                Open a shell using the test or build virtualenv
   clean         Remove generated local build directories
   help          Show this help
 EOF
@@ -31,11 +36,32 @@ fail() {
   return 1
 }
 
+audit_macos_linkage() {
+  local binary="$1"
+  local dependency
+  local failed=0
+
+  [[ "$(uname -s)" == "Darwin" ]] || return 0
+  while IFS= read -r dependency; do
+    dependency="${dependency%% (*}"
+    case "$dependency" in
+    /usr/lib/* | /System/Library/* | @rpath/* | @loader_path/* | @executable_path/*) ;;
+    *)
+      printf 'external dynamic dependency: %s -> %s\n' "$binary" "$dependency" >&2
+      failed=1
+      ;;
+    esac
+  done < <(otool -L "$binary" | tail -n +2 | sed 's/^[[:space:]]*//')
+
+  ((failed == 0)) || fail "non-system dynamic dependencies were found"
+}
+
 have_command() {
   command -v "$1" >/dev/null 2>&1
 }
 
 doctor() {
+  local profile="${1:-wheel}"
   local failed=0
   local command_name
   local formula
@@ -45,6 +71,11 @@ doctor() {
     fail "local wheel builds currently support macOS only" || true
     failed=1
   fi
+
+  case "$profile" in
+  wheel | standalone) ;;
+  *) fail "unknown build profile '$profile'; use 'wheel' or 'standalone'" ;;
+  esac
 
   for command_name in git curl tar make clang clang++ python3 brew; do
     if have_command "$command_name"; then
@@ -73,7 +104,19 @@ doctor() {
 
   if have_command brew; then
     installed_formulae="$(brew list --formula -1 2>/dev/null || true)"
-    for formula in bison flex gmp libsigsegv libtecla; do
+    local formulae=(bison flex gmp libsigsegv libtecla)
+    if [[ "$profile" == "standalone" ]]; then
+      formulae+=(autoconf automake ncurses)
+      for command_name in autoreconf zip unzip; do
+        if have_command "$command_name"; then
+          printf 'ok      %s\n' "$command_name"
+        else
+          printf 'missing %s\n' "$command_name"
+          failed=1
+        fi
+      done
+    fi
+    for formula in "${formulae[@]}"; do
       if grep -Fxq "$formula" <<<"$installed_formulae"; then
         printf 'ok      brew:%s\n' "$formula"
       else
@@ -96,7 +139,7 @@ install_deps() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "install-deps supports macOS only"
   have_command brew || fail "Homebrew is required: https://brew.sh"
 
-  brew install bison flex gmp libsigsegv libtecla
+  brew install bison flex gmp libsigsegv libtecla autoconf automake ncurses
   note "Homebrew dependencies are installed"
 }
 
@@ -128,6 +171,51 @@ build_wheel() {
   note "wheel artifacts are available in $top_dir/out"
 }
 
+project_version() {
+  sed -n "s/^version[[:space:]]*=[[:space:]]*'\([^']*\)'.*/\1/p" \
+    "$top_dir/src/pyproject.toml"
+}
+
+build_standalone() {
+  local version
+
+  doctor standalone
+  version="$(project_version)"
+  [[ -n "$version" ]] || fail "could not read the project version"
+  export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
+
+  "$top_dir/build/native.sh" prep
+  "$top_dir/build/native.sh" deps
+  "$top_dir/build/native.sh" build-maude-se "v$version"
+  note "standalone artifact is available in $top_dir/out"
+}
+
+test_standalone() {
+  local archives=("$top_dir"/out/maude_se_z3-*.zip)
+  local temp_dir
+  local executable
+  local output
+
+  if [[ ! -e "${archives[0]}" ]]; then
+    fail "no standalone ZIP found in $top_dir/out; run ./build.sh standalone first"
+  fi
+  if [[ ${#archives[@]} -ne 1 ]]; then
+    fail "expected exactly one standalone ZIP in $top_dir/out, found ${#archives[@]}"
+  fi
+
+  temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/maude-se-standalone.XXXXXX")"
+  trap 'rm -rf -- "$temp_dir"' RETURN
+  unzip -q "${archives[0]}" -d "$temp_dir"
+  executable="$(find "$temp_dir" -type f -name 'maude-se-z3' -print -quit)"
+  [[ -n "$executable" ]] || fail "standalone executable is missing from ${archives[0]}"
+
+  output="$(cd "$(dirname "$executable")" && \
+    printf 'reduce in NAT : 1 + 1 .\nquit\n' | "$executable")"
+  grep -Eq 'result .*: 2' <<<"$output" || fail "standalone calculation smoke test failed"
+  audit_macos_linkage "$executable"
+  note "standalone smoke test passed"
+}
+
 test_wheel() {
   local wheels=("$top_dir"/out/*.whl)
 
@@ -149,6 +237,10 @@ test_wheel() {
   "$test_venv/bin/maude-se" --help >/dev/null
   printf 'quit\n' | \
     "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
+  while IFS= read -r binary; do
+    audit_macos_linkage "$binary"
+  done < <(find "$test_venv" -type f \( -name '*.so' -o -name '*.dylib' \) \
+    -path '*/maudeSE/*' -print)
   note "wheel smoke tests passed"
 }
 
@@ -193,6 +285,9 @@ clean_build() {
     "$top_dir/.venv-build"
     "$top_dir/.venv-test"
     "$top_dir/maude-bindings"
+    "$top_dir/Maude"
+    "$top_dir/.native-build"
+    "$top_dir/.native-3rd_party"
     "$top_dir/out"
   )
 
