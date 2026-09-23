@@ -134,8 +134,8 @@ official Maude feature defaults and adds the MaudeSE SMT extension with a
 statically linked Z3; the experimental integrated compiler remains disabled.
 
 `test-standalone` does not rebuild. It extracts the existing ZIP into a
-temporary directory, runs a calculation through the packaged executable, and
-rejects non-system dynamic-library dependencies.
+temporary directory, runs a calculation plus Z3 SAT and UNSAT checks through
+the packaged executable, and rejects non-system dynamic-library dependencies.
 
 ### 6. Use the installed development build
 

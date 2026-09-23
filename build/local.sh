@@ -194,6 +194,7 @@ test_standalone() {
   local archives=("$top_dir"/out/maude_se_z3-*.zip)
   local temp_dir
   local executable
+  local bundle_dir
   local output
 
   if [[ ! -e "${archives[0]}" ]]; then
@@ -208,10 +209,19 @@ test_standalone() {
   unzip -q "${archives[0]}" -d "$temp_dir"
   executable="$(find "$temp_dir" -type f -name 'maude-se-z3' -print -quit)"
   [[ -n "$executable" ]] || fail "standalone executable is missing from ${archives[0]}"
+  bundle_dir="$(dirname "$executable")"
 
-  output="$(cd "$(dirname "$executable")" && \
+  output="$(cd "$bundle_dir" && \
     printf 'reduce in NAT : 1 + 1 .\nquit\n' | "$executable")"
   grep -Eq 'result .*: 2' <<<"$output" || fail "standalone calculation smoke test failed"
+
+  cp "$top_dir/examples/smt-check-ex.maude" "$bundle_dir/"
+  output="$(cd "$bundle_dir" && \
+    printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\ncheck in SIMPLE : X:Integer > 4 and X:Integer < 3 using QF_LRA .\nquit\n' | \
+      "$executable" smt-check-ex.maude smt-check.maude maude-se-meta.maude)"
+  grep -Fq 'result: sat' <<<"$output" || fail "standalone Z3 SAT smoke test failed"
+  grep -Fq 'result: unsat' <<<"$output" || fail "standalone Z3 UNSAT smoke test failed"
+
   audit_macos_linkage "$executable"
   note "standalone smoke test passed"
 }
