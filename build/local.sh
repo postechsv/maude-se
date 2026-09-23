@@ -16,6 +16,7 @@ Commands:
   setup         Create the build virtualenv and prepare pinned upstream sources
   wheel         Build a macOS wheel into out/
   test          Install the wheel in an isolated environment and run smoke tests
+  shell [test]  Open a shell using the test or build virtualenv
   clean         Remove generated local build directories
   help          Show this help
 EOF
@@ -149,6 +150,39 @@ test_wheel() {
   printf 'quit\n' | \
     "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
   note "wheel smoke tests passed"
+}
+
+open_venv_shell() {
+  local environment="${1:-test}"
+  local venv_dir
+  local shell_path="${SHELL:-/bin/bash}"
+  local shell_name
+
+  case "$environment" in
+  test) venv_dir="$test_venv" ;;
+  build) venv_dir="$build_venv" ;;
+  *) fail "unknown environment '$environment'; use 'test' or 'build'" ;;
+  esac
+
+  if [[ ! -x "$venv_dir/bin/python" ]]; then
+    if [[ "$environment" == "test" ]]; then
+      fail "test environment not found; run ./build.sh test first"
+    else
+      fail "build environment not found; run ./build.sh setup first"
+    fi
+  fi
+
+  export VIRTUAL_ENV="$venv_dir"
+  export PATH="$venv_dir/bin:$PATH"
+  unset PYTHONHOME 2>/dev/null || true
+  shell_name="$(basename "$shell_path")"
+
+  note "opening $environment environment; run 'exit' to return"
+  case "$shell_name" in
+  zsh) exec "$shell_path" -f -i ;;
+  bash) exec "$shell_path" --noprofile --norc -i ;;
+  *) exec "$shell_path" -i ;;
+  esac
 }
 
 clean_build() {

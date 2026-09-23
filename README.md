@@ -13,6 +13,8 @@ For details on implementing a custom connector or using MaudeSE, please refer to
 
 ## Installation
 
+For local development builds and command details, see [INSTALL.md](INSTALL.md).
+
 Use `pip` to install `maude-se`
 
 ```
