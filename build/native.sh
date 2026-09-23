@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # set variables
-top_dir="$(pwd)"
+top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
@@ -471,8 +471,10 @@ copy_files_only() {
 # Main
 # ----
 
-build_command="$1"
-shift
+build_command="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
 case "$build_command" in
 set-env) setup_build "$@" ;;
 prep) prepare "$@" ;;

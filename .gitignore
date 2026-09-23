@@ -3,6 +3,8 @@
 .vscode/
 .DS_Store
 .python-version
+.venv-build/
+.venv-test/
 .3rd_party/
 .build/
 .native-3rd_party/

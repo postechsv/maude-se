@@ -7,8 +7,8 @@
 set -euo pipefail
 
 # set variables
-top_dir="$(pwd)"
-src_dir="$(pwd)/src"
+top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+src_dir="$top_dir/src"
 
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
@@ -31,26 +31,61 @@ lib_dir="$build_dir/lib"
 # functionality
 progress() { echo "===== " $@; }
 
-prepare() {
-  pip install meson scikit-build ninja cmake swig build
+ensure_repo() {
+  local url="$1"
+  local dir="$2"
+  local ref="$3"
+  local current_ref
 
-  git clone https://github.com/fadoss/maude-bindings.git
-  git -C "$top_dir/maude-bindings" checkout --detach "$MAUDE_BINDINGS_REF"
+  if [[ ! -e "$dir/.git" ]]; then
+    git clone "$url" "$dir"
+  fi
+
+  current_ref="$(git -C "$dir" rev-parse HEAD)"
+  if [[ "$current_ref" != "$ref" ]]; then
+    if [[ -n "$(git -C "$dir" status --porcelain)" ]]; then
+      echo "error: $dir has local changes at unexpected revision $current_ref" >&2
+      return 1
+    fi
+    git -C "$dir" checkout --detach "$ref"
+  fi
+}
+
+apply_patch_once() {
+  local dir="$1"
+  local patch_file="$2"
+
+  if git -C "$dir" apply -p0 --check "$patch_file"; then
+    git -C "$dir" apply -p0 "$patch_file"
+  elif git -C "$dir" apply -p0 --reverse --check "$patch_file"; then
+    progress "Patch already applied: $(basename "$patch_file")"
+  else
+    echo "error: patch does not apply cleanly: $patch_file" >&2
+    return 1
+  fi
+}
+
+prepare() {
+  ensure_repo \
+    "https://github.com/fadoss/maude-bindings.git" \
+    "$top_dir/maude-bindings" \
+    "$MAUDE_BINDINGS_REF"
   git -C "$top_dir/maude-bindings" submodule update --init
-  git -C "$smc_dir" checkout --detach "$MAUDESMC_REF"
+  ensure_repo \
+    "https://github.com/fadoss/maudesmc" \
+    "$smc_dir" \
+    "$MAUDESMC_REF"
   patch_maude
 }
 
 patch_maude() {
   progress "Apply patchings"
 
-  git -C "$top_dir/maude-bindings" apply -p0 --check "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
-  git -C "$top_dir/maude-bindings" apply -p0 "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
-
-  git -C "$smc_dir" apply -p0 --check "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
-  git -C "$smc_dir" apply -p0 --check "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
-  git -C "$smc_dir" apply -p0 "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
-  git -C "$smc_dir" apply -p0 "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
+  apply_patch_once \
+    "$top_dir/maude-bindings" \
+    "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
+  apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
+  apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
 }
 
 make_patch() {
@@ -136,7 +171,7 @@ build_maude_se() {
     rm -rf dist/ maude.egg-info/ _skbuild/
     CMAKE_ARGS="-DBUILD_LIBMAUDE=OFF -DEXTRA_INCLUDE_DIRS=$build_dir/include -DMAUDE_SE_INSTALL_FILES=$top_dir/src" \
       ARCHFLAGS="-arch $arch" \
-      python -m pip wheel -w dist --no-deps .
+      python -m pip wheel -w dist --no-deps --no-build-isolation .
   )
 
   cd "$top_dir"
@@ -251,7 +286,11 @@ build_from_brew() {
   mkdir -p "$build_dir/include"
   mkdir -p "$build_dir/lib"
 
-  brew install $1
+  brew list --versions "$1" >/dev/null 2>&1 || {
+    echo "error: missing Homebrew dependency: $1" >&2
+    echo "install it with: ./build.sh install-deps" >&2
+    return 1
+  }
 
   brew_dir=$(get_brew_pkg $1)
 
@@ -297,8 +336,10 @@ copy_files_only() {
 # Main
 # ----
 
-build_command="$1"
-shift
+build_command="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
 case "$build_command" in
 prep) prepare "$@" ;;
 deps) build_deps "$@" ;;
