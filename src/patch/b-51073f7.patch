@@ -3,7 +3,7 @@ index 93d1eb1..a51f080 100644
 --- CMakeLists.txt
 +++ CMakeLists.txt
 @@ -1,9 +1,9 @@
- cmake_minimum_required(VERSION 3.12)
+ cmake_minimum_required(VERSION 3.15)
 -project(maude)
 +project(maudeSE)
  
@@ -63,7 +63,7 @@ index 93d1eb1..a51f080 100644
 +	INSTALL(FILES ${FILES_TO_DEPLOY} DESTINATION maudeSE)
 +	INSTALL(DIRECTORY ${DIRS_TO_DEPLOY} DESTINATION maudeSE)
 +	install(FILES
-+		"${MAUDE_SE_INSTALL_FILES}/smt-check.maude" 
++		"${MAUDE_SE_INSTALL_FILES}/smt-check.maude"
 +		"${MAUDE_SE_INSTALL_FILES}/maude-se-meta.maude"
 +		DESTINATION maudeSE/maude)
  
@@ -73,9 +73,10 @@ diff --git swig/maude.i swig/maude.i
 index 432e6b0..6afbcb8 100644
 --- swig/maude.i
 +++ swig/maude.i
-@@ -238,3 +238,5 @@ bool setAssocUnifDepth(float m);
+@@ -239,4 +239,6 @@ bool setAssocUnifDepth(float m);
  %include module.i
  %include view.i
+ %include strategy.i
  %include hook.i
 +%include rwsmt.i
 +%include core.i

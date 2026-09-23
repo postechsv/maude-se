@@ -20,7 +20,7 @@ index 825b96b..12fbfa6 100644
        return new QuotedIdentifierOpSymbol(name, nrArgs);
      case SymbolType::META_LEVEL_OP_SYMBOL:
        return new MetaLevelOpSymbol(name, nrArgs, strategy);
-+    case SymbolType::META_LEVEL_SMT_OP_SYMBOL: 
++    case SymbolType::META_LEVEL_SMT_OP_SYMBOL:
 +      return new MetaLevelSmtOpSymbol(name, nrArgs, strategy);
 +    case SymbolType::SMT_OP_SYMBOL:
 +      return new SmtOpSymbol(name, nrArgs, strategy);
@@ -36,7 +36,7 @@ index 6627c86..41f4e9c 100644
  #include "SMT_NumberDagNode.hh"
  
 +// SMT Op definition
-+#include "smtOpSymbol.hh" 
++#include "smtOpSymbol.hh"
 +
  //	higher class definitions
  #include "rewriteSequenceSearch.hh"

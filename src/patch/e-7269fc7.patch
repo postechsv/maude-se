@@ -6,8 +6,8 @@ index 4e0364a..e1e45cf 100644
  #
  #	Initialize autoconf stuff.
  #
--AC_INIT([Maude],[3.5],[maude-bugs@lists.cs.illinois.edu])
-+AC_INIT([Maude],[3.5+se],[maude-bugs@lists.cs.illinois.edu])
+-AC_INIT([Maude],[3.5.1],[maude-bugs@lists.cs.illinois.edu])
++AC_INIT([Maude],[3.5.1+se],[maude-bugs@lists.cs.illinois.edu])
  #
  #	Allow directory names that look like macros.
  #
@@ -139,7 +139,7 @@ index fd3deca..c8bacd1 100644
  #include "SMT_NumberDagNode.hh"
  
 +// SMT Op definition
-+#include "smtOpSymbol.hh" 
++#include "smtOpSymbol.hh"
 +
  //	higher class definitions
  #include "rewriteSequenceSearch.hh"

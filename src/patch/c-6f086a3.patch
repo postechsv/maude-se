@@ -3,8 +3,8 @@ index 8033a65..f3753ee 100644
 --- meson.build
 +++ meson.build
 @@ -1,4 +1,4 @@
--project('Maude', 'cpp', version: '3.5+smc', default_options: ['cpp_std=c++14'])
-+project('Maude', 'cpp', version: '3.5+se', default_options: ['cpp_std=c++14'])
+-project('Maude', 'cpp', version: '3.5.1+smc', default_options: ['cpp_std=c++14'])
++project('Maude', 'cpp', version: '3.5.1+se', default_options: ['cpp_std=c++14'])
  
  #
  ## Configuration
