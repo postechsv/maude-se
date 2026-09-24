@@ -233,6 +233,13 @@ build_gmp() {
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
 
+  local gmp_cpu_opts=(--enable-fat)
+  if [[ "$os" == "Darwin" && "$arch" == "x86_64" ]]; then
+    # GMP's fat dispatch objects contain text relocations rejected by modern
+    # macOS linkers. Target baseline amd64 for portable Intel binaries.
+    gmp_cpu_opts=(--build=amd64-apple-darwin --disable-fat)
+  fi
+
   progress "Downloading gmp $GMP_VERSION"
   rm -rf "$third_party/gmp-$GMP_VERSION"
   get_gnu "gmp" "$GMP_VERSION" "tar.xz"
@@ -240,7 +247,7 @@ build_gmp() {
 
   ./configure --prefix="$build_dir" \
     CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" LDFLAGS="$native_ldflags" \
-    --enable-cxx --enable-fat --disable-shared --enable-static
+    --enable-cxx "${gmp_cpu_opts[@]}" --disable-shared --enable-static
 
   make -j4
   make install
