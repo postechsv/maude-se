@@ -203,13 +203,6 @@ deployment target: 10.13 for x86_64 and 11.0 for arm64. Override it with
 temporary directory, runs a calculation plus Z3 SAT and UNSAT checks through
 the packaged executable, and rejects non-system dynamic-library dependencies.
 
-## Rehearse the release build in GitHub Actions
-
-After pushing a branch, open the **Release** workflow in GitHub Actions and
-select **Run workflow** with that branch. This runs the macOS and Linux wheel
-and standalone builds and their tests without publishing to PyPI or creating
-a GitHub Release. Only a matching release-tag push can publish artifacts.
-
 ### 6. Use the installed development build
 
 Open an isolated shell containing the tested MaudeSE installation:
@@ -272,3 +265,18 @@ Display this command list at any time with:
 ```bash
 ./build.sh --help
 ```
+
+## Test distribution builds in GitHub Actions
+
+Once `.github/workflows/build.yml` is on the default branch, a repository
+collaborator with write access can open **Build and test** in GitHub Actions,
+select **Run workflow**, and choose a pushed branch. This runs the macOS and
+Linux wheel and standalone builds and tests without publishing. Build
+artifacts are available from the completed workflow run. Unpushed local
+changes are not included.
+
+The separate **Release** workflow runs the same build and tests when a
+matching `v<version>` tag is pushed. It publishes wheels to PyPI unless the
+tag contains `pre`, and publishes wheels plus standalone ZIPs to GitHub
+Releases. PyPI publishing requires the repository's `pypi` environment and
+trusted publisher to be configured.

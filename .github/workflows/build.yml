@@ -1,0 +1,116 @@
+name: Build and test
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-version:
+    name: Verify package version
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Match release tag to package version
+      env:
+        RELEASE_TAG: ${{ github.ref_name }}
+        REF_TYPE: ${{ github.ref_type }}
+      run: |
+        top_dir="$PWD"
+        source build/version.sh
+        if [[ "$REF_TYPE" == tag ]]; then
+          validate_maude_se_release_tag "$RELEASE_TAG"
+        else
+          maude_se_version >/dev/null
+        fi
+
+  manylinux_2_28:
+    name: Linux wheels (manylinux_2_28)
+    runs-on: ubuntu-latest
+    needs: verify-version
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build and test Linux wheels
+      run: |
+        docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_28_x86_64 \
+          bash -c './build/many_linux.sh && bash ./build/test-linux.sh wheel'
+    - name: Store wheel distributions
+      uses: actions/upload-artifact@v4
+      with:
+        name: py-package-dist-many-linux
+        path: out/
+
+  macos:
+    name: macOS wheel
+    strategy:
+      matrix:
+        os: ['macos-latest','macos-13']
+        python-version: ['3.8','3.9','3.10','3.11','3.12','3.13']
+    runs-on: ${{ matrix.os }}
+    needs: verify-version
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install pypa/build
+      run: python3 -m pip install build --user
+    - name: Build Python wheel
+      run: ./build/macos.sh
+    - name: Test Z3, Yices, and cvc5
+      run: ./build.sh test
+    - name: Store wheel distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: py-package-dist-${{ strategy.job-index }}
+        path: out/
+
+  manylinux_native:
+    name: Linux standalone (manylinux_2_28)
+    runs-on: ubuntu-latest
+    needs: verify-version
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build MaudeSE
+      env:
+        TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      run: |
+        docker run --rm \
+          -v "$PWD:/work" -w /work \
+          -e GITHUB_TOKEN="${{ github.token }}" \
+          quay.io/pypa/manylinux_2_28_x86_64 \
+          bash -c "./build/native.sh build \"$TAG\""
+    - name: Test standalone executable
+      run: |
+        docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_28_x86_64 \
+          bash ./build/test-linux.sh standalone
+    - name: Store standalone distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-dist-many-linux
+        path: out/
+
+  macos_native:
+    name: macOS standalone
+    strategy:
+      matrix:
+        os: ['macos-latest','macos-13']
+    runs-on: ${{ matrix.os }}
+    needs: verify-version
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build MaudeSE
+      env:
+        TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      run: |
+        export GITHUB_TOKEN="${{ github.token }}"
+        ./build/native.sh build "$TAG"
+    - name: Test standalone executable
+      run: ./build.sh test-standalone
+    - name: Store standalone distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-dist-${{ strategy.job-index }}
+        path: out/
