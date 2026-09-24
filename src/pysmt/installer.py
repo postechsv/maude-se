@@ -1,8 +1,11 @@
 """Inspect and install optional solver dependencies for the current Python."""
 
 import argparse
+import ctypes.util
 import importlib
+import importlib.util
 from importlib import metadata
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -13,6 +16,34 @@ SOLVERS = {
     "yices": (("yices", "yices-solver"), "yices"),
     "cvc5": (("cvc5",), "cvc5"),
 }
+
+
+def import_solver(name, module):
+    if name != "yices":
+        return importlib.import_module(module)
+
+    spec = importlib.util.find_spec("yices_solver")
+    if spec is None or not spec.submodule_search_locations:
+        return importlib.import_module(module)
+    library_dir = Path(next(iter(spec.submodule_search_locations))) / "lib"
+    libraries = sorted(library_dir.glob("libyices*.dylib")) + sorted(
+        library_dir.glob("libyices*.so*")
+    )
+    if not libraries:
+        return importlib.import_module(module)
+
+    original_find_library = ctypes.util.find_library
+
+    def find_library(name):
+        if name == "yices":
+            return str(libraries[0])
+        return original_find_library(name)
+
+    ctypes.util.find_library = find_library
+    try:
+        return importlib.import_module(module)
+    finally:
+        ctypes.util.find_library = original_find_library
 
 
 def required_versions():
@@ -41,7 +72,7 @@ def check_solver(name):
         installed.append("{} {}".format(distribution, version))
 
     try:
-        imported = importlib.import_module(module)
+        imported = import_solver(name, module)
         if name == "z3":
             imported.Solver()
         elif name == "yices":

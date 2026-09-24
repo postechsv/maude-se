@@ -7,7 +7,10 @@ mode="${1:-}"
 
 case "$mode" in
 wheel)
-  versions=(cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313)
+  versions=()
+  for version in cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313; do
+    [[ -x "/opt/python/$version/bin/python" ]] && versions+=("$version")
+  done
   for version in "${versions[@]}"; do
     wheels=("$top_dir"/out/maude_se-*-"$version"-manylinux_*.whl)
     [[ ${#wheels[@]} -eq 1 && -f "${wheels[0]}" ]] || {

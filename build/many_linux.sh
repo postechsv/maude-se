@@ -12,7 +12,14 @@ package_src_dir="$build_dir/package-src"
 yum install flex bison -y
 
 refversion=cp311-cp311
-versions=(cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313)
+versions=()
+for version in cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313; do
+    if [[ -x "/opt/python/${version}/bin/python" ]]; then
+        versions+=("$version")
+    else
+        echo "Skipping unavailable Python: $version"
+    fi
+done
 
 export PATH="/opt/python/${refversion}/bin:$PATH"
 
