@@ -16,8 +16,11 @@ versions=(cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313)
 
 export PATH="/opt/python/${refversion}/bin:$PATH"
 
-python -m pip install --upgrade pip
-python -m pip install --upgrade wheel auditwheel build
+python -m pip install -r "$top_dir/build/requirements.txt"
+python -m pip install --upgrade wheel auditwheel
+
+command -v meson
+command -v ninja
 
 ./build/build.sh prep
 ./build/build.sh deps
