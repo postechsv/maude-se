@@ -291,7 +291,7 @@ build_tecla() {
   rm -rf "$tecla_dir"
 
   download_source_archive \
-    "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz" \
+    "https://deb.debian.org/debian/pool/main/libt/libtecla/libtecla_$TECLA_VERSION.orig.tar.gz" \
     "$tecla_dir.tar.gz" "libtecla-$TECLA_VERSION"
   tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
   rm -f "$tecla_dir.tar.gz"
