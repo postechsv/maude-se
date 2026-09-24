@@ -1,9 +1,14 @@
 import argparse
-from maudeSE import *
-from maudeSE.factory import *
-from maudeSE.util import *
 
 def main():
+    from maudeSE.installer import SOLVERS, check_solver
+    from maudeSE.maude import init, load, setSmtManagerFactory, setSmtSolver
+    from maudeSE.factory import Factory
+    from maudeSE.util import (
+        check_config, load_class_from_file, load_config, load_user_config,
+        update_config,
+    )
+    import os
     
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('file', nargs='?', type=str, help="input Maude file")
@@ -26,6 +31,14 @@ def main():
         check_config(cfg)
 
         s = cfg["solver"]
+        if s in SOLVERS:
+            ready, detail = check_solver(s)
+            if not ready:
+                raise RuntimeError(
+                    "{} solver unavailable: {}. Run: maude-se-installer install {}".format(
+                        s, detail, s
+                    )
+                )
 
         # instantiate our interface
         setSmtSolver(s)
@@ -52,3 +65,4 @@ def main():
 
     except Exception as err:
         print("error: {}".format(err))
+        return 1

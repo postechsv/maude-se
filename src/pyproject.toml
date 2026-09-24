@@ -15,7 +15,6 @@ readme = 'README.md'
 requires-python = '>=3.8'
 dependencies = [
 	"pyyaml",
-	"z3-solver==4.13.0.0",
 ]
 
 authors = [
@@ -23,9 +22,11 @@ authors = [
 ]
 
 [project.optional-dependencies]
+z3 = ["z3-solver==4.13.0.0"]
 cvc5 = ["cvc5==1.4.0"]
 yices = ["yices==1.1.6", "yices-solver==2.6.5.post24"]
 all-solvers = [
+	"z3-solver==4.13.0.0",
 	"cvc5==1.4.0",
 	"yices==1.1.6",
 	"yices-solver==2.6.5.post24",
@@ -43,3 +44,4 @@ build-backend = 'scikit_build_core.build'
 
 [project.scripts]
 maude-se = "maudeSE:main"
+maude-se-installer = "maudeSE.installer:main"

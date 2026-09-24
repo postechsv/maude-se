@@ -240,10 +240,26 @@ test_wheel() {
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
     "pip==25.0.1"
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
+    "${wheels[0]}"
+
+  if output="$("$test_venv/bin/maude-se-installer" doctor z3)"; then
+    fail "base wheel unexpectedly includes Z3"
+  fi
+  grep -Fq 'z3-solver is not installed' <<<"$output" || \
+    fail "installer did not report missing Z3"
+  if output="$("$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" 2>&1)"; then
+    fail "maude-se unexpectedly ran without its selected solver"
+  fi
+  grep -Fq 'maude-se-installer install z3' <<<"$output" || \
+    fail "maude-se did not explain how to install Z3"
+
+  "$test_venv/bin/maude-se-installer" install z3
+  "$test_venv/bin/python" -m pip install --disable-pip-version-check \
     "${wheels[0]}[all-solvers]"
 
   "$test_venv/bin/python" -c 'import maudeSE'
   "$test_venv/bin/maude-se" --help >/dev/null
+  "$test_venv/bin/maude-se-installer" doctor
   for solver in z3 yices cvc5; do
     output="$(
       printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\ncheck in SIMPLE : X:Integer > 4 and X:Integer < 3 using QF_LRA .\nquit\n' | \

@@ -8,15 +8,35 @@ Install the latest released Python package from PyPI:
 python3 -m pip install maude-se
 ```
 
-MaudeSE uses Z3 by default. Install optional solver support with package
-extras when needed:
+MaudeSE selects Z3 by default, but the base wheel does not install any SMT
+solver. The wheel installs `maude-se-installer`, which checks the solvers
+available in the current Python environment:
 
 ```bash
-python3 -m pip install z3-solver
-python3 -m pip install 'maude-se[yices]'
-python3 -m pip install 'maude-se[cvc5]'
-# or install every supported solver
-python3 -m pip install 'maude-se[all-solvers]'
+maude-se-installer doctor
+maude-se-installer doctor cvc5
+```
+
+Install Z3 for the default configuration, another solver of your choice, or
+all solvers into that same environment:
+
+```bash
+maude-se-installer install z3
+maude-se-installer install yices
+maude-se-installer install cvc5
+maude-se-installer install all
+```
+
+These commands use the installed MaudeSE version's declared dependencies.
+Equivalent package extras are `maude-se[z3]`, `maude-se[yices]`,
+`maude-se[cvc5]`, and `maude-se[all-solvers]`. Install Z3 before running
+`maude-se` with its default configuration. The installer applies to the wheel;
+the standalone executable includes its own solver.
+
+Select a solver when running a Maude file:
+
+```bash
+maude-se example.maude -s cvc5
 ```
 
 Check the installation with:
@@ -96,8 +116,8 @@ Standalone builds use Homebrew only for build tools:
 
 The native libraries used by the wheel and standalone builds are built from
 pinned source versions instead of Homebrew bottles. Standalone builds include
-a statically linked Z3, while wheels declare the pinned `z3-solver` package as
-a runtime dependency.
+a statically linked Z3, while wheels declare each pinned solver package as an
+optional dependency.
 
 Install missing Homebrew packages explicitly with:
 
@@ -137,11 +157,13 @@ mode with compiler optimization, link-time optimization, and symbol stripping.
 ```
 
 This command does not rebuild the wheel. It expects exactly one wheel in
-`out/`, recreates `.build-wheel/venv-test`, installs the wheel and all
-supported solvers, and checks:
+`out/`, recreates `.build-wheel/venv-test`, verifies the base wheel has no
+solver, installs Z3 through the installer, then installs all supported solvers
+and checks:
 
 - `import maudeSE`;
-- `maude-se --help`; and
+- `maude-se --help`;
+- `maude-se-installer doctor`;
 - Z3, Yices, and cvc5 SAT/UNSAT smoke tests using
   `examples/smt-check-ex.maude`;
 - native modules have no non-system dynamic-library dependencies.
