@@ -240,9 +240,9 @@ build_gmp() {
   if [[ "$os" == "Darwin" ]]; then
     local gmp_cpu_opts=(--enable-fat)
     if [[ "$arch" == "x86_64" ]]; then
-      # Avoid text relocations from GMP's fat dispatch objects when linking
-      # Intel macOS extension modules.
-      gmp_cpu_opts=(--build=amd64-apple-darwin --disable-fat)
+      # Avoid text relocations from GMP's Intel assembly when linking
+      # static GMP into Python extension modules.
+      gmp_cpu_opts=(--disable-fat --disable-assembly)
     fi
     progress "Downloading gmp $GMP_VERSION"
     rm -rf "$third_party/gmp-$GMP_VERSION"

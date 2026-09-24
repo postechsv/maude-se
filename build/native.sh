@@ -235,9 +235,9 @@ build_gmp() {
 
   local gmp_cpu_opts=(--enable-fat)
   if [[ "$os" == "Darwin" && "$arch" == "x86_64" ]]; then
-    # GMP's fat dispatch objects contain text relocations rejected by modern
-    # macOS linkers. Target baseline amd64 for portable Intel binaries.
-    gmp_cpu_opts=(--build=amd64-apple-darwin --disable-fat)
+    # GMP's Intel assembly contains text relocations rejected by modern macOS
+    # linkers, even in a non-fat build. Use portable C for static linking.
+    gmp_cpu_opts=(--disable-fat --disable-assembly)
   fi
 
   progress "Downloading gmp $GMP_VERSION"
