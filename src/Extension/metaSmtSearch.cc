@@ -55,8 +55,11 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         Connector conn2 = vg->getConnector2();
                         // prepare for the current module
                         conv->prepareFor(m);
-                        conn->set_logic(logic);
-                        conn2->set_logic(logic);
+                        if (logic)
+                        {
+                            conn->set_logic(logic);
+                            conn2->set_logic(logic);
+                        }
                         // vg->setUnderline(conn, conv);
 
                         // cout << "   !!! Made cached SMT_RewriteSequenceSearch !!!" << endl;
@@ -112,9 +115,11 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                     smtState->transferCountTo(context);
                     if (!success)
                     {
+                        bool invalidRewrite = smtState->hasInvalidRewriteResult();
                         bool uncertain = smtState->isSmtUnknown();
                         delete smtState;
-                        result = (uncertain ? smtUnknownSymbol : smtFailureSymbol)->makeDagNode();
+                        result = (invalidRewrite ? invalidRewriteSymbol :
+                                  uncertain ? smtUnknownSymbol : smtFailureSymbol)->makeDagNode();
                         goto fail;
                     }
                     context.incrementRlCount();
@@ -170,9 +175,11 @@ bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingCont
                 Verbose("metaSearchPath: visited " << smtState->getNrStates() << " states.");
                 if (!success)
                 {
+                    bool invalidRewrite = smtState->hasInvalidRewriteResult();
                     bool uncertain = smtState->isSmtUnknown();
                     delete smtState;
-                    result = uncertain ? unknownTraceSymbol->makeDagNode() : upFailureTrace();
+                    result = invalidRewrite ? invalidRewriteTraceSymbol->makeDagNode() :
+                             uncertain ? unknownTraceSymbol->makeDagNode() : upFailureTrace();
                     goto fail;
                 }
                 context.incrementRlCount();

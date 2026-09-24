@@ -90,6 +90,8 @@ SmtStateTransitionGraph::~SmtStateTransitionGraph()
 
 int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 {
+	if (invalidRewriteResult || smtUnknown)
+		return NONE;
 	State *n = seen[stateNr];
 	int nrNextStates = n->nextStates.length();
 	if (index < nrNextStates)
@@ -204,6 +206,8 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			if (nrChild != 2)
 			{
 				IssueWarning("failed to apply one-step symbolic rewrite (error term : " << r.first << ")");
+				invalidRewriteResult = true;
+				return NONE;
 			}
 
 			DagNode *c1 = dg[0];

@@ -22,6 +22,11 @@ void Interpreter::doRewriteSmtSearching(Timer &timer,
     bool showStats = getFlag(SHOW_STATS);
     if (!result)
     {
+      if (state->hasInvalidRewriteResult())
+      {
+        cout << "\nSearch stopped: invalid symbolic rewrite result." << endl;
+        break;
+      }
       if (state->isSmtUnknown())
       {
         cout << "\nSMT result unknown; search stopped." << endl;

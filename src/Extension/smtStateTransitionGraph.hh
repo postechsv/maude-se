@@ -48,6 +48,7 @@ public:
   void transferCountTo(RewritingContext &recipient);
   int getStateParent(int stateNr) const;
   bool isSmtUnknown() const { return smtUnknown; }
+  bool hasInvalidRewriteResult() const { return invalidRewriteResult; }
 
 protected:
   struct State
@@ -90,6 +91,7 @@ protected:
   bool fold;
   bool merge;
   bool smtUnknown = false;
+  bool invalidRewriteResult = false;
 
   // key: State index
   typedef map<int, Vector<ConstrainedTerm *>> ConstrainedTermMap;

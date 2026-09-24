@@ -137,7 +137,7 @@ void RewriteSmtSequenceSearch::markReachableNodes()
 
 bool RewriteSmtSequenceSearch::findNextMatch()
 {
-    if (smtUnknown)
+    if (smtUnknown || invalidRewriteResult)
         return false;
     if (matchState != 0)
         goto tryMatch; // non-startup case
@@ -185,7 +185,7 @@ bool RewriteSmtSequenceSearch::findNextMatch()
             return true;
         }
 
-        if (smtUnknown)
+        if (smtUnknown || invalidRewriteResult)
             break;
         delete matchState;
     }
@@ -263,7 +263,7 @@ int RewriteSmtSequenceSearch::findNextInterestingState()
                 }
             }
         }
-        if (smtUnknown)
+        if (smtUnknown || invalidRewriteResult)
             return NONE;
         if (getContext()->traceAbort())
             return NONE;

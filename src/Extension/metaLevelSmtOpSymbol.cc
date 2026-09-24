@@ -351,7 +351,8 @@ MetaLevelSmtOpSymbol::downLogic(DagNode* arg) const
   int qid;
   if (metaLevel->downQid(arg, qid))
     {
-      return Token::name(qid);
+      const char* logic = Token::name(qid);
+      return strcmp(logic, "auto") == 0 ? nullptr : logic;
     }
   return nullptr;
 }
