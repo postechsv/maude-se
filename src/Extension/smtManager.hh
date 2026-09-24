@@ -84,7 +84,9 @@ private:
 
 VisibleModule *getCurrentModule();
 
-#ifdef USE_CVC4
+#ifdef USE_CVC5
+#include "cvc5.hh"
+#elif defined(USE_CVC4)
 #include "cvc4.hh"
 #elif defined(USE_YICES2)
 #include "yices2.hh"

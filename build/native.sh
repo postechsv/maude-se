@@ -107,11 +107,12 @@ setup_build() {
     export PATH="$(brew --prefix autoconf)/bin:$PATH"
     export PATH="$(brew --prefix automake)/bin:$PATH"
   else
-    yum install flex bison zip -y
+    yum install flex bison zip unzip -y
   fi
 }
 
 build_deps() {
+  local solver="${1:-z3}"
 
   build_libsigsegv
   build_gmp
@@ -119,13 +120,45 @@ build_deps() {
   build_tecla
   build_ncurses
 
-  # Build the solver from source so it uses the same deployment target.
-  build_z3
-  # get_yices
-  # # get_cvc5
+  case "$solver" in
+    z3) build_z3 ;;
+    cvc5) get_cvc5 ;;
+    *) echo "error: unsupported native standalone solver: $solver" >&2; return 2 ;;
+  esac
 
   rm -rf "$build_dir"/lib/*.so*
   rm -rf "$build_dir"/lib/*.dylib*
+}
+
+get_cvc5() {
+  local package_name expected archive source_dir
+  case "$os:$arch" in
+    Darwin:arm64)
+      package_name="cvc5-macOS-arm64-static"
+      expected="$CVC5_MACOS_ARM64_SHA256" ;;
+    Darwin:x86_64)
+      package_name="cvc5-macOS-x86_64-static"
+      expected="$CVC5_MACOS_X86_64_SHA256" ;;
+    Linux:x86_64)
+      package_name="cvc5-Linux-x86_64-static"
+      expected="$CVC5_LINUX_X86_64_SHA256" ;;
+    *) echo "error: cvc5 has no pinned static package for $os/$arch" >&2; return 1 ;;
+  esac
+  mkdir -p "$third_party" "$include_dir" "$lib_dir"
+  archive="$third_party/$package_name.zip"
+  source_dir="$third_party/$package_name"
+  if [[ ! -f "$archive" ]]; then
+    curl -fLsS --retry 3 -o "$archive" \
+      "https://github.com/cvc5/cvc5/releases/download/cvc5-$CVC5_VERSION/$package_name.zip"
+  fi
+  verify_source_archive "$archive" "$expected"
+  if [[ ! -d "$source_dir" ]]; then
+    unzip -q "$archive" -d "$third_party"
+  fi
+  cp -R "$source_dir/include/cvc5" "$include_dir/"
+  cp "$source_dir/lib/libcvc5.a" "$source_dir/lib/libpicpolyxx.a" \
+    "$source_dir/lib/libpicpoly.a" "$source_dir/lib/libcadical.a" \
+    "$source_dir/lib/libmpfr.a" "$lib_dir/"
 }
 
 prepare() {
@@ -137,6 +170,7 @@ patch_maude() {
   progress "Apply patching"
 
   apply_patch_once "$maude_dir" "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
+  apply_patch_once "$maude_dir" "$top_dir/src/patch/native-cvc5.patch"
 }
 
 make_patch() {
@@ -148,19 +182,23 @@ make_patch() {
 
 build_all() {
   local release_tag="${1:-$(maude_se_release_tag)}"
+  local solver="${2:-z3}"
 
   validate_maude_se_release_tag "$release_tag"
   setup_build
   prepare
-  build_deps
-  build_maude_se "$release_tag"
+  build_deps "$solver"
+  build_maude_se "$release_tag" "$solver"
 }
 
 build_maude_se() {
-  build_maude "z3" "--with-yices2=no --with-cvc4=no --with-z3=yes" "-pthread" "$1"
-  # build_maude "yices" "--with-yices2=yes --with-cvc4=no --with-z3=no" ""
-  # build_maude yices --with-yices2=yes --with-cvc4=no --with-z3=no
-  # build_maude cvc4 --with-yices2=no --with-cvc4=yes --with-z3=no
+  local release_tag="$1"
+  local solver="${2:-z3}"
+  case "$solver" in
+    z3) build_maude z3 "--with-yices2=no --with-cvc4=no --with-cvc5=no --with-z3=yes" "-pthread" "$release_tag" ;;
+    cvc5) build_maude cvc5 "--with-yices2=no --with-cvc4=no --with-cvc5=yes --with-z3=no" "-pthread" "$release_tag" ;;
+    *) echo "error: unsupported native standalone solver: $solver" >&2; return 2 ;;
+  esac
 }
 
 build_maude() {
@@ -210,7 +248,8 @@ build_maude() {
     LDFLAGS="$LDFLAGS" \
     TECLA_LIBS="$lib_dir/libtecla.a $lib_dir/libncursesw.a" \
     GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a" \
-    Z3_LIB="$lib_dir/libz3.a"
+    Z3_LIB="$lib_dir/libz3.a" \
+    CVC5_LIB="$lib_dir/libcvc5.a $lib_dir/libpicpolyxx.a $lib_dir/libpicpoly.a $lib_dir/libcadical.a $lib_dir/libmpfr.a $lib_dir/libgmpxx.a $lib_dir/libgmp.a"
 
   make -j4
   make check
@@ -220,6 +259,12 @@ build_maude() {
   cp maude "$out_name/maude-se-$name"
   cp $maude_dir/src/Main/*.maude ./"$out_name"
   cp "$package_src_dir"/*.maude ./"$out_name"
+  if [[ "$name" == cvc5 ]]; then
+    local cvc5_platform="$os"
+    [[ "$os" == Darwin ]] && cvc5_platform=macOS
+    cp "$third_party/cvc5-$cvc5_platform-$arch-static/COPYING" "$out_name/CVC5-COPYING"
+    cp -R "$third_party/cvc5-$cvc5_platform-$arch-static/licenses" "$out_name/licenses"
+  fi
 
   zip -r "$out_name.zip" "$out_name"
 

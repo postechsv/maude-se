@@ -61,7 +61,7 @@ wheel)
   done
   ;;
 standalone)
-  "$top_dir/build.sh" test-standalone
+  "$top_dir/build.sh" test-standalone "${2:-z3}"
   ;;
 *)
   echo "usage: $0 wheel|standalone" >&2

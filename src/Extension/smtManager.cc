@@ -171,7 +171,9 @@ int encodeEscapedToken(const char *str)
     return Token::encode(escaped.c_str());
 }
 
-#ifdef USE_CVC4
+#ifdef USE_CVC5
+#include "cvc5.cc"
+#elif defined(USE_CVC4)
 #include "cvc4.cc"
 #elif defined(USE_YICES2)
 #include "yices2.cc"

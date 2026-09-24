@@ -86,6 +86,14 @@ jobs:
       run: |
         docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_28_x86_64 \
           bash ./build/test-linux.sh standalone
+    - name: Build and test cvc5 standalone
+      env:
+        TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      run: |
+        docker run --rm -v "$PWD:/work" -w /work \
+          -e GITHUB_TOKEN="${{ github.token }}" -e TAG="$TAG" \
+          quay.io/pypa/manylinux_2_28_x86_64 \
+          bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh deps cvc5 && ./build/native.sh build-maude-se "$release_tag" cvc5 && bash ./build/test-linux.sh standalone cvc5'
     - name: Store standalone distribution
       uses: actions/upload-artifact@v4
       with:
@@ -109,6 +117,10 @@ jobs:
         ./build/native.sh build "$TAG"
     - name: Test standalone executable
       run: ./build.sh test-standalone
+    - name: Build and test cvc5 standalone
+      run: |
+        ./build.sh standalone cvc5
+        ./build.sh test-standalone cvc5
     - name: Store standalone distribution
       uses: actions/upload-artifact@v4
       with:

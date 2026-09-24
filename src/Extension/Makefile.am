@@ -43,12 +43,14 @@ libExtension_a_SOURCES = \
 EXTRA_DIST = \
     z3.cc \
     yices2.cc \
-    cvc4.cc
+    cvc4.cc \
+    cvc5.cc
 
 noinst_HEADERS = \
     z3.hh \
     yices2.hh \
     cvc4.hh \
+    cvc5.hh \
     nativeSmt.hh \
 	smtManager.hh \
     smtOpSymbol.hh \

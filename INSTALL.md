@@ -203,6 +203,17 @@ deployment target: 10.13 for x86_64 and 11.0 for arm64. Override it with
 temporary directory, runs a calculation plus Z3 SAT and UNSAT checks through
 the packaged executable, and rejects non-system dynamic-library dependencies.
 
+The native cvc5 standalone uses cvc5 1.4.0 and can be built separately:
+
+```bash
+./build.sh standalone cvc5
+./build.sh test-standalone cvc5
+```
+
+This produces `out/maude_se_cvc5-<version>-<platform>-<architecture>.zip`
+with the `maude-se-cvc5` executable. The cvc5 library is statically linked;
+the build downloads a checksum-verified official cvc5 static distribution.
+
 ### 6. Use the installed development build
 
 Open an isolated shell containing the tested MaudeSE installation:

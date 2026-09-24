@@ -1,0 +1,40 @@
+diff --git configure.ac configure.ac
+--- configure.ac
++++ configure.ac
+@@ -102,6 +102,22 @@ else
+   Z3_LIB=""
+ fi
+ #
++# Check whether cvc5 should provide the native SMT backend.
++#
++AC_ARG_WITH(cvc5,
++        AS_HELP_STRING([--with-cvc5],[use cvc5 SMT solver library [default=no]]),
++        [WITH_CVC5=$withval],
++        [WITH_CVC5=no])
++if (test $WITH_CVC5 = yes) then
++  AC_DEFINE([USE_CVC5], [], [use cvc5 SMT solver library])
++  if (test -z "$CVC5_LIB") then
++    CVC5_LIB="-lcvc5"
++  fi
++  AC_SUBST(CVC5_LIB)
++else
++  CVC5_LIB=""
++fi
++#
+ #	Check to see if we should use Yices2 for SMT solving.
+ #
+ AC_ARG_WITH(yices2,
+diff --git src/Main/Makefile.am src/Main/Makefile.am
+--- src/Main/Makefile.am
++++ src/Main/Makefile.am
+@@ -64,6 +64,7 @@ maude_LDADD = \
+ 	$(YICES2_LIB) \
++	$(CVC5_LIB) \
+ 	$(GMP_LIBS) \
+ 	$(BUDDY_LIB) \
+ 	$(TECLA_LIBS) \
+ 	$(LIBSIGSEGV_LIB) \
+ 	$(Z3_LIB)
+ 
+ maude_SOURCES = \
+ 	main.cc
