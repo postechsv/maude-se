@@ -3,8 +3,8 @@
 set -euo pipefail
 
 top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-build_venv="$top_dir/.venv-build"
-test_venv="$top_dir/.venv-test"
+build_venv="$top_dir/.build-wheel/venv-build"
+test_venv="$top_dir/.build-wheel/venv-test"
 
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
@@ -107,9 +107,9 @@ doctor() {
 
   if have_command brew; then
     installed_formulae="$(brew list --formula -1 2>/dev/null || true)"
-    local formulae=(bison flex)
+    local formulae=(bison flex cmake swig)
     if [[ "$profile" == "standalone" ]]; then
-      formulae+=(autoconf automake cmake)
+      formulae+=(autoconf automake)
       for command_name in autoreconf cmake zip unzip; do
         if have_command "$command_name"; then
           printf 'ok      %s\n' "$command_name"
@@ -142,7 +142,7 @@ install_deps() {
   [[ "$(uname -s)" == "Darwin" ]] || fail "install-deps supports macOS only"
   have_command brew || fail "Homebrew is required: https://brew.sh"
 
-  brew install bison flex autoconf automake cmake
+  brew install bison flex autoconf automake cmake swig
   note "Homebrew dependencies are installed"
 }
 
@@ -226,6 +226,7 @@ test_standalone() {
 test_wheel() {
   local wheels=("$top_dir"/out/*.whl)
   local output
+  local solver
 
   if [[ ! -e "${wheels[0]}" ]]; then
     fail "no wheel found in $top_dir/out; run ./build.sh wheel first"
@@ -239,16 +240,18 @@ test_wheel() {
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
     "pip==25.0.1"
   "$test_venv/bin/python" -m pip install --disable-pip-version-check \
-    "${wheels[0]}"
+    "${wheels[0]}[all-solvers]"
 
   "$test_venv/bin/python" -c 'import maudeSE'
   "$test_venv/bin/maude-se" --help >/dev/null
-  output="$(
-    printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\ncheck in SIMPLE : X:Integer > 4 and X:Integer < 3 using QF_LRA .\nquit\n' | \
-      "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s z3
-  )"
-  grep -Fq 'result: sat' <<<"$output" || fail "wheel Z3 SAT smoke test failed"
-  grep -Fq 'result: unsat' <<<"$output" || fail "wheel Z3 UNSAT smoke test failed"
+  for solver in z3 yices cvc5; do
+    output="$(
+      printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\ncheck in SIMPLE : X:Integer > 4 and X:Integer < 3 using QF_LRA .\nquit\n' | \
+        "$test_venv/bin/maude-se" "$top_dir/examples/smt-check-ex.maude" -s "$solver"
+    )"
+    grep -Fq 'result: sat' <<<"$output" || fail "wheel $solver SAT smoke test failed"
+    grep -Fq 'result: unsat' <<<"$output" || fail "wheel $solver UNSAT smoke test failed"
+  done
   while IFS= read -r binary; do
     audit_macos_linkage "$binary"
   done < <(find "$test_venv" -type f \( -name '*.so' -o -name '*.dylib' \) \
@@ -292,14 +295,8 @@ open_venv_shell() {
 clean_build() {
   local path
   local paths=(
-    "$top_dir/.build"
-    "$top_dir/.3rd_party"
-    "$top_dir/.venv-build"
-    "$top_dir/.venv-test"
-    "$top_dir/maude-bindings"
-    "$top_dir/Maude"
-    "$top_dir/.native-build"
-    "$top_dir/.native-3rd_party"
+    "$top_dir/.build-wheel"
+    "$top_dir/.build-standalone"
     "$top_dir/out"
   )
 

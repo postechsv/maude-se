@@ -8,6 +8,7 @@ class Factory(SmtManagerFactory):
     def __init__(self):
         SmtManagerFactory.__init__(self)
         self._map = dict()
+        self._converter = None
 
     def register(self, name, conv_cls, conn_cls):
         self._map[name] = (conv_cls, conn_cls)
@@ -27,6 +28,11 @@ class Factory(SmtManagerFactory):
     
         if conv is None:
             raise Exception("fail to create converter")
+
+        # Keep the Python director object.  SWIG passes createConnector a
+        # base-class proxy, which hides solver-specific Python attributes
+        # needed by backends such as cvc5.
+        self._converter = conv
     
         # must be disown in order to take over the ownership
         return conv.__disown__()
@@ -37,7 +43,7 @@ class Factory(SmtManagerFactory):
         self.check_solver(solver)
 
         _, cn = self._map[solver]
-        conn = cn(conv)
+        conn = cn(self._converter)
     
         if conn is None:
             raise Exception("fail to create connector")

@@ -11,12 +11,16 @@ class Cvc5Connector(Connector):
         self._c = converter
         self._g = id_gen()
 
-        _logic = "ALL" if logic is None else logic
-
         # set solver
-        self._s = cvc5.Solver()
+        # Terms are owned by a cvc5 TermManager.  Reuse the converter's
+        # solver so converted terms and asserted formulas have the same
+        # owner (required by cvc5 1.4 and later).
+        self._s = converter.solver
         self._s.setOption("produce-models", "true")
-        self._s.setLogic(_logic)
+        self._logic = None
+        if logic is not None:
+            self._s.setLogic(logic)
+            self._logic = logic
 
         self._m = None
     
@@ -124,10 +128,15 @@ class Cvc5Connector(Connector):
             print(f"  {v} ---> {self._m[v]}")
 
     def set_logic(self, logic):
-        # set solver
-        self._s = cvc5.Solver()
-        self._s.setOption("produce-models", "true")
-        self._s.setLogic(logic)
+        self._s.resetAssertions()
+        if self._logic is None:
+            self._s.setLogic(logic)
+            self._logic = logic
+        elif self._logic != logic:
+            raise ValueError(
+                f"cvc5 connector already uses logic {self._logic}; "
+                f"cannot switch to {logic}"
+            )
 
     def get_converter(self):
         return self._c

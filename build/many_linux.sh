@@ -4,7 +4,9 @@
 set -euo pipefail
 
 top_dir="$(pwd)"
-build_dir="$top_dir/.build"
+work_dir="$top_dir/.build-wheel"
+bindings_dir="$work_dir/sources/maude-bindings"
+build_dir="$work_dir/install"
 package_src_dir="$build_dir/package-src"
 
 yum install flex bison -y
@@ -22,7 +24,7 @@ python -m pip install --upgrade wheel auditwheel build
 ./build/build.sh build-maude
 ./build/build.sh prep-build-maude-se
 
-cd maude-bindings 
+cd "$bindings_dir"
 (
     for version in "${versions[@]}"; do
         /opt/python/${version}/bin/python -m pip install --upgrade scikit-build-core scikit-build ninja cmake meson swig build
@@ -38,4 +40,4 @@ cd maude-bindings
 cd "$top_dir"
 
 mkdir -p ./out
-cp -r ./maude-bindings/.dist/* ./out
+cp -r "$bindings_dir"/.dist/* ./out

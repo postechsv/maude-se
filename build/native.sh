@@ -15,10 +15,10 @@ source "$top_dir/build/versions.env"
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
 
-maude_dir="$top_dir/Maude"
-
-build_dir="$top_dir/.native-build"
-third_party="$top_dir/.native-3rd_party"
+work_dir="$top_dir/.build-standalone"
+maude_dir="$work_dir/sources/Maude"
+build_dir="$work_dir/install"
+third_party="$work_dir/dependencies"
 
 # OS & architecture detection
 
@@ -72,6 +72,14 @@ ensure_repo() {
 apply_patch_once() {
   local dir="$1"
   local patch_file="$2"
+  local marker="$work_dir/patches/$(basename "$patch_file").applied"
+  local signature
+
+  signature="$(git -C "$dir" rev-parse HEAD):$(git hash-object "$patch_file")"
+  if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]]; then
+    progress "Patch already applied: $(basename "$patch_file")"
+    return 0
+  fi
 
   if git -C "$dir" apply -p0 --check "$patch_file" 2>/dev/null; then
     git -C "$dir" apply -p0 "$patch_file"
@@ -81,6 +89,8 @@ apply_patch_once() {
     echo "error: patch does not apply cleanly: $patch_file" >&2
     return 1
   fi
+  mkdir -p "$(dirname "$marker")"
+  printf '%s\n' "$signature" >"$marker"
 }
 
 setup_build() {
@@ -130,7 +140,7 @@ patch_maude() {
 make_patch() {
   progress "Make patch for Maude as a library"
 
-  cd "$top_dir/Maude"
+  cd "$maude_dir"
   git diff --no-prefix >$top_dir/src/patch/e-$(git log -1 --pretty=format:"%h").patch
 }
 

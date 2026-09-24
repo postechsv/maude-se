@@ -90,6 +90,10 @@ class Cvc5Converter(Converter):
         self._func_dict = dict()
         self._module = None
 
+    @property
+    def solver(self):
+        return self._s
+
     def prepareFor(self, module: Module):
         # clear previous
         self._param_sort.clear()

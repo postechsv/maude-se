@@ -49,6 +49,9 @@ jobs:
     - name: Build Python package
       run: ./build/macos.sh
 
+    - name: Test Z3, Yices, and cvc5
+      run: ./build.sh test
+
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:

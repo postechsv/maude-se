@@ -3,6 +3,9 @@
 .vscode/
 .DS_Store
 .python-version
+.build-wheel/
+.build-standalone/
+# Legacy build directories from before the layout change.
 .venv-build/
 .venv-test/
 .3rd_party/

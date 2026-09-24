@@ -8,11 +8,15 @@ Install the latest released Python package from PyPI:
 python3 -m pip install maude-se
 ```
 
-MaudeSE uses Z3 by default. Install its Python package to run the default
-solver:
+MaudeSE uses Z3 by default. Install optional solver support with package
+extras when needed:
 
 ```bash
 python3 -m pip install z3-solver
+python3 -m pip install 'maude-se[yices]'
+python3 -m pip install 'maude-se[cvc5]'
+# or install every supported solver
+python3 -m pip install 'maude-se[all-solvers]'
 ```
 
 Check the installation with:
@@ -35,12 +39,23 @@ early when the tag and package version differ.
 
 ## Build locally on macOS
 
-The local build uses two isolated Python environments:
+Generated build files are kept in two directories:
 
-- `.venv-build` contains CMake, Meson, Ninja, SWIG, and the Python packaging
-  tools used to build the wheel.
-- `.venv-test` contains the generated MaudeSE wheel, PyYAML, and Z3. It
-  represents a clean user installation and is recreated by the test command.
+- `.build-wheel/` contains the wheel's external source checkouts, downloaded
+  dependencies, installed native libraries, and Python environments.
+- `.build-standalone/` contains the standalone Maude checkout, downloaded
+  dependencies, and installed native libraries.
+
+Finished wheels and standalone ZIP files are written to `out/`.
+
+The wheel directory contains two isolated Python environments:
+
+- `.build-wheel/venv-build` contains Meson, Ninja, and the Python packaging
+  tools used to build the wheel. CMake and SWIG come from Homebrew.
+- `.build-wheel/venv-test` contains the generated MaudeSE wheel, PyYAML, Z3, Yices, and
+  cvc5. It
+  represents a clean `all-solvers` user installation and is recreated by the
+  test command.
 
 Both directories and all generated build artifacts are ignored by Git.
 
@@ -68,6 +83,8 @@ Homebrew. Wheel builds use these Homebrew build tools:
 
 - `bison`
 - `flex`
+- `cmake`
+- `swig`
 
 Standalone builds use Homebrew only for build tools:
 
@@ -97,7 +114,7 @@ Install missing Homebrew packages explicitly with:
 This command:
 
 1. checks the local prerequisites;
-2. creates or updates `.venv-build` with pinned build tools;
+2. creates or updates `.build-wheel/venv-build` with pinned build tools;
 3. checks out the pinned `maude-bindings` and `maudesmc` revisions; and
 4. applies the MaudeSE patches if they have not already been applied.
 
@@ -120,11 +137,13 @@ mode with compiler optimization, link-time optimization, and symbol stripping.
 ```
 
 This command does not rebuild the wheel. It expects exactly one wheel in
-`out/`, recreates `.venv-test`, installs the wheel and Z3, and checks:
+`out/`, recreates `.build-wheel/venv-test`, installs the wheel and all
+supported solvers, and checks:
 
 - `import maudeSE`;
 - `maude-se --help`; and
-- the Z3-based `examples/smt-check-ex.maude` smoke test;
+- Z3, Yices, and cvc5 SAT/UNSAT smoke tests using
+  `examples/smt-check-ex.maude`;
 - native modules have no non-system dynamic-library dependencies.
 
 On macOS, the Python extension and the operating system itself remain dynamic.
@@ -173,7 +192,7 @@ This is equivalent to:
 ./build.sh shell test
 ```
 
-Inside that shell, commands such as the following use `.venv-test`:
+Inside that shell, commands such as the following use `.build-wheel/venv-test`:
 
 ```bash
 maude-se --help
@@ -207,14 +226,14 @@ native build products, and `out/`. It does not uninstall Homebrew packages.
 | `./build.sh doctor` | Check macOS build prerequisites | No |
 | `./build.sh doctor standalone` | Check wheel and standalone prerequisites | No |
 | `./build.sh install-deps` | Install required Homebrew packages | Yes |
-| `./build.sh setup` | Prepare pinned sources and `.venv-build` | Repository only |
+| `./build.sh setup` | Prepare pinned sources and `.build-wheel/venv-build` | Repository only |
 | `./build.sh wheel` | Build a wheel into `out/` | Repository only |
-| `./build.sh test` | Recreate `.venv-test` and test the existing wheel | Repository only |
+| `./build.sh test` | Recreate `.build-wheel/venv-test` and test the existing wheel | Repository only |
 | `./build.sh standalone` | Build a standalone executable ZIP into `out/` | Repository only |
 | `./build.sh test-standalone` | Test the existing standalone ZIP | Temporary files only |
 | `./build.sh shell` | Open the MaudeSE test environment | No persistent changes |
 | `./build.sh shell build` | Open the build-tool environment | No persistent changes |
-| `./build.sh clean` | Remove generated local build files | Repository only |
+| `./build.sh clean` | Remove both build directories and `out/` | Repository only |
 
 Display this command list at any time with:
 

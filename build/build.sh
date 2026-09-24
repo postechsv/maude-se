@@ -16,11 +16,11 @@ source "$top_dir/build/versions.env"
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
 
-# maudesmc
-smc_dir="$top_dir/maude-bindings/subprojects/maudesmc"
-
-build_dir="$top_dir/.build"
-third_party="$top_dir/.3rd_party"
+work_dir="$top_dir/.build-wheel"
+bindings_dir="$work_dir/sources/maude-bindings"
+smc_dir="$bindings_dir/subprojects/maudesmc"
+build_dir="$work_dir/install"
+third_party="$work_dir/dependencies"
 package_src_dir="$build_dir/package-src"
 
 # OS & architecture detection
@@ -80,6 +80,14 @@ ensure_repo() {
 apply_patch_once() {
   local dir="$1"
   local patch_file="$2"
+  local marker="$work_dir/patches/$(basename "$patch_file").applied"
+  local signature
+
+  signature="$(git -C "$dir" rev-parse HEAD):$(git hash-object "$patch_file")"
+  if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]]; then
+    progress "Patch already applied: $(basename "$patch_file")"
+    return 0
+  fi
 
   if git -C "$dir" apply -p0 --check "$patch_file" 2>/dev/null; then
     git -C "$dir" apply -p0 "$patch_file"
@@ -89,14 +97,16 @@ apply_patch_once() {
     echo "error: patch does not apply cleanly: $patch_file" >&2
     return 1
   fi
+  mkdir -p "$(dirname "$marker")"
+  printf '%s\n' "$signature" >"$marker"
 }
 
 prepare() {
   ensure_repo \
     "https://github.com/fadoss/maude-bindings.git" \
-    "$top_dir/maude-bindings" \
+    "$bindings_dir" \
     "$MAUDE_BINDINGS_REF"
-  git -C "$top_dir/maude-bindings" submodule update --init
+  git -C "$bindings_dir" submodule update --init
   ensure_repo \
     "https://github.com/fadoss/maudesmc" \
     "$smc_dir" \
@@ -108,7 +118,7 @@ patch_maude() {
   progress "Apply patchings"
 
   apply_patch_once \
-    "$top_dir/maude-bindings" \
+    "$bindings_dir" \
     "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
   apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
   apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
@@ -117,7 +127,7 @@ patch_maude() {
 make_patch() {
   progress "Make patch for Maude as a library"
 
-  cd "$top_dir/maude-bindings"
+  cd "$bindings_dir"
   git diff --no-prefix ":^subprojects" ":^pyproject.toml" ":^README.md" >$top_dir/src/patch/b-$(git log -1 --pretty=format:"%h").patch
 
   cd "$smc_dir"
@@ -157,7 +167,7 @@ build_maude() {
       -Dstrip=true \
       -Dcpp_args="$native_cxxflags -fstrict-aliasing" \
       -Dextra-lib-dirs="$build_dir/lib" \
-      -Dextra-include-dirs="$build_dir/include, $py_inc, $top_dir/maude-bindings/src" \
+      -Dextra-include-dirs="$build_dir/include, $py_inc, $bindings_dir/src" \
       -Dstatic-libs='buddy, gmp, sigsegv' \
       -Dwith-smt='pysmt' \
       -Dwith-ltsmin=disabled \
@@ -171,7 +181,7 @@ build_maude() {
 }
 
 prep_build_maude_se() {
-  swig_src_dir="$top_dir/maude-bindings/swig"
+  swig_src_dir="$bindings_dir/swig"
 
   prepare_maude_se_package_sources "$package_src_dir"
 
@@ -188,12 +198,12 @@ prep_build_maude_se() {
     strip $smc_dir/installdir/lib/*.so # only for Linux
   fi
 
-  cp "$top_dir/src/pyproject.toml" $top_dir/maude-bindings
-  cp "$top_dir/README.md" $top_dir/maude-bindings
+  cp "$top_dir/src/pyproject.toml" "$bindings_dir"
+  cp "$top_dir/README.md" "$bindings_dir"
 
   cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
   cp "$src_dir/swig/core.i" "$swig_src_dir"
-  cp "$src_dir/Extension/pysmt.hh" "$top_dir/maude-bindings/src"
+  cp "$src_dir/Extension/pysmt.hh" "$bindings_dir/src"
 }
 
 build_maude_se() {
@@ -206,7 +216,7 @@ build_maude_se() {
     cmake_args+=" -DCMAKE_OSX_DEPLOYMENT_TARGET=$deployment_target"
   fi
 
-  cd maude-bindings
+  cd "$bindings_dir"
   (
     rm -rf dist/ maude.egg-info/ _skbuild/
     CMAKE_ARGS="$cmake_args" \
@@ -216,7 +226,7 @@ build_maude_se() {
 
   cd "$top_dir"
   mkdir -p ./out
-  cp ./maude-bindings/dist/* ./out
+  cp "$bindings_dir"/dist/* ./out
 }
 
 # build gmp
