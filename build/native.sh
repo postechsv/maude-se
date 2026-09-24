@@ -161,7 +161,6 @@ build_maude_se() {
   # build_maude "yices" "--with-yices2=yes --with-cvc4=no --with-z3=no" ""
   # build_maude yices --with-yices2=yes --with-cvc4=no --with-z3=no
   # build_maude cvc4 --with-yices2=no --with-cvc4=yes --with-z3=no
-  # Z3_LIB="$lib_dir/libz3.a" \
 }
 
 build_maude() {
@@ -210,7 +209,8 @@ build_maude() {
     CXXFLAGS="$CXXFLAGS" \
     LDFLAGS="$LDFLAGS" \
     TECLA_LIBS="$lib_dir/libtecla.a $lib_dir/libncursesw.a" \
-    GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a"
+    GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a" \
+    Z3_LIB="$lib_dir/libz3.a"
 
   make -j4
   make check
