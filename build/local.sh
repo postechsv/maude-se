@@ -41,20 +41,38 @@ fail() {
 
 audit_macos_linkage() {
   local binary="$1"
+  local allow_bundled_maude="${2:-false}"
   local dependency
+  local self_id
+  local rpaths
+  local linkage
   local failed=0
 
   [[ "$(uname -s)" == "Darwin" ]] || return 0
+  linkage="$(otool -L "$binary")" || fail "cannot inspect dynamic dependencies: $binary"
+  self_id="$(otool -D "$binary" | tail -n +2 | head -n 1)"
+  rpaths="$(otool -l "$binary" | awk '/cmd LC_RPATH/{in_rpath=1; next} in_rpath && /path /{print $2; in_rpath=0}')"
   while IFS= read -r dependency; do
     dependency="${dependency%% (*}"
+    [[ "$dependency" == "$self_id" ]] && continue
     case "$dependency" in
-    /usr/lib/* | /System/Library/* | @rpath/* | @loader_path/* | @executable_path/*) ;;
+    /usr/lib/* | /System/Library/*) ;;
+    @rpath/libmaude.dylib)
+      if [[ "$allow_bundled_maude" == true &&
+            -f "$(dirname "$binary")/libmaude.dylib" &&
+            ! -L "$(dirname "$binary")/libmaude.dylib" &&
+            "$rpaths" == '@loader_path' ]]; then
+        continue
+      fi
+      printf 'unresolved bundled dependency: %s -> %s\n' "$binary" "$dependency" >&2
+      failed=1
+      ;;
     *)
       printf 'external dynamic dependency: %s -> %s\n' "$binary" "$dependency" >&2
       failed=1
       ;;
     esac
-  done < <(otool -L "$binary" | tail -n +2 | sed 's/^[[:space:]]*//')
+  done < <(tail -n +2 <<<"$linkage" | sed 's/^[[:space:]]*//')
 
   ((failed == 0)) || fail "non-system dynamic dependencies were found"
 }
@@ -269,7 +287,7 @@ test_wheel() {
     grep -Fq 'result: unsat' <<<"$output" || fail "wheel $solver UNSAT smoke test failed"
   done
   while IFS= read -r binary; do
-    audit_macos_linkage "$binary"
+    audit_macos_linkage "$binary" true
   done < <(find "$test_venv" -type f \( -name '*.so' -o -name '*.dylib' \) \
     -path '*/maudeSE/*' -print)
   note "wheel smoke tests passed"
