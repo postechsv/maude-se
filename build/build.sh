@@ -304,18 +304,19 @@ build_tecla() {
   progress "Build libtecla"
   mkdir -p "$build_dir"
   mkdir -p "$third_party"
+  progress "Downloading Tecla $TECLA_VERSION"
+  tecla_dir="$third_party/libtecla"
+  rm -rf "$tecla_dir"
+  download_source_archive \
+    "https://deb.debian.org/debian/pool/main/libt/libtecla/libtecla_$TECLA_VERSION.orig.tar.gz" \
+    "$tecla_dir.tar.gz" "libtecla-$TECLA_VERSION"
+  tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
+  rm -f "$tecla_dir.tar.gz"
+
+  cd "$tecla_dir"
+  cp "$top_dir/build/config.guess" "$top_dir/build/config.sub" ./
+  chmod +x config.guess config.sub
   if [[ "$os" == "Darwin" ]]; then
-    progress "Downloading Tecla $TECLA_VERSION"
-    tecla_dir="$third_party/libtecla"
-    rm -rf "$tecla_dir"
-    download_source_archive \
-      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz" \
-      "$tecla_dir.tar.gz" "libtecla-$TECLA_VERSION"
-    tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
-    rm -f "$tecla_dir.tar.gz"
-    cd "$tecla_dir"
-    cp "$top_dir/build/config.guess" "$top_dir/build/config.sub" ./
-    chmod +x config.guess config.sub
     if ! grep -Fq '#include <sys/ioctl.h>' enhance.c; then
       sed -i.bak '1i\
 #include <sys/ioctl.h>\
@@ -326,28 +327,14 @@ build_tecla() {
       's/#elif defined(__APPLE__) && defined(__MACH__)/#elif defined(__APPLE__) \&\& defined(__MACH__) \&\& defined(TECLA_TPUTS_RETURNS_VOID)/' \
       getline.c
     rm -f getline.c.bak
-    ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
-      --prefix="$build_dir"
-    make -j4 TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
-    make install_inc
-    install -m 644 libtecla.a "$lib_dir/libtecla.a"
-  else
-    progress "Downloading Tecla 1.6.3"
-    tecla_dir="$third_party/libtecla"
-
-    download_source_archive \
-      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-1.6.3.tar.gz" \
-      "$tecla_dir.tar.gz" "libtecla-1.6.3"
-    tar -xvzf "$tecla_dir.tar.gz" -C "$third_party"
-    rm -rf "$tecla_dir.tar.gz"
-
-    cd "$tecla_dir"
-
-    ./configure CXXFLAGS="-fPIC" CFLAGS="-fPIC -g -fno-stack-protector -O3" \
-      --prefix=$build_dir
-    make
-    make install
   fi
+
+  ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
+    --prefix="$build_dir"
+  # Tecla's generated Makefile does not order normal_obj before its file targets.
+  make TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
+  make install_inc
+  install -m 644 libtecla.a "$lib_dir/libtecla.a"
 }
 
 # build libsigsegv
