@@ -20,9 +20,9 @@ Commands:
   setup         Create the build virtualenv and prepare pinned upstream sources
   wheel         Build a macOS wheel into out/
   test          Install the wheel in an isolated environment and run smoke tests
-  standalone [z3|cvc5]
+  standalone [z3|yices|cvc5|all]
                 Build a self-contained macOS executable ZIP into out/
-  test-standalone [z3|cvc5]
+  test-standalone [z3|yices|cvc5|all]
                 Extract and smoke-test the standalone ZIP
   shell [test|build]
                 Open a shell using the test or build virtualenv
@@ -197,7 +197,13 @@ build_standalone() {
   local version
   local solver="${1:-z3}"
 
-  [[ "$solver" == z3 || "$solver" == cvc5 ]] || fail "unsupported standalone solver '$solver'"
+  if [[ "$solver" == all ]]; then
+    build_standalone z3
+    build_standalone yices
+    build_standalone cvc5
+    return
+  fi
+  [[ "$solver" == z3 || "$solver" == yices || "$solver" == cvc5 ]] || fail "unsupported standalone solver '$solver'"
 
   doctor standalone
   version="$(maude_se_version)"
@@ -209,8 +215,14 @@ build_standalone() {
   note "standalone artifact is available in $top_dir/out"
 }
 
-test_standalone() {
+test_standalone() (
   local solver="${1:-z3}"
+  if [[ "$solver" == all ]]; then
+    test_standalone z3
+    test_standalone yices
+    test_standalone cvc5
+    return
+  fi
   local archives=("$top_dir"/out/maude_se_"$solver"-*.zip)
   local temp_dir
   local executable
@@ -225,7 +237,7 @@ test_standalone() {
   fi
 
   temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/maude-se-standalone.XXXXXX")"
-  trap 'rm -rf -- "$temp_dir"' RETURN
+  trap 'rm -rf -- "$temp_dir"' EXIT
   unzip -q "${archives[0]}" -d "$temp_dir"
   executable="$(find "$temp_dir" -type f -name "maude-se-$solver" -print -quit)"
   [[ -n "$executable" ]] || fail "standalone executable is missing from ${archives[0]}"
@@ -242,22 +254,22 @@ test_standalone() {
   grep -Fq 'result: sat' <<<"$output" || fail "standalone $solver SAT smoke test failed"
   grep -Fq 'result: unsat' <<<"$output" || fail "standalone $solver UNSAT smoke test failed"
 
-  if [[ "$solver" == cvc5 ]]; then
+  if [[ "$solver" == cvc5 || "$solver" == yices ]]; then
     output="$(cd "$bundle_dir" && \
       printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\nshow model .\nquit\n' | \
       "$executable" smt-check-ex.maude smt-check.maude maude-se-meta.maude)"
-    grep -Fq 'X:Integer |-->' <<<"$output" || fail "standalone cvc5 model smoke test failed"
+    grep -Fq 'X:Integer |-->' <<<"$output" || fail "standalone $solver model smoke test failed"
 
     cp "$top_dir/examples/smt-search-ex.maude" "$bundle_dir/"
     output="$(cd "$bundle_dir" && \
       printf 'smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) such that I:Integer > 0 and I:Integer < 9 using QF_LRA .\nquit\n' | \
       "$executable" smt-search-ex.maude smt-check.maude maude-se-meta.maude)"
-    grep -Fq 'Solution 1' <<<"$output" || fail "standalone cvc5 search smoke test failed"
+    grep -Fq 'Solution 1' <<<"$output" || fail "standalone $solver search smoke test failed"
   fi
 
   audit_macos_linkage "$executable"
   note "standalone smoke test passed"
-}
+)
 
 test_wheel() {
   local wheels=("$top_dir"/out/*.whl)

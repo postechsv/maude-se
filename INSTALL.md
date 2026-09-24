@@ -214,6 +214,20 @@ This produces `out/maude_se_cvc5-<version>-<platform>-<architecture>.zip`
 with the `maude-se-cvc5` executable. The cvc5 library is statically linked;
 the build downloads a checksum-verified official cvc5 static distribution.
 
+To build the native Yices executable, or all three independent executables:
+
+```bash
+./build.sh standalone yices
+./build.sh test-standalone yices
+./build.sh standalone all
+./build.sh test-standalone all
+```
+
+The Yices build uses the checksum-verified Yices 2.6.5 static release,
+statically links CUDD 3.0.0 from its pinned source revision, and uses the
+libpoly static archive from the checksum-verified cvc5 distribution. Its ZIP
+contains `maude-se-yices` and does not require a locally installed solver.
+
 ### 6. Use the installed development build
 
 Open an isolated shell containing the tested MaudeSE installation:

@@ -122,6 +122,7 @@ build_deps() {
 
   case "$solver" in
     z3) build_z3 ;;
+    yices) get_yices; get_cvc5; build_cudd ;;
     cvc5) get_cvc5 ;;
     *) echo "error: unsupported native standalone solver: $solver" >&2; return 2 ;;
   esac
@@ -196,6 +197,7 @@ build_maude_se() {
   local solver="${2:-z3}"
   case "$solver" in
     z3) build_maude z3 "--with-yices2=no --with-cvc4=no --with-cvc5=no --with-z3=yes" "-pthread" "$release_tag" ;;
+    yices) build_maude yices "--with-yices2=yes --with-cvc4=no --with-cvc5=no --with-z3=no" "-pthread" "$release_tag" ;;
     cvc5) build_maude cvc5 "--with-yices2=no --with-cvc4=no --with-cvc5=yes --with-z3=no" "-pthread" "$release_tag" ;;
     *) echo "error: unsupported native standalone solver: $solver" >&2; return 2 ;;
   esac
@@ -249,6 +251,7 @@ build_maude() {
     TECLA_LIBS="$lib_dir/libtecla.a $lib_dir/libncursesw.a" \
     GMP_LIBS="$lib_dir/libgmpxx.a $lib_dir/libgmp.a" \
     Z3_LIB="$lib_dir/libz3.a" \
+    YICES2_LIB="$lib_dir/libyices.a $lib_dir/libpicpoly.a $lib_dir/libcudd.a $lib_dir/libgmp.a" \
     CVC5_LIB="$lib_dir/libcvc5.a $lib_dir/libpicpolyxx.a $lib_dir/libpicpoly.a $lib_dir/libcadical.a $lib_dir/libmpfr.a $lib_dir/libgmpxx.a $lib_dir/libgmp.a"
 
   make -j4
@@ -260,6 +263,15 @@ build_maude() {
   cp $maude_dir/src/Main/*.maude ./"$out_name"
   cp "$package_src_dir"/*.maude ./"$out_name"
   if [[ "$name" == cvc5 ]]; then
+    local cvc5_platform="$os"
+    [[ "$os" == Darwin ]] && cvc5_platform=macOS
+    cp "$third_party/cvc5-$cvc5_platform-$arch-static/COPYING" "$out_name/CVC5-COPYING"
+    cp -R "$third_party/cvc5-$cvc5_platform-$arch-static/licenses" "$out_name/licenses"
+  fi
+  if [[ "$name" == yices ]]; then
+    cp "$third_party/yices-$os-$arch/yices-$YICES_VERSION/LICENSE" "$out_name/YICES-LICENSE"
+    cp "$third_party/yices-$os-$arch/yices-$YICES_VERSION/NOTICES" "$out_name/YICES-NOTICES"
+    cp "$third_party/cudd-3.0.0/LICENSE" "$out_name/CUDD-LICENSE"
     local cvc5_platform="$os"
     [[ "$os" == Darwin ]] && cvc5_platform=macOS
     cp "$third_party/cvc5-$cvc5_platform-$arch-static/COPYING" "$out_name/CVC5-COPYING"
@@ -499,43 +511,48 @@ get_z3() {
 }
 
 get_yices() {
-  progress "Get Yices"
-  mkdir -p "$third_party"
-  mkdir -p "$build_dir"
-  mkdir -p "$build_dir/lib"
-  mkdir -p "$build_dir/include"
-
-  if [[ "$os" == "Darwin" ]]; then
-    yices_os="apple"
-    if [[ "$arch" == "x86_64" ]]; then
-      yices_arch="$arch"
-    else
-      yices_arch="arm"
-    fi
-  else
-    yices_os="linux"
-    yices_arch="$arch"
+  local package_name expected archive package_dir source_dir
+  case "$os:$arch" in
+    Darwin:arm64)
+      package_name="yices-$YICES_VERSION-arm-apple-darwin22.6.0-static-gmp"
+      expected="$YICES_MACOS_ARM64_SHA256" ;;
+    Darwin:x86_64)
+      package_name="yices-$YICES_VERSION-x86_64-apple-darwin21.6.0-static-gmp"
+      expected="$YICES_MACOS_X86_64_SHA256" ;;
+    Linux:x86_64)
+      package_name="yices-$YICES_VERSION-x86_64-pc-linux-gnu-static-gmp"
+      expected="$YICES_LINUX_X86_64_SHA256" ;;
+    *) echo "error: Yices has no pinned static package for $os/$arch" >&2; return 1 ;;
+  esac
+  progress "Install Yices $YICES_VERSION ($os/$arch)"
+  mkdir -p "$third_party" "$include_dir" "$lib_dir"
+  archive="$third_party/$package_name.tar.gz"
+  package_dir="$third_party/yices-$os-$arch"
+  source_dir="$package_dir/yices-$YICES_VERSION"
+  if [[ ! -f "$archive" ]]; then
+    curl -fLsS --retry 3 -o "$archive" \
+      "https://github.com/SRI-CSL/yices2/releases/download/Yices-$YICES_VERSION/$package_name.tar.gz"
   fi
+  verify_source_archive "$archive" "$expected"
+  if [[ ! -d "$source_dir" ]]; then
+    mkdir -p "$package_dir"
+    tar -xzf "$archive" -C "$package_dir"
+  fi
+  cp "$source_dir/include"/*.h "$include_dir/"
+  cp "$source_dir/lib/libyices.a" "$lib_dir/"
+}
 
-  url=$(git_latest "SRI-CSL" "yices2" "$yices_arch.*$yices_os")
-
-  yices_tmp="$third_party/yices.tar.gz"
-  yices_dir=$(get_smt "$url" "$yices_tmp")
-
-  yices_dir=$(basename $yices_dir)
-  yices_dir="$third_party/${yices_dir%.*}"
-  # echo $yices_dir
-
-  rm -rf "$yices_dir"
-  tar -xvzf "$yices_tmp" -C "$third_party"
-
-  rm -rf "$yices_tmp"
-
-  yices_dir="$third_party/$(git_latest_name "SRI-CSL" "yices2" "$yices_arch.*$yices_os")"
-  yices_dir=${yices_dir,,} # make it lowercase
-
-  mv $yices_dir/lib/libyices.a $build_dir/lib
-  mv $yices_dir/include/* $build_dir/include
+build_cudd() {
+  local cudd_dir="$third_party/cudd-3.0.0"
+  progress "Build CUDD 3.0.0 for Yices"
+  ensure_repo "https://github.com/ivmai/cudd.git" "$cudd_dir" "$CUDD_REF"
+  (
+    cd "$cudd_dir"
+    ./configure CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
+      LDFLAGS="$native_ldflags" --prefix="$build_dir" --disable-shared
+    make -j4
+    make install
+  )
 }
 
 get_smt() {

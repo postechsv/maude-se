@@ -1,936 +1,374 @@
-// utility stuff
 #include "macros.hh"
 #include "vector.hh"
-
-// forward declarations
 #include "interface.hh"
 #include "core.hh"
 #include "variable.hh"
 #include "mixfix.hh"
 #include "SMT.hh"
-
-// interface class definitions
 #include "symbol.hh"
 #include "term.hh"
-
-// variable class definitions
 #include "variableDagNode.hh"
-#include "variableTerm.hh"
-
 #include "freeDagNode.hh"
-
-// SMT class definitions
 #include "SMT_Symbol.hh"
 #include "SMT_NumberSymbol.hh"
 #include "SMT_NumberDagNode.hh"
-
-// front end class definitions
 #include "token.hh"
 #include "yices2.hh"
-#include <sstream>
-
-
-
-YicesConverter::YicesConverter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol) 
-    : NativeSmtConverter(smtInfo, extensionSymbol) {};
-
-
-YicesConnector::YicesConnector(YicesConverter* conv)
-    {};
-
-// SmtManager::SmtManager(const SMT_Info &smtInfo)
-//         : AbstractSmtManager(smtInfo), VariableGenerator(smtInfo) {
-//     hasVariable = false;
-//     setSimplificationStrategy();
-// #ifdef USE_YICES2_MCSAT
-//     setSolverTo(false);
-// #else
-//     setSolverTo(true);
-// #endif
-// }
-
-// void SmtManager::setSolverTo(bool isLinear) {
-//     yices_free_context(smtContext);
-//     if (isLinear){
-//         smtContext = yices_new_context(NULL);
-//         isSolverLinear = true;
-//     } else {
-//         ctx_config_t *config = yices_new_config();
-//         yices_set_config(config, "solver-type", "mcsat");
-//         smtContext = yices_new_context(config);
-//         yices_free_config(config);
-//         isSolverLinear = false;
-//     }
-// }
-
-// SmtManager::Result SmtManager::checkDag(DagNode* dag) {
-//     // setSolverTo(true);
-//     yices_term t = makeExpr(dag, nullptr, true);
-//     if (t.term == NULL_TERM)
-//         return BAD_DAG;
-
-//     yices_push(smtContext);
-//     int code = yices_assert_formula(smtContext, t.term);
-//     if (code < 0) {
-//         IssueWarning("Yices2 reported an error - giving up:");
-//         yices_print_error(stderr);
-//         yices_pop(smtContext);
-//         return SAT_UNKNOWN;
-//     }
-
-//     smt_status_t result = yices_check_context(smtContext, NULL);
-//     yices_pop(smtContext);
-
-//     if (result == STATUS_SAT)
-//         return SAT;
-//     if (result == STATUS_UNSAT)
-//         return UNSAT;
-
-//     IssueWarning("Yices2 not able to determine satisfiability - giving up.");
-//     return SAT_UNKNOWN;
-// }
-
-// SmtManager::Result SmtManager::assertDag(DagNode* dag) {
-//     yices_term t = makeExpr(dag, nullptr, true);
-//     if (t.term == NULL_TERM)
-//         return BAD_DAG;
-
-//     int code = yices_assert_formula(smtContext, t.term);
-//     if (code < 0) {
-//         IssueWarning("Yices2 reported an error - giving up:");
-//         yices_print_error(stderr);
-//         return SAT_UNKNOWN;
-//     }
-
-//     smt_status_t result = yices_check_context(smtContext, NULL);
-
-//     if (result == STATUS_SAT)
-//         return SAT;
-//     if (result == STATUS_UNSAT)
-//         return UNSAT;
-
-//     IssueWarning("Yices2 is not able to determine satisfiability - giving up.");
-//     return SAT_UNKNOWN;
-// }
-
-// SmtManager::SmtResult SmtManager::checkDagContextFree(DagNode *dag,
-//                                                       ExtensionSymbol* extensionSymbol) {
-//     resetFormulaSize();
-//     yices_term t = makeExpr(dag, extensionSymbol, true);
-
-//     Verbose("SmtCheckSymbol : Formula size " << formulaSize);
-//     resetFormulaSize();
-//     if (t.term == NULL_TERM)
-//         return SMT_BAD_DAG;
-
-//     // yices_push(smtContext);
-//     int code = yices_assert_formula(smtContext, t.term);
-//     if (code < 0) {
-//         yices_print_error(stderr);
-//         throw ExtensionException("Yices2 give up");
-//     }
-
-//     smt_status_t result = yices_check_context(smtContext, NULL);
-
-//     // yices_pop(smtContext);
-//     if (result == STATUS_SAT)
-//         return SMT_SAT;
-//     if (result == STATUS_UNSAT)
-//         return SMT_UNSAT;
-
-//     IssueWarning("Yices2 is not able to determine satisfiability  - giving up.");
-//     return SMT_SAT_UNKNOWN;
-// }
-
-// DagNode *SmtManager::simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol) {
-//     hasVariable = false;
-
-//     try{
-//         push();
-//         resetFormulaSize();
-//         yices_term t = makeExpr(dagNode, extensionSymbol, false);
-//         Verbose("SimplifyFormulaSymbol : Formula size " << formulaSize);
-//         resetFormulaSize();
-
-//         ReverseSmtManagerVariableMap* rsv = nullptr;
-//         if (hasVariable){
-//             rsv = generateReverseVariableMap();
-//         }
-
-//         DagNode* dn = Term2Dag(t, extensionSymbol, rsv);
-
-//         if (hasVariable)
-//             delete rsv;
-//         pop();
-//         return dn;
-//     } catch(ExtensionException& ex){
-//         if (strcmp(ex.c_str(), "Exception but ok")){
-//             throw ExtensionException(yices_error_string());
-//         }
-//     }
-//     return nullptr;
-// }
-
-// DagNode* SmtManager::generateAssignment(DagNode *dagNode,
-//                                         SmtCheckerSymbol* smtCheckerSymbol) {
-
-//     Vector < DagNode * > dv;
-//     Vector < DagNode * > finalResult;
-
-//     model_t *model = yices_get_model(smtContext, true);
-
-//     if(model!=NULL) {
-//         // resultTerms must not be a pointer of term_vector_t.
-//         // if not, it will raise memory error.
-//         term_vector_t resultTerms;
-//         yices_init_term_vector(&resultTerms);
-//         yices_model_collect_defined_terms(model, &resultTerms);
-//         uint32_t num = resultTerms.size;
-
-//         // actual value
-//         int32_t va;
-
-//         ReverseSmtManagerVariableMap* rsv = nullptr;
-//         if (hasVariable)
-//             rsv = generateReverseVariableMap();
-
-//         // empty set
-//         if (num == 0) {
-//             finalResult.append(smtCheckerSymbol->emptySatAssignmentSetSymbol->makeDagNode());
-//         } else if (num == 1) {
-//             yices_term rTerm{};
-//             rTerm.term = resultTerms.data[0];
-//             rTerm.type = yices_type_of_term(rTerm.term);
-
-//             if (yices_get_bool_value(model, rTerm.term, &va) == TYPE_MISMATCH) {
-//                 IssueWarning("This is not numeral type");
-//                 throw ExtensionException("cannot make assignments");
-//             }
-
-//             dv.append(GenerateDag(model, rTerm, smtCheckerSymbol, rsv));
-//             dv.append(smtCheckerSymbol->emptySatAssignmentSetSymbol->makeDagNode());
-//             finalResult.append(smtCheckerSymbol->concatSatAssignmentSetSymbol->makeDagNode(dv));
-//         } else {
-//             if (num % 2 == 1) {
-//                 for (int i = 0; i < num; i++) {
-//                     yices_term rTerm{};
-//                     rTerm.term = resultTerms.data[i];
-//                     rTerm.type = yices_type_of_term(rTerm.term);
-
-//                     if (yices_get_bool_value(model, rTerm.term, &va) == TYPE_MISMATCH) {
-//                         IssueWarning("This is not numeral type");
-//                         throw ExtensionException("cannot make assignments");
-//                     }
-//                     dv.append(GenerateDag(model, rTerm, smtCheckerSymbol, rsv));
-//                 }
-//                 dv.append(smtCheckerSymbol->emptySatAssignmentSetSymbol->makeDagNode());
-//             } else {
-//                 for (int i = 0; i < num; i++) {
-//                     yices_term rTerm{};
-//                     rTerm.term = resultTerms.data[i];
-//                     rTerm.type = yices_type_of_term(rTerm.term);
-
-//                     if (yices_get_bool_value(model, rTerm.term, &va) == TYPE_MISMATCH) {
-//                         IssueWarning("This is not numeral type");
-//                         throw ExtensionException("cannot make assignments");
-//                     }
-//                     dv.append(GenerateDag(model, rTerm, smtCheckerSymbol, rsv));
-//                 }
-//             }
-//             finalResult.append(smtCheckerSymbol->concatSatAssignmentSetSymbol->makeDagNode(dv));
-//         }
-//         DagNode *assn = smtCheckerSymbol->smtAssignmentResultSymbol->makeDagNode(finalResult);
-//         pop();
-
-//         if (hasVariable)
-//             delete rsv;
-
-//         yices_delete_term_vector(&resultTerms);
-//         yices_free_model(model);
-//         clearAssertions();
-//         return assn;
-//     }
-//     // sat but cannot generate model.
-//     throw ExtensionException("the context is sat but cannot generate model");
-// }
-
-// DagNode* SmtManager::GenerateDag(model_t *mdl, yices_term e, SmtCheckerSymbol* smtCheckerSymbol,
-//                                  ReverseSmtManagerVariableMap* rsv) {
-
-//     Vector < DagNode * > args(2);
-//     ReverseSmtManagerVariableMap::const_iterator it = rsv->find(e);
-//     if(it != rsv->end()){
-//         args[0] = it->second;
-//     }
-
-//     if (yices_term_is_int(e.term)) {
-//         int32_t returnVal;
-//         yices_get_int32_value(mdl, e.term, &returnVal);
-//         args[1] = new SMT_NumberDagNode(smtCheckerSymbol->integerSymbol, mpq_class(returnVal));
-//         return smtCheckerSymbol->intAssignmentSymbol->makeDagNode(args);
-//     } else if (yices_term_is_bool(e.term)) {
-//         int32_t returnVal;
-//         yices_get_bool_value(mdl, e.term, &returnVal);
-
-//         if (returnVal) {
-//             args[1] = smtCheckerSymbol->trueTerm.getDag();
-//         } else {
-//             args[1] = smtCheckerSymbol->falseTerm.getDag();
-//         }
-//         return smtCheckerSymbol->boolAssignmentSymbol->makeDagNode(args);
-//     } else if (yices_term_is_real(e.term)) {
-//         int32_t num;
-//         uint32_t den;
-//         yices_get_rational32_value(mdl, e.term, &num, &den);
-//         args[1] = new SMT_NumberDagNode(smtCheckerSymbol->realSymbol, mpq_class(num, den));
-//         return smtCheckerSymbol->realAssignmentSymbol->makeDagNode(args);
-//     } else {
-//         IssueWarning("Unsupported type");
-//     }
-// }
-
-// DagNode* SmtManager::Term2Dag(yices_term e, ExtensionSymbol* extensionSymbol,
-//                               ReverseSmtManagerVariableMap* rsv) {
-//     if(rsv != nullptr){
-//         ReverseSmtManagerVariableMap::const_iterator it = rsv->find(e);
-//         if (it != rsv->end()) {
-//             return it->second;
-//         }
-//     }
-
-//     switch (yices_term_constructor(e.term)) {
-//         case YICES_CONSTRUCTOR_ERROR:
-//             throw ExtensionException("Yices constructor error");
-//         case YICES_BOOL_CONSTANT: {
-//             int32_t returnVal;
-//             yices_bool_const_value(e.term, &returnVal);
-//             if (returnVal) {
-//                 return extensionSymbol->trueTerm.getDag();
-//             } else {
-//                 return extensionSymbol->falseTerm.getDag();
-//             }
-//         }
-//         case YICES_NOT_TERM: {
-//             Vector < DagNode * > arg(1);
-
-//             yices_term child{};
-//             child.term = yices_term_child(e.term, 0);
-//             child.type = yices_bool_type();
-
-//             arg[0] = Term2Dag(child, extensionSymbol, rsv);
-//             return extensionSymbol->notBoolSymbol->makeDagNode(arg);
-//         }
-//         case YICES_OR_TERM: {
-//             Vector < DagNode * > arg(2);
-
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child1.type = yices_bool_type();
-
-//             child2.term = yices_term_child(e.term, 1);
-//             child2.type = yices_bool_type();
-
-//             arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//             arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//             return extensionSymbol->orBoolSymbol->makeDagNode(arg);
-//         }
-//         case YICES_XOR_TERM: {
-//             Vector < DagNode * > arg(2);
-
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child1.type = yices_bool_type();
-
-//             child2.term = yices_term_child(e.term, 1);
-//             child2.type = yices_bool_type();
-
-//             arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//             arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//             return extensionSymbol->xorBoolSymbol->makeDagNode(arg);
-//         }
-//         case YICES_EQ_TERM: {
-//             Vector < DagNode * > arg(2);
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child2.term = yices_term_child(e.term, 1);
-
-//             // real type
-//             if (yices_type_of_term(child1.term) == yices_real_type() ||
-//                 yices_type_of_term(child2.term) == yices_real_type()){
-
-//                 child1.type = yices_real_type();
-//                 child2.type = yices_real_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 return extensionSymbol->eqRealSymbol->makeDagNode(arg);
-//             } else if (yices_type_of_term(child1.term) == yices_int_type() &&
-//                         yices_type_of_term(child2.term) == yices_int_type()){
-
-//                 child1.type = yices_int_type();
-//                 child2.type = yices_int_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 return extensionSymbol->eqIntSymbol->makeDagNode(arg);
-//             } else {
-
-//                 child1.type = yices_bool_type();
-//                 child2.type = yices_bool_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 return extensionSymbol->eqBoolSymbol->makeDagNode(arg);
-//             }
-//         }
-//         case YICES_ITE_TERM: {
-//             Vector < DagNode * > arg(3);
-//             yices_term child1{};
-//             yices_term child2{};
-//             yices_term child3{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child2.term = yices_term_child(e.term, 1);
-//             child3.term = yices_term_child(e.term, 2);
-
-//             child1.type = yices_bool_type();
-
-//             if (yices_type_of_term(child2.term) == yices_int_type()){
-//                 child2.type = yices_int_type();
-//                 child3.type = yices_int_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-//                 return extensionSymbol->iteIntSymbol->makeDagNode(arg);
-//             } else if (yices_type_of_term(child2.term) == yices_real_type()){
-//                 child2.type = yices_real_type();
-//                 child3.type = yices_real_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-//                 return extensionSymbol->iteRealSymbol->makeDagNode(arg);
-//             } else {
-//                 child2.type = yices_bool_type();
-//                 child3.type = yices_bool_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 arg[2] = Term2Dag(child3, extensionSymbol, rsv);
-
-//                 return extensionSymbol->iteBoolSymbol->makeDagNode(arg);
-//             }
-//         }
-//         case YICES_ARITH_GE_ATOM: {
-//    	        Vector < DagNode * > arg(2);
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-// 	        child2.term = yices_term_child(e.term, 1);
-
-// 	        if (yices_type_of_term(child1.term) == yices_real_type() ||
-//                 yices_type_of_term(child2.term) == yices_real_type()){
-
-//                 child1.type = yices_real_type();
-//                 child2.type = yices_real_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 return extensionSymbol->geqRealSymbol->makeDagNode(arg);
-//             } else {
-//                 child1.type = yices_int_type();
-//                 child2.type = yices_int_type();
-
-//                 arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//                 arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//                 return extensionSymbol->geqIntSymbol->makeDagNode(arg);
-//             }
-//         }
-//         case YICES_IS_INT_ATOM: {
-//             Vector < DagNode * > arg(1);
-
-//             yices_term child{};
-//             child.term = yices_term_child(e.term, 0);
-//             child.type = yices_real_type();
-
-//             arg[0] = Term2Dag(child, extensionSymbol, rsv);
-//             return extensionSymbol->isIntegerSymbol->makeDagNode(arg);
-//         }
-//         case YICES_IDIV: {
-//             Vector < DagNode * > arg(2);
-
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child2.term = yices_term_child(e.term, 1);
-//             child1.type = yices_int_type();
-//             child2.type = yices_int_type();
-
-//             arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//             arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//             return extensionSymbol->divIntSymbol->makeDagNode(arg);
-//         }
-//         case YICES_RDIV: {
-//             Vector < DagNode * > arg(2);
-
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child2.term = yices_term_child(e.term, 1);
-//             child1.type = yices_real_type();
-//             child2.type = yices_real_type();
-
-//             arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//             arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//             return extensionSymbol->divRealSymbol->makeDagNode(arg);
-//         }
-//         case YICES_IMOD: {
-//             Vector < DagNode * > arg(2);
-
-//             yices_term child1{};
-//             yices_term child2{};
-
-//             child1.term = yices_term_child(e.term, 0);
-//             child2.term = yices_term_child(e.term, 1);
-//             child1.type = yices_int_type();
-//             child2.type = yices_int_type();
-
-//             arg[0] = Term2Dag(child1, extensionSymbol, rsv);
-//             arg[1] = Term2Dag(child2, extensionSymbol, rsv);
-//             return extensionSymbol->modIntSymbol->makeDagNode(arg);
-//         }
-//         case YICES_FLOOR: {
-//             Vector < DagNode * > arg(1);
-
-//             yices_term child{};
-//             child.term = yices_term_child(e.term, 0);
-//             child.type = yices_real_type();
-
-//             arg[0] = Term2Dag(child, extensionSymbol, rsv);
-//             return extensionSymbol->toIntegerSymbol->makeDagNode(arg);
-// 	    }
-//         case YICES_POWER_PRODUCT: {
-//             int child_num = yices_term_num_children(e.term);
-//             Vector < DagNode* > arg(child_num);
-//             for(int i = 0; i < child_num; i++){
-//                 uint32_t exp;
-//                 yices_term child{};
-//                 child.type = e.type;
-//                 yices_product_component(e.term, i, &child.term, &exp);
-//                 arg[i] = Term2Dag(child, extensionSymbol, rsv);
-//             }
-
-//             if(yices_type_is_int(e.type))
-//                 return multipleGen(&arg, 0, MulType::INT_MUL, extensionSymbol);
-//             else
-//                 return multipleGen(&arg, 0, MulType::REAL_MUL, extensionSymbol);
-
-//         }
-//         case YICES_ARITH_SUM: {
-//             int child_num = yices_term_num_children(e.term);
-
-//             Vector < DagNode* > arg(child_num);
-
-//             for(int i = 0; i < child_num; i++){
-//                 mpq_t coeff;
-//                 mpq_init(coeff);
-
-//                 yices_term child;
-//                 yices_sum_component(e.term, i, coeff, &child.term);
-//                 child.type = e.type;
-
-//                 yices_term coeffTerm{};
-//                 coeffTerm.term = yices_mpq(coeff);
-//                 coeffTerm.type = e.type;
-
-//                 if (child.term == NULL_TERM){
-//                     arg[i] = Term2Dag(coeffTerm, extensionSymbol, rsv);
-//                 } else {
-//                     Vector < DagNode * > innerArg(2);
-//                     innerArg[0] = Term2Dag(coeffTerm, extensionSymbol, rsv);
-//                     innerArg[1] = Term2Dag(child, extensionSymbol, rsv);
-//                     if(child_num == 1){
-//                         if(yices_type_is_int(e.type)){
-//                             return extensionSymbol->mulIntSymbol->makeDagNode(innerArg);
-//                         } else {
-//                             return extensionSymbol->mulRealSymbol->makeDagNode(innerArg);
-//                         }
-//                     } else {
-//                         if(yices_type_is_int(e.type)){
-//                             arg[i] = extensionSymbol->mulIntSymbol->makeDagNode(innerArg);
-//                         } else {
-//                             arg[i] = extensionSymbol->mulRealSymbol->makeDagNode(innerArg);
-//                         }
-//                     }
-//                 }
-//             }
-//             if(yices_type_is_int(e.type))
-//                 return multipleGen(&arg, 0, MulType::INT_ADD, extensionSymbol);
-//             else
-//                 return multipleGen(&arg, 0, MulType::REAL_ADD, extensionSymbol);
-//         }
-//         case YICES_UNINTERPRETED_TERM: {
-//             ReverseSmtManagerVariableMap::const_iterator it = rsv->find(e);
-//             if (it != rsv->end()) {
-//                 if(it->second->symbol() == extensionSymbol->toRealSymbol){
-//                     Vector <DagNode*> tmp_arg(1);
-//                     tmp_arg[0] = it->second;
-//                     return extensionSymbol->toRealSymbol->makeDagNode(tmp_arg);
-//                 }
-//                 return it->second;
-//             }
-//         }
-//         case YICES_ARITH_CONSTANT: {
-//             mpq_t num;
-//             mpq_init(num);
-//             yices_rational_const_value(e.term, num);
-//             if (yices_type_is_int(e.type)) {
-//                 return new SMT_NumberDagNode(extensionSymbol->integerSymbol, mpq_class(num));
-//             } else {
-//                 return new SMT_NumberDagNode(extensionSymbol->realSymbol, mpq_class(num));
-//             }
-//         }
-//         default:
-//             throw ExtensionException("Exception but ok");
-//         }
-// }
-
-// yices_term SmtManager::variableGenerator(DagNode *dag, ExprType exprType) {
-//     hasVariable = true;
-
-//     // Two dag nodes are the same
-//     SmtManagerVariableMap::const_iterator it = smtManagerVariableMap.find(dag);
-//     if (it != smtManagerVariableMap.end())
-//         return it->second;
-
-//     // Dags are different while they both point to the same symbol
-//     for(auto it = smtManagerVariableMap.begin(); it != smtManagerVariableMap.end(); it++){
-//         if(dag->equal(it->first)){
-//             smtManagerVariableMap.insert(SmtManagerVariableMap::value_type(dag, it->second));
-//             return it->second;
-//         }
-//     }
-
-//     type_t type = NULL_TYPE;
-//     string name;
-
-//     if (VariableDagNode* v = dynamic_cast<VariableDagNode*>(dag)){
-//         Symbol *s = v->symbol();
-
-//         Sort *sort = s->getRangeSort();
-//         int id = v->id();
-//         name = Token::name(id);
-
-//         switch (AbstractSmtManager::smtInfo.getType(sort)) {
-//             case SMT_Info::NOT_SMT: {
-//                 IssueWarning(
-//                         "Variable " << QUOTE(static_cast<DagNode *>(v)) <<
-//                         " does not belong to an SMT sort.");
-//                 SMT_NULL_TERM();
-//             }
-//             case SMT_Info::BOOLEAN: {
-//                 type = yices_bool_type();
-//                 name = name + "_" + string("Boolean");
-//                 break;
-//             }
-//             case SMT_Info::INTEGER: {
-//                 type = yices_int_type();
-//                 name = name + "_" + string("Integer");
-//                 break;
-//             }
-//             case SMT_Info::REAL: {
-//                 type = yices_real_type();
-//                 name = name + "_" + string("Real");
-//                 break;
-//             }
-//         }
-//     } else if(exprType != ExprType::BUILTIN) {
-//         switch (exprType){
-//             case BOOL:
-//                 type = yices_bool_type();
-//                 name = "b_";
-//                 break;
-//             case INT:
-//                 type = yices_int_type();
-//                 name = "i_";
-//                 break;
-//             case REAL:
-//                 type = yices_real_type();
-//                 name = "r_";
-//                 break;
-//         }
-//         const void * address = static_cast<const void*>(dag);
-//         std::stringstream ss;
-//         ss << address;
-//         string varId = ss.str();
-//         name += varId;
-//     } else {
-//         SMT_NULL_TERM();
-//     }
-//     incrFormulaSize();
-//     yices_term newTerm{};
-//     newTerm.term = yices_new_uninterpreted_term(type);
-//     newTerm.type = type;
-//     yices_set_term_name(newTerm.term, name.c_str());
-
-//     smtManagerVariableMap.insert(SmtManagerVariableMap::value_type(dag, newTerm));
-//     return newTerm;
-// }
-
-// yices_term SmtManager::Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol){
-//     if (SMT_NumberDagNode* n = dynamic_cast<SMT_NumberDagNode*>(dag)){
-//         incrFormulaSize();
-//         Sort *sort = n->symbol()->getRangeSort();
-//         if(AbstractSmtManager::smtInfo.getType(sort) == SMT_Info::INTEGER) {
-//             yices_term term{};
-//             term.term = yices_mpz(n->getValue().get_num_mpz_t());
-//             term.type = yices_int_type();
-//             return term;
-//         } else if (AbstractSmtManager::smtInfo.getType(sort) == SMT_Info::REAL) {
-//             yices_term term{};
-//             term.term = yices_mpq(n->getValue().get_mpq_t());
-//             term.type = yices_real_type();
-//             return term;
-//         }
-//     }
-
-//     try {
-//         return makeExtensionVariable(dag, extensionSymbol);
-//     } catch (ExtensionException& ex) {
-//         if (isNull(ex.c_str())) {
-//             if (SMT_Symbol * s = dynamic_cast<SMT_Symbol *>(dag->symbol())) {
-//                 int nrArgs = s->arity();
-//                 Vector <yices_term> terms(nrArgs);
-//                 FreeDagNode *f = safeCast(FreeDagNode * , dag);
-
-//                 for (int i = 0; i < nrArgs; ++i) {
-//                     terms[i] = Dag2Term(f->getArgument(i), extensionSymbol);
-//                 }
-
-//                 switch (s->getOperator()) {
-//                     //
-//                     //	Boolean stuff.
-//                     //
-//                     case SMT_Symbol::CONST_TRUE: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_true();
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::CONST_FALSE: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_false();
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::NOT: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_not(terms[0].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::AND: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_and2(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::OR: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_or2(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::XOR: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_xor2(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::IMPLIES: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_implies(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                         //
-//                         //	Polymorphic Boolean stuff.
-//                         //
-//                     case SMT_Symbol::EQUALS: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_eq(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::NOT_EQUALS: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_neq(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::ITE: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_ite(terms[0].term, terms[1].term, terms[2].term);
-//                         term.type = terms[1].type;
-//                         return term;
-//                     }
-//                         //
-//                         //	Integer stuff.
-//                         //
-//                     case SMT_Symbol::UNARY_MINUS: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_neg(terms[0].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::MINUS: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_sub(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::PLUS: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_add(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::MULT: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_mul(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::DIV: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_idiv(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::MOD: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_imod(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                         //
-//                         //	Integer tests.
-//                         //
-//                     case SMT_Symbol::LT: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_arith_lt_atom(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::LEQ: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_arith_leq_atom(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::GT: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_arith_gt_atom(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::GEQ: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_arith_geq_atom(terms[0].term, terms[1].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::DIVISIBLE: {
-//                         incrFormulaSize();
-//                         DagNode *a = f->getArgument(1);
-//                         if (SMT_NumberDagNode * n = dynamic_cast<SMT_NumberDagNode *>(a)) {
-//                             const mpq_class &rat = n->getValue();
-//                             if (rat > 0){
-//                                 yices_term term{};
-//                                 term.term = yices_divides_atom(terms[1].term, terms[0].term);
-//                                 term.type = yices_bool_type();
-//                                 return term;
-//                             }
-//                         }
-//                         IssueWarning("bad divisor in " << QUOTE(dag) << ".");
-//                         goto fail;
-//                     }
-//                         //
-//                         //	Stuff that is extra to reals.
-//                         //
-//                     case SMT_Symbol::REAL_DIVISION: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_division(terms[0].term, terms[1].term);
-//                         term.type = terms[0].type;
-//                         return term;
-//                     }
-//                     case SMT_Symbol::TO_REAL: {
-//                         //
-//                         //	Yices2 treats integers as a subset of the reals.
-//                         //
-//                         incrFormulaSize();
-//                         yices_term term = terms[0];
-//                         term.type = yices_real_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::TO_INTEGER: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_floor(terms[0].term);
-//                         term.type = yices_int_type();
-//                         return term;
-//                     }
-//                     case SMT_Symbol::IS_INTEGER: {
-//                         incrFormulaSize();
-//                         yices_term term{};
-//                         term.term = yices_is_int_atom(terms[0].term);
-//                         term.type = yices_bool_type();
-//                         return term;
-//                     }
-//                 }
-//             }
-//             // No issue warning
-//             IssueWarning("term " << QUOTE(dag) << " is not a valid SMT term.");
-//             fail:
-//             resetFormulaSize();
-//             throw ExtensionException("not a valid term, return original term instead");
-//         }
-//     }
-// }
-
-// DagNode* SmtManager::applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol){
-//     return dagNode;
-// }
+#include "userLevelRewritingContext.hh"
+#include <mutex>
+#include <stdexcept>
+
+namespace
+{
+term_t checked(term_t value)
+{
+    if (value == NULL_TERM)
+        throw std::runtime_error(yices_error_string());
+    return value;
+}
+
+term_t unwrap(const SmtTerm &term)
+{
+    auto value = std::dynamic_pointer_cast<YicesTerm>(term);
+    if (!value)
+        throw std::runtime_error("expected a Yices SMT term");
+    return value->value;
+}
+
+SmtTerm wrap(term_t value, type_t type = NULL_TYPE, DagNode *original = nullptr)
+{
+    return std::make_shared<YicesTerm>(checked(value), type, original);
+}
+}
+
+SmtTerm YicesModel::get(SmtTerm key)
+{
+    auto found = values.find(unwrap(key));
+    if (found == values.end()) return nullptr;
+    return wrap(found->second.first, found->second.second);
+}
+
+SmtTermVector YicesModel::keys()
+{
+    auto result = std::make_shared<std::vector<SmtTerm>>();
+    for (const auto &entry : values)
+        result->push_back(wrap(entry.first));
+    return result;
+}
+
+YicesConverter::YicesConverter(const SMT_Info &info)
+    : NativeSmtConverter(info)
+{
+    static std::once_flag initialized;
+    std::call_once(initialized, [] { yices_init(); });
+}
+
+void YicesConverter::prepareFor(VisibleModule *module)
+{
+    sg.setModule(module);
+    smtManagerVariableMap.clear();
+    retainedDags.clear();
+}
+
+void YicesConverter::markReachableNodes()
+{
+    for (const auto &entry : smtManagerVariableMap)
+        entry.first->mark();
+    for (DagNode *dag : retainedDags)
+        dag->mark();
+}
+
+DagNode *YicesConverter::conjoin(DagNode *left, DagNode *right)
+{
+    if (!left || !right) return nullptr;
+    auto *boolean = sg.getKind("Boolean");
+    Vector<ConnectedComponent *> domain;
+    domain.push_back(boolean);
+    domain.push_back(boolean);
+    Vector<DagNode *> arguments(2);
+    arguments[0] = left;
+    arguments[1] = right;
+    DagNode *joined = sg.getSymbol("_and_", domain, boolean)->makeDagNode(arguments);
+    retainedDags.push_back(joined);
+    return joined;
+}
+
+SmtTerm YicesConverter::dag2term(DagNode *dag)
+{
+    term_t value = convert(dag);
+    return wrap(value, yices_type_of_term(value), dag);
+}
+
+DagNode *YicesConverter::term2dag(SmtTerm term)
+{
+    auto value = std::dynamic_pointer_cast<YicesTerm>(term);
+    if (!value) throw std::runtime_error("expected a Yices SMT term");
+    DagNode *dag = value->original ? value->original : convertBack(value->value, value->type);
+    if (dag->getSort() == nullptr)
+    {
+        auto *context = new UserLevelRewritingContext(dag);
+        dag->computeTrueSort(*context);
+        delete context;
+    }
+    return dag;
+}
+
+term_t YicesConverter::makeVariable(DagNode *dag)
+{
+    auto found = smtManagerVariableMap.find(dag);
+    if (found != smtManagerVariableMap.end()) return found->second;
+    for (const auto &entry : smtManagerVariableMap)
+    {
+        if (dag->equal(entry.first))
+        {
+            smtManagerVariableMap.emplace(dag, entry.second);
+            return entry.second;
+        }
+    }
+
+    type_t type = NULL_TYPE;
+    if (auto *variable = dynamic_cast<VariableDagNode *>(dag))
+    {
+        switch (smtInfo.getType(variable->symbol()->getRangeSort()))
+        {
+        case SMT_Info::BOOLEAN: type = yices_bool_type(); break;
+        case SMT_Info::INTEGER: type = yices_int_type(); break;
+        case SMT_Info::REAL: type = yices_real_type(); break;
+        default: throw std::runtime_error("variable is not an SMT sort");
+        }
+    }
+    else
+    {
+        Sort *idSort = sg.getSort("SMTVarId");
+        if (!idSort) throw std::runtime_error("not an SMT variable");
+        Vector<ConnectedComponent *> domain;
+        domain.push_back(idSort->component());
+        const struct { const char *symbol; const char *sort; } forms[] = {
+            {"b", "BooleanVar"}, {"i", "IntegerVar"}, {"r", "RealVar"}};
+        for (const auto &form : forms)
+        {
+            Sort *target = sg.getSort(form.sort);
+            if (target && dag->symbol() == sg.getSymbol(form.symbol, domain, target->component()))
+            {
+                if (form.symbol[0] == 'b') type = yices_bool_type();
+                if (form.symbol[0] == 'i') type = yices_int_type();
+                if (form.symbol[0] == 'r') type = yices_real_type();
+                break;
+            }
+        }
+        if (type == NULL_TYPE) throw std::runtime_error("not an SMT variable");
+    }
+    term_t result = checked(yices_new_uninterpreted_term(type));
+    smtManagerVariableMap.emplace(dag, result);
+    return result;
+}
+
+term_t YicesConverter::convert(DagNode *dag)
+{
+    if (auto *number = dynamic_cast<SMT_NumberDagNode *>(dag))
+        return checked(yices_mpq(number->getValue().get_mpq_t()));
+    if (dynamic_cast<VariableDagNode *>(dag)) return makeVariable(dag);
+    try { return makeVariable(dag); }
+    catch (const std::runtime_error &) { /* ordinary SMT operator */ }
+
+    auto *symbol = dynamic_cast<SMT_Symbol *>(dag->symbol());
+    if (!symbol) throw std::runtime_error("term is not an SMT expression");
+    std::vector<term_t> args;
+    if (symbol->arity())
+    {
+        auto *freeDag = dynamic_cast<FreeDagNode *>(dag);
+        if (!freeDag) throw std::runtime_error("SMT operator has no free arguments");
+        for (int i = 0; i < symbol->arity(); ++i)
+            args.push_back(convert(freeDag->getArgument(i)));
+    }
+    term_t result = NULL_TERM;
+    switch (symbol->getOperator())
+    {
+    case SMT_Symbol::CONST_TRUE: result = yices_true(); break;
+    case SMT_Symbol::CONST_FALSE: result = yices_false(); break;
+    case SMT_Symbol::NOT: result = yices_not(args[0]); break;
+    case SMT_Symbol::AND: result = yices_and2(args[0], args[1]); break;
+    case SMT_Symbol::OR: result = yices_or2(args[0], args[1]); break;
+    case SMT_Symbol::XOR: result = yices_xor2(args[0], args[1]); break;
+    case SMT_Symbol::IMPLIES: result = yices_implies(args[0], args[1]); break;
+    case SMT_Symbol::EQUALS: result = yices_eq(args[0], args[1]); break;
+    case SMT_Symbol::NOT_EQUALS: result = yices_not(yices_eq(args[0], args[1])); break;
+    case SMT_Symbol::ITE: result = yices_ite(args[0], args[1], args[2]); break;
+    case SMT_Symbol::UNARY_MINUS: result = yices_neg(args[0]); break;
+    case SMT_Symbol::MINUS: result = yices_sub(args[0], args[1]); break;
+    case SMT_Symbol::PLUS: result = yices_add(args[0], args[1]); break;
+    case SMT_Symbol::MULT: result = yices_mul(args[0], args[1]); break;
+    case SMT_Symbol::DIV: result = yices_idiv(args[0], args[1]); break;
+    case SMT_Symbol::MOD: result = yices_imod(args[0], args[1]); break;
+    case SMT_Symbol::DIVISIBLE: result = yices_divides_atom(args[1], args[0]); break;
+    case SMT_Symbol::REAL_DIVISION: result = yices_division(args[0], args[1]); break;
+    case SMT_Symbol::LT: result = yices_arith_lt_atom(args[0], args[1]); break;
+    case SMT_Symbol::LEQ: result = yices_arith_leq_atom(args[0], args[1]); break;
+    case SMT_Symbol::GT: result = yices_arith_gt_atom(args[0], args[1]); break;
+    case SMT_Symbol::GEQ: result = yices_arith_geq_atom(args[0], args[1]); break;
+    case SMT_Symbol::TO_REAL: result = args[0]; break;
+    case SMT_Symbol::TO_INTEGER: result = yices_floor(args[0]); break;
+    case SMT_Symbol::IS_INTEGER: result = yices_is_int_atom(args[0]); break;
+    default: throw std::runtime_error("unsupported SMT operator in Yices converter");
+    }
+    return checked(result);
+}
+
+DagNode *YicesConverter::convertBack(term_t value, type_t expectedType)
+{
+    for (const auto &entry : smtManagerVariableMap)
+        if (entry.second == value) return entry.first;
+
+    int32_t boolean;
+    if (yices_bool_const_value(value, &boolean) == 0)
+    {
+        Vector<ConnectedComponent *> domain;
+        auto *sort = sg.getKind("Boolean");
+        return sg.getSymbol(boolean ? "true" : "false", domain, sort)->makeDagNode();
+    }
+    mpq_class number;
+    if (yices_rational_const_value(value, number.get_mpq_t()) == 0)
+    {
+        const bool integer = expectedType == yices_int_type();
+        Vector<ConnectedComponent *> domain;
+        auto *sort = sg.getKind(integer ? "Integer" : "Real");
+        auto *symbol = static_cast<SMT_NumberSymbol *>(sg.getSymbol(
+            integer ? "<Integers>" : "<Reals>", domain, sort));
+        return new SMT_NumberDagNode(symbol, number);
+    }
+    char *description = yices_term_to_string(value, 120, 10, 0);
+    std::string message = "cannot convert Yices term to Maude DAG: ";
+    message += description ? description : yices_error_string();
+    yices_free_string(description);
+    throw std::runtime_error(message);
+}
+
+YicesConnector::YicesConnector(std::shared_ptr<YicesConverter> converter)
+    : conv(std::move(converter)), context(yices_new_context(nullptr))
+{
+    if (!context) throw std::runtime_error(yices_error_string());
+}
+
+YicesConnector::~YicesConnector() { yices_free_context(context); }
+
+SmtResult YicesConnector::check_sat(SmtTermVector constraints)
+{
+    for (const auto &constraint : *constraints)
+        if (yices_assert_formula(context, unwrap(constraint)) < 0)
+        {
+            IssueWarning("Yices assertion failed: " << yices_error_string());
+            return unknown;
+        }
+    switch (yices_check_context(context, nullptr))
+    {
+    case STATUS_SAT: return sat;
+    case STATUS_UNSAT: return unsat;
+    default:
+        IssueWarning("Yices returned unknown satisfiability: " << yices_error_string());
+        return unknown;
+    }
+}
+
+SmtTerm YicesConnector::add_const(SmtTerm accumulated, SmtTerm current)
+{
+    if (!accumulated) return current;
+    auto left = std::dynamic_pointer_cast<YicesTerm>(accumulated);
+    auto right = std::dynamic_pointer_cast<YicesTerm>(current);
+    return wrap(yices_and2(left->value, right->value), yices_bool_type(),
+                conv->conjoin(left->original, right->original));
+}
+
+TermSubst YicesConnector::mk_subst(std::map<DagNode *, DagNode *> &substitution)
+{
+    auto result = std::make_shared<YicesSubstitution>();
+    for (const auto &entry : substitution)
+    {
+        result->from.push_back(unwrap(conv->dag2term(entry.first)));
+        result->to.push_back(unwrap(conv->dag2term(entry.second)));
+    }
+    return result;
+}
+
+bool YicesConnector::subsume(TermSubst substitution, SmtTerm previous,
+                              SmtTerm accumulated, SmtTerm current)
+{
+    auto subst = std::dynamic_pointer_cast<YicesSubstitution>(substitution);
+    if (!subst) throw std::runtime_error("invalid Yices substitution");
+    term_t conclusion = checked(yices_subst_term(subst->from.size(),
+        subst->from.data(), subst->to.data(), unwrap(previous)));
+    term_t premise = checked(yices_and2(unwrap(accumulated), unwrap(current)));
+    term_t counterexample = checked(yices_not(yices_implies(premise, conclusion)));
+    push();
+    try
+    {
+        if (yices_assert_formula(context, counterexample) < 0)
+            throw std::runtime_error(yices_error_string());
+        smt_status_t result = yices_check_context(context, nullptr);
+        pop();
+        if (result == STATUS_UNSAT) return true;
+        if (result == STATUS_SAT) return false;
+        IssueWarning("Yices returned unknown during subsumption");
+        return false;
+    }
+    catch (...)
+    {
+        pop();
+        throw;
+    }
+}
+
+SmtModel YicesConnector::get_model()
+{
+    model_t *model = yices_get_model(context, 1);
+    if (!model) throw std::runtime_error(yices_error_string());
+    std::map<term_t, std::pair<term_t, type_t>> values;
+    for (const auto &entry : conv->variables())
+    {
+        term_t value = yices_get_value_as_term(model, entry.second);
+        if (value != NULL_TERM)
+            values.emplace(entry.second,
+                           std::make_pair(value, yices_type_of_term(entry.second)));
+    }
+    yices_free_model(model);
+    return std::make_shared<YicesModel>(std::move(values));
+}
+
+void YicesConnector::push()
+{
+    if (yices_push(context) < 0) throw std::runtime_error(yices_error_string());
+    ++pushCount;
+}
+
+void YicesConnector::pop()
+{
+    if (!pushCount || yices_pop(context) < 0)
+        throw std::runtime_error("unbalanced Yices pop");
+    --pushCount;
+}
+
+void YicesConnector::reset()
+{
+    yices_reset_context(context);
+    pushCount = 0;
+}
+
+void YicesConnector::set_logic(const char *requested)
+{
+    if (logic == requested) return;
+    if (!logic.empty())
+        throw std::runtime_error("Yices logic cannot be changed after initialization");
+    ctx_config_t *config = yices_new_config();
+    if (!config) throw std::runtime_error(yices_error_string());
+    if (yices_default_config_for_logic(config, requested) < 0)
+    {
+        yices_free_config(config);
+        throw std::runtime_error(yices_error_string());
+    }
+    context_t *replacement = yices_new_context(config);
+    yices_free_config(config);
+    if (!replacement) throw std::runtime_error(yices_error_string());
+    yices_free_context(context);
+    context = replacement;
+    logic = requested;
+    pushCount = 0;
+}

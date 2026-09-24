@@ -1,151 +1,114 @@
-#ifndef YICES2_EXTENSION_HH
-#define YICES2_EXTENSION_HH
+#ifndef MAUDE_SE_YICES2_EXTENSION_HH
+#define MAUDE_SE_YICES2_EXTENSION_HH
 
+#include <gmp.h>
+#include <yices.h>
 #include "smtInterface.hh"
 #include "nativeSmt.hh"
 #include "extGlobal.hh"
-#include "yices.h"
-#include <vector>
-#include <gmpxx.h>
-
 #include "simpleRootContainer.hh"
+#include <map>
+#include <memory>
+#include <string>
 
-
-class YicesTerm : public SmtTerm
+class YicesTerm : public _SmtTerm
 {
 public:
-    YicesTerm(term_t term, type_t type) : term(term), type(type) {};
-    ~YicesTerm(){};
-
-    term_t term;
+    YicesTerm(term_t value, type_t type = NULL_TYPE, DagNode *original = nullptr)
+        : value(value), type(type), original(original) {}
+    term_t value;
     type_t type;
+    DagNode *original;
 };
 
-struct cmpExprById{
-    bool operator( )(const YicesTerm &lhs, const YicesTerm &rhs) const {
-        return lhs.term < rhs.term;
-    }
-};
-
-
-class YicesConverter : public Converter, public NativeSmtConverter< YicesTerm*, cmpExprById >, private SimpleRootContainer
-{
-    NO_COPYING(YicesConverter);
-public:
-    YicesConverter(const SMT_Info &smtInfo, MetaLevelSmtOpSymbol* extensionSymbol);
-	~YicesConverter(){};
-    void prepareFor(VisibleModule* vmodule){};
-    SmtTerm* dag2term(DagNode* dag){
-        return dag2termInternal(dag);
-    };
-    DagNode* term2dag(SmtTerm* term){
-        YicesTerm* t = dynamic_cast<YicesTerm*>(term);
-        return term2dagInternal(t);
-    }
-
-public:
-    // inline z3::context* getContext(){ return &ctx; };
-
-private:
-    // z3::context ctx;
-
-private:
-    // override
-    YicesTerm* variableGenerator(DagNode *dag, ExprType exprType){ return nullptr; };
-    YicesTerm* makeVariable(VariableDagNode* v){ return nullptr; };
-
-    // Aux
-    YicesTerm* dag2termInternal(DagNode* dag){ return nullptr; };
-    DagNode* term2dagInternal(YicesTerm* term){ return nullptr; };
-
-private:
-    // Maude specific
-    VisibleModule* vmodule;
-    void markReachableNodes(){};
-};
-
-
-
-class YicesConnector : public Connector
+class YicesSubstitution : public _TermSubst
 {
 public:
-    YicesConnector(YicesConverter* conv);
-	~YicesConnector(){};
-    bool check_sat(std::vector<SmtTerm*> consts){ return false; };
-    bool subsume(TermSubst* subst, SmtTerm* prev, SmtTerm* acc, SmtTerm* cur){ return false; };
-    TermSubst* mk_subst(std::map<DagNode*, DagNode*>& subst_dict){ return nullptr; };
-    SmtTerm* add_const(SmtTerm* acc, SmtTerm* cur){ return nullptr; };
-    SmtModel* get_model(){ return nullptr; };
-    void push(){};
-    void pop(){};
+    std::vector<term_t> from;
+    std::vector<term_t> to;
+};
 
-    void print_model(){};
-    void set_logic(const char* logic){};
-    void reset(){};
-
-    Converter* get_converter(){ return conv; };
+class YicesModel : public _SmtModel
+{
+public:
+    explicit YicesModel(std::map<term_t, std::pair<term_t, type_t>> values)
+        : values(std::move(values)) {}
+    SmtTerm get(SmtTerm key) override;
+    SmtTermVector keys() override;
 
 private:
-    // z3::solver *s;
-    // z3::solver *s_v; // solver for validity check
-    // z3::context ctx; // context for validity check
+    std::map<term_t, std::pair<term_t, type_t>> values;
+};
 
-    // z3::expr translate(z3::expr& e);
+class YicesConverter : public _Converter,
+                       public NativeSmtConverter<term_t, std::less<term_t>>,
+                       private SimpleRootContainer
+{
+public:
+    explicit YicesConverter(const SMT_Info &info);
+    void prepareFor(VisibleModule *module) override;
+    SmtTerm dag2term(DagNode *dag) override;
+    DagNode *term2dag(SmtTerm term) override;
+    const SmtManagerVariableMap &variables() const { return smtManagerVariableMap; }
+    DagNode *conjoin(DagNode *left, DagNode *right);
 
-    // int pushCount;
-    YicesConverter* conv;
+private:
+    term_t makeVariable(DagNode *dag) override;
+    term_t convert(DagNode *dag);
+    DagNode *convertBack(term_t value, type_t expectedType);
+    void markReachableNodes() override;
+    SymbolGetter sg;
+    std::vector<DagNode *> retainedDags;
+};
+
+class YicesConnector : public _Connector
+{
+public:
+    explicit YicesConnector(std::shared_ptr<YicesConverter> converter);
+    ~YicesConnector() override;
+    SmtResult check_sat(SmtTermVector constraints) override;
+    bool subsume(TermSubst substitution, SmtTerm previous, SmtTerm accumulated,
+                 SmtTerm current) override;
+    TermSubst mk_subst(std::map<DagNode *, DagNode *> &substitution) override;
+    SmtTerm add_const(SmtTerm accumulated, SmtTerm current) override;
+    SmtModel get_model() override;
+    void push() override;
+    void pop() override;
+    SmtTerm simplify(SmtTerm term) override { return term; }
+    void print_model() override {}
+    void set_logic(const char *logic) override;
+    void reset() override;
+    Converter get_converter() override { return conv; }
+
+private:
+    std::shared_ptr<YicesConverter> conv;
+    context_t *context;
+    std::string logic;
+    unsigned pushCount = 0;
 };
 
 class YicesSmtManagerFactory : public SmtManagerFactory
 {
 public:
-    Converter* createConverter(const SMT_Info& smtInfo, MetaLevelSmtOpSymbol* extensionSymbol){
-        return new YicesConverter(smtInfo, extensionSymbol);
+    Converter createConverter(const SMT_Info &info) override
+    {
+        return std::make_shared<YicesConverter>(info);
     }
-    Connector* createConnector(Converter* conv){
-        return new YicesConnector(dynamic_cast<YicesConverter*>(conv));
+    Connector createConnector(Converter converter) override
+    {
+        return std::make_shared<YicesConnector>(
+            std::dynamic_pointer_cast<YicesConverter>(converter));
     }
 };
 
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
-    void set(){
-        if (smtManagerFactory) delete smtManagerFactory;
+    void set() override
+    {
+        delete smtManagerFactory;
         smtManagerFactory = new YicesSmtManagerFactory();
-    };
+    }
 };
-
-
-// public:
-//     YicesConverter(const SMT_Info &smtInfo);
-
-//     // backward compatibility
-//     Result assertDag(DagNode* dag);
-//     Result checkDag(DagNode* dag);
-//     VariableDagNode *makeFreshVariable(Term *baseVariable, const mpz_class &number);
-//     SmtResult checkDagContextFree(DagNode *dag, ExtensionSymbol* extensionSymbol=nullptr);
-
-//     // SMT manager requirements
-//     DagNode *generateAssignment(DagNode *dagNode, SmtCheckerSymbol* smtCheckerSymbol);
-//     DagNode *simplifyDag(DagNode *dagNode, ExtensionSymbol* extensionSymbol);
-//     DagNode* applyTactic(DagNode* dagNode, DagNode* tacticTypeDagNode, ExtensionSymbol* extensionSymbol);
-
-// private:
-
-//     DagNode* GenerateDag(model_t *mdl, YicesTerm e, SmtCheckerSymbol* smtCheckerSymbol, ReverseSmtManagerVariableMap* rsv);
-//     YicesTerm variableGenerator(DagNode *dag, ExprType exprType);
-
-//     YicesTerm Dag2Term(DagNode *dag, ExtensionSymbol* extensionSymbol);
-//     DagNode *Term2Dag(YicesTerm e, ExtensionSymbol* extensionSymbol, ReverseSmtManagerVariableMap* rsv=nullptr);
-
-//     void setSolverTo(bool isLinear);
-//     inline void setSimplificationStrategy(){
-//         int32_t a = yices_context_enable_option(smtContext, "var-elim");
-//         int32_t b = yices_context_enable_option(smtContext, "arith-elim");
-//         // int32_t c = yices_context_enable_option(smtContext, "keep-ite");
-//     }
-//     bool isSolverLinear;
-// };
 
 #endif
