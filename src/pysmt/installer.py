@@ -51,6 +51,11 @@ def required_versions():
     for requirement in metadata.requires("maude-se") or ():
         match = re.match(r"^([A-Za-z0-9_.-]+)==([^;\s]+)", requirement)
         if match:
+            marker = requirement.split(";", 1)[1] if ";" in requirement else ""
+            if re.search(r"python_version\s*<\s*['\"]3\.9['\"]", marker) and sys.version_info >= (3, 9):
+                continue
+            if re.search(r"python_version\s*>=\s*['\"]3\.9['\"]", marker) and sys.version_info < (3, 9):
+                continue
             versions[match.group(1).lower().replace("_", "-")] = match.group(2)
     return versions
 
