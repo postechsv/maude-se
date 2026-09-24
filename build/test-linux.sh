@@ -7,9 +7,12 @@ mode="${1:-}"
 
 case "$mode" in
 wheel)
-  versions=()
-  for version in cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313; do
-    [[ -x "/opt/python/$version/bin/python" ]] && versions+=("$version")
+  versions=(cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313 cp314-cp314)
+  for version in "${versions[@]}"; do
+    if [[ ! -x "/opt/python/$version/bin/python" ]]; then
+      echo "error: required Python is unavailable: $version" >&2
+      exit 1
+    fi
   done
   for version in "${versions[@]}"; do
     wheels=("$top_dir"/out/maude_se-*-"$version"-manylinux_*.whl)

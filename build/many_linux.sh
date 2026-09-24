@@ -9,17 +9,16 @@ bindings_dir="$work_dir/sources/maude-bindings"
 build_dir="$work_dir/install"
 package_src_dir="$build_dir/package-src"
 
-yum install flex bison -y
-
 refversion=cp311-cp311
-versions=()
-for version in cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313; do
-    if [[ -x "/opt/python/${version}/bin/python" ]]; then
-        versions+=("$version")
-    else
-        echo "Skipping unavailable Python: $version"
+versions=(cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313 cp314-cp314)
+for version in "${versions[@]}"; do
+    if [[ ! -x "/opt/python/${version}/bin/python" ]]; then
+        echo "error: required Python is unavailable: $version" >&2
+        exit 1
     fi
 done
+
+yum install flex bison -y
 
 export PATH="/opt/python/${refversion}/bin:$PATH"
 

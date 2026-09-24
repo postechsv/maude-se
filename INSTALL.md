@@ -98,7 +98,7 @@ To include the additional standalone-build prerequisites in the check, run:
 ./build.sh doctor standalone
 ```
 
-The macOS build requires Xcode Command Line Tools, Python 3.8 or newer, and
+The macOS build requires Xcode Command Line Tools, Python 3.10-3.14, and
 Homebrew. Wheel builds use these Homebrew build tools:
 
 - `bison`

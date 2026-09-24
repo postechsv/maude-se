@@ -7,7 +7,7 @@ For details on implementing a custom connector or using MaudeSE, please refer to
 
 ## Prerequisite
 
-* MaudeSE requires `Python >= 3.8`.
+* MaudeSE supports Python 3.10-3.14, matching the official Maude wheel range.
 * Python supported SMT solvers that you want to use. 
   * E.g., `z3`, `yices`, `cvc5`.
 

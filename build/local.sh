@@ -115,10 +115,10 @@ doctor() {
   fi
 
   if have_command python3; then
-    if python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 8))'; then
-      printf 'ok      Python >= 3.8\n'
+    if python3 -c 'import sys; raise SystemExit(not ((3, 10) <= sys.version_info[:2] < (3, 15)))'; then
+      printf 'ok      Python 3.10-3.14\n'
     else
-      printf 'missing Python >= 3.8\n'
+      printf 'missing Python 3.10-3.14\n'
       failed=1
     fi
   fi
