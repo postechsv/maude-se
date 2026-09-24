@@ -45,7 +45,7 @@ jobs:
     name: macOS wheel
     strategy:
       matrix:
-        os: ['macos-latest','macos-13']
+        os: ['macos-latest','macos-15-intel']
         python-version: ['3.8','3.9','3.10','3.11','3.12','3.13']
     runs-on: ${{ matrix.os }}
     needs: verify-version
@@ -96,7 +96,7 @@ jobs:
     name: macOS standalone
     strategy:
       matrix:
-        os: ['macos-latest','macos-13']
+        os: ['macos-latest','macos-15-intel']
     runs-on: ${{ matrix.os }}
     needs: verify-version
     steps:
