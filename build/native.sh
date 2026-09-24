@@ -319,7 +319,8 @@ build_tecla() {
 
   ./configure CFLAGS="$native_cflags" LDFLAGS="$native_ldflags" \
     --prefix="$build_dir"
-  make -j4 TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
+  # Tecla's generated Makefile does not order normal_obj before its file targets.
+  make TARGETS=normal TARGET_LIBS=static DEMOS= PROGRAMS=
   make install_inc
   install -m 644 libtecla.a "$lib_dir/libtecla.a"
 }
