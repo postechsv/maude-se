@@ -112,8 +112,9 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                     smtState->transferCountTo(context);
                     if (!success)
                     {
+                        bool uncertain = smtState->isSmtUnknown();
                         delete smtState;
-                        result = smtFailureSymbol->makeDagNode();
+                        result = (uncertain ? smtUnknownSymbol : smtFailureSymbol)->makeDagNode();
                         goto fail;
                     }
                     context.incrementRlCount();
@@ -169,8 +170,9 @@ bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingCont
                 Verbose("metaSearchPath: visited " << smtState->getNrStates() << " states.");
                 if (!success)
                 {
+                    bool uncertain = smtState->isSmtUnknown();
                     delete smtState;
-                    result = upFailureTrace();
+                    result = uncertain ? unknownTraceSymbol->makeDagNode() : upFailureTrace();
                     goto fail;
                 }
                 context.incrementRlCount();

@@ -225,10 +225,17 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			ll->push_back(acc);
 			ll->push_back(cur);
 
-			if (connector->check_sat(ll) != sat)
+			SmtResult satResult = connector->check_sat(ll);
+			if (satResult != sat)
 			{
-				Verbose("constraint is unsatisfiable ... continue");
 				connector->pop();
+				if (satResult == unknown)
+				{
+					IssueWarning("SMT solver returned unknown while checking a symbolic transition.");
+					smtUnknown = true;
+					return NONE;
+				}
+				Verbose("constraint is unsatisfiable ... continue");
 				continue;
 			}
 			connector->pop();

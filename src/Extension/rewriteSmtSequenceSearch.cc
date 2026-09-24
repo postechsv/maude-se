@@ -137,6 +137,8 @@ void RewriteSmtSequenceSearch::markReachableNodes()
 
 bool RewriteSmtSequenceSearch::findNextMatch()
 {
+    if (smtUnknown)
+        return false;
     if (matchState != 0)
         goto tryMatch; // non-startup case
 
@@ -183,9 +185,12 @@ bool RewriteSmtSequenceSearch::findNextMatch()
             return true;
         }
 
+        if (smtUnknown)
+            break;
         delete matchState;
     }
 
+    delete matchState;
     matchState = 0;
     return false;
 }
@@ -258,6 +263,8 @@ int RewriteSmtSequenceSearch::findNextInterestingState()
                 }
             }
         }
+        if (smtUnknown)
+            return NONE;
         if (getContext()->traceAbort())
             return NONE;
         if (normalFormNeeded && nextArc == 0)
@@ -352,9 +359,15 @@ bool RewriteSmtSequenceSearch::checkMatchConstraint(int stateNr)
     }
 
     connector->push();
-    if (connector->check_sat(ll) != sat)
+    SmtResult satResult = connector->check_sat(ll);
+    if (satResult != sat)
     {
         connector->pop();
+        if (satResult == unknown)
+        {
+            IssueWarning("SMT solver returned unknown while checking a search goal.");
+            smtUnknown = true;
+        }
         return false;
     }
     else

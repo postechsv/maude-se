@@ -47,6 +47,7 @@ public:
   RewritingContext *getContext();
   void transferCountTo(RewritingContext &recipient);
   int getStateParent(int stateNr) const;
+  bool isSmtUnknown() const { return smtUnknown; }
 
 protected:
   struct State
@@ -88,6 +89,7 @@ protected:
 
   bool fold;
   bool merge;
+  bool smtUnknown = false;
 
   // key: State index
   typedef map<int, Vector<ConstrainedTerm *>> ConstrainedTermMap;

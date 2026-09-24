@@ -417,6 +417,7 @@ fmod META-SMT-SEARCH is
 
   op {_,_,_,_,_,_} : Term Substitution Term Substitution Nat Nat -> SmtResult2 [ctor] . --- last one is the state number
   op failure : -> SmtResult2? [ctor] .
+  op smtUnknown : -> SmtResult2? [ctor] .
 
   op  metaSmtSearch : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> SmtResult2? .
   ceq metaSmtSearch(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
@@ -435,6 +436,7 @@ fmod META-SMT-SEARCH is
   op metaSmtSearch : Module Term Term Condition Term Qid Nat Bound Nat Qid Bool Bool ~> SmtResult2?
     [special (id-hook MetaLevelSmtOpSymbol     (metaSmtSearch)
               op-hook smtFailureSymbol         (failure : ~> SmtResult2?)
+              op-hook smtUnknownSymbol         (smtUnknown : ~> SmtResult2?)
               op-hook smtResultSymbol          ({_,_,_,_,_,_} : Term Substitution Term Substitution Nat Nat ~> SmtResult2)
               op-hook assignmentSymbol         (_<-_ : Qid Term ~> Assignment)
               op-hook substitutionSymbol       (_;_ : Substitution Substitution ~> Substitution)
@@ -501,6 +503,7 @@ fmod META-SMT-SEARCH is
   
   op {_,_} : Trace2 Substitution -> Trace2Result [ctor] .
   op failure : -> Trace2Result? [ctor] .
+  op smtPathUnknown : -> Trace2Result? [ctor] .
 
   op  metaSmtSearchPath : Module Term Term Condition Qid Bound Nat Qid Bool Bool ~> Trace2Result? .
   ceq metaSmtSearchPath(M, T, T', COND, STEP, B, N, LOGIC, FOLD, MERGE)
@@ -523,6 +526,7 @@ fmod META-SMT-SEARCH is
               op-hook nilTraceSymbol            (nil : ~> Trace2)
               op-hook traceSymbol               (__ : Trace2 Trace2 ~> Trace2)
               op-hook failureTraceSymbol        (failure : ~> Trace2Result?)
+              op-hook unknownTraceSymbol        (smtPathUnknown : ~> Trace2Result?)
               op-hook traceResultSymbol         ({_,_} : Trace2 Substitution ~> Trace2Result)
 
               op-hook assignmentSymbol          (_<-_ : Qid Term ~> Assignment)

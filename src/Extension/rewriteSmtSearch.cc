@@ -22,6 +22,11 @@ void Interpreter::doRewriteSmtSearching(Timer &timer,
     bool showStats = getFlag(SHOW_STATS);
     if (!result)
     {
+      if (state->isSmtUnknown())
+      {
+        cout << "\nSMT result unknown; search stopped." << endl;
+        break;
+      }
       const char *reply = (solutionCount == 0) ? "No solution." : "No more solutions.";
       cout << "\n"
            << reply << endl;

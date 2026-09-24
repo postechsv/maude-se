@@ -618,10 +618,12 @@ omod MAUDE-SE-META-INTERPRETER is
 
   op check : Nat Nat SearchResult? -> Bool .
   eq check(C, N, {failure}) = false .
+  eq check(C, N, {smtUnknown}) = false .
   eq check(C, N, {SRES}) = C < N .
 
   op toString : Module Nat SmtResult2? -> String .
    eq toString(MO, C, failure) = "No more solutions.\n\n" .
+   eq toString(MO, C, smtUnknown) = "SMT result unknown; search stopped. Results may be incomplete.\n\n" .
   ceq toString(MO, C, {T, SUBS, T', SUBS', N', N}) = "\n" +
     "Solution " + string(C, 10) + " (state " + string(N, 10) + ")"              + "\n\n" +
     "Symbolic state:" + "\n " + metaPrintToString(MO, none, T, mixfix, none)    + "\n\n" +
@@ -675,6 +677,7 @@ omod MAUDE-SE-META-INTERPRETER is
 
   op toString : Module Trace2Result? Bool -> String .
   eq toString(MO, failure, B) = "Failed to get path.\n" . --- outdated
+  eq toString(MO, smtPathUnknown, B) = "SMT result unknown; path is unavailable.\n" .
   eq toString(MO, {TR, SUBS}, false) = toString(MO, TR, SUBS) .
 
   op toString : Module Trace2 Substitution -> String .
