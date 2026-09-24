@@ -392,6 +392,7 @@ build_z3() {
     cmake -S "$z3_dir" -B "$z3_dir/build" \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX="$build_dir" \
+      -DCMAKE_INSTALL_LIBDIR=lib \
       -DCMAKE_OSX_ARCHITECTURES="$arch" \
       -DCMAKE_OSX_DEPLOYMENT_TARGET="$deployment_target" \
       -DCMAKE_C_FLAGS="$native_cflags" \
@@ -403,6 +404,10 @@ build_z3() {
     cmake --install "$z3_dir/build"
   )
 
+  [[ -f "$lib_dir/libz3.a" ]] || {
+    echo "error: Z3 static library was not installed at $lib_dir/libz3.a" >&2
+    return 1
+  }
   rm -f "$build_dir"/lib/libz3*.so* "$build_dir"/lib/libz3*.dylib
 }
 
