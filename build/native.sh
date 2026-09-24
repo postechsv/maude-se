@@ -11,6 +11,8 @@ top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
+# shellcheck source=source-integrity.sh
+source "$top_dir/build/source-integrity.sh"
 
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
@@ -253,7 +255,9 @@ build_buddy() {
     buddy_dir="$third_party/buddy-$BUDDY_VERSION"
     rm -rf "$buddy_dir"
 
-    curl -L "https://github.com/utwente-fmt/buddy/releases/download/v$BUDDY_VERSION/buddy-$BUDDY_VERSION.tar.gz" >"$buddy_dir.tar.gz"
+    download_source_archive \
+      "https://github.com/utwente-fmt/buddy/releases/download/v$BUDDY_VERSION/buddy-$BUDDY_VERSION.tar.gz" \
+      "$buddy_dir.tar.gz" "buddy-$BUDDY_VERSION"
     tar -xzf "$buddy_dir.tar.gz" -C "$third_party"
     rm -rf "$buddy_dir.tar.gz"
 
@@ -286,8 +290,9 @@ build_tecla() {
   tecla_dir="$third_party/libtecla"
   rm -rf "$tecla_dir"
 
-  curl -fL -o "$tecla_dir.tar.gz" \
-    "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz"
+  download_source_archive \
+    "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz" \
+    "$tecla_dir.tar.gz" "libtecla-$TECLA_VERSION"
   tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
   rm -f "$tecla_dir.tar.gz"
 
@@ -365,6 +370,10 @@ build_z3() {
     rm -rf "$z3_dir"
     git clone --branch "z3-$Z3_VERSION" --depth 1 \
       https://github.com/Z3Prover/z3 "$z3_dir"
+    [[ "$(git -C "$z3_dir" rev-parse HEAD)" == "$Z3_4_13_0_REF" ]] || {
+      echo "error: Z3 tag z3-$Z3_VERSION does not resolve to the pinned commit" >&2
+      return 1
+    }
 
     # Z3 4.13.0 contains a stale accessor name that newer Clang versions
     # instantiate and reject while compiling static_matrix::ref.
@@ -504,8 +513,9 @@ get_gnu() {
   ext=$3
   libname="$name-$version"
   mkdir -p "$third_party"
-  curl -fL -o "$third_party/$libname.$ext" \
-    "https://ftp.gnu.org/gnu/$name/$libname.$ext"
+  download_source_archive \
+    "https://ftp.gnu.org/gnu/$name/$libname.$ext" \
+    "$third_party/$libname.$ext" "$libname"
   tar -xf "$third_party/$libname.$ext" -C "$third_party"
   rm -rf "$third_party/$libname.$ext"
 }

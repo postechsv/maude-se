@@ -12,6 +12,8 @@ src_dir="$top_dir/src"
 
 # shellcheck source=versions.env
 source "$top_dir/build/versions.env"
+# shellcheck source=source-integrity.sh
+source "$top_dir/build/source-integrity.sh"
 
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
@@ -269,7 +271,9 @@ build_buddy() {
     buddy_dir="$third_party/buddy-2.4"
     rm -rf "$buddy_dir"
 
-    curl -fL https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz >"$buddy_dir.tar.gz"
+    download_source_archive \
+      "https://github.com/utwente-fmt/buddy/releases/download/v2.4/buddy-2.4.tar.gz" \
+      "$buddy_dir.tar.gz" "buddy-2.4"
     tar -xzf "$buddy_dir.tar.gz" -C "$third_party"
     rm -rf "$buddy_dir.tar.gz"
 
@@ -304,8 +308,9 @@ build_tecla() {
     progress "Downloading Tecla $TECLA_VERSION"
     tecla_dir="$third_party/libtecla"
     rm -rf "$tecla_dir"
-    curl -fL -o "$tecla_dir.tar.gz" \
-      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz"
+    download_source_archive \
+      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-$TECLA_VERSION.tar.gz" \
+      "$tecla_dir.tar.gz" "libtecla-$TECLA_VERSION"
     tar -xzf "$tecla_dir.tar.gz" -C "$third_party"
     rm -f "$tecla_dir.tar.gz"
     cd "$tecla_dir"
@@ -330,7 +335,9 @@ build_tecla() {
     progress "Downloading Tecla 1.6.3"
     tecla_dir="$third_party/libtecla"
 
-    curl -o "$tecla_dir.tar.gz" https://sites.astro.caltech.edu/~mcs/tecla/libtecla-1.6.3.tar.gz
+    download_source_archive \
+      "https://sites.astro.caltech.edu/~mcs/tecla/libtecla-1.6.3.tar.gz" \
+      "$tecla_dir.tar.gz" "libtecla-1.6.3"
     tar -xvzf "$tecla_dir.tar.gz" -C "$third_party"
     rm -rf "$tecla_dir.tar.gz"
 
@@ -404,7 +411,9 @@ get_gnu() {
   ext=$3
   libname="$name-$version"
   mkdir -p "$third_party"
-  curl -o "$third_party/$libname.$ext" https://ftp.gnu.org/gnu/$name/$libname.$ext
+  download_source_archive \
+    "https://ftp.gnu.org/gnu/$name/$libname.$ext" \
+    "$third_party/$libname.$ext" "$libname"
   tar -xvf "$third_party/$libname.$ext" -C "$third_party"
   rm -rf "$third_party/$libname.$ext"
 }

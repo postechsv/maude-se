@@ -117,7 +117,10 @@ Standalone builds use Homebrew only for build tools:
 The native libraries used by the wheel and standalone builds are built from
 pinned source versions instead of Homebrew bottles. Standalone builds include
 a statically linked Z3, while wheels declare each pinned solver package as an
-optional dependency.
+optional dependency. Source archives are checked against pinned SHA-256 hashes
+before extraction; the standalone Z3 tag is also checked against a pinned
+commit. Update `build/versions.env` hashes when intentionally changing a
+dependency version.
 
 Install missing Homebrew packages explicitly with:
 
