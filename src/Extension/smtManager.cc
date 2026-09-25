@@ -67,7 +67,14 @@ VariableGenerator::VariableGenerator(const SMT_Info &smtInfo, bool use_cur_modul
         conn2 = smtManagerFactory->createConnector(conv);
 
     if (use_cur_module)
-        conv->prepareFor(getCurrentModule());
+    {
+        currentModule = std::shared_ptr<VisibleModule>(
+            getCurrentModule(), [](VisibleModule *module)
+            {
+                if (module) module->unprotect();
+            });
+        conv->prepareFor(currentModule.get());
+    }
 }
 
 VariableGenerator::Result

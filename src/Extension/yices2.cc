@@ -67,15 +67,12 @@ void YicesConverter::prepareFor(VisibleModule *module)
 {
     sg.setModule(module);
     smtManagerVariableMap.clear();
-    retainedDags.clear();
 }
 
 void YicesConverter::markReachableNodes()
 {
     for (const auto &entry : smtManagerVariableMap)
         entry.first->mark();
-    for (DagNode *dag : retainedDags)
-        dag->mark();
 }
 
 DagNode *YicesConverter::conjoin(DagNode *left, DagNode *right)
@@ -89,7 +86,6 @@ DagNode *YicesConverter::conjoin(DagNode *left, DagNode *right)
     arguments[0] = left;
     arguments[1] = right;
     DagNode *joined = sg.getSymbol("_and_", domain, boolean)->makeDagNode(arguments);
-    retainedDags.push_back(joined);
     return joined;
 }
 
@@ -103,7 +99,7 @@ DagNode *YicesConverter::term2dag(SmtTerm term)
 {
     auto value = std::dynamic_pointer_cast<YicesTerm>(term);
     if (!value) throw std::runtime_error("expected a Yices SMT term");
-    DagNode *dag = value->original ? value->original : convertBack(value->value, value->type);
+    DagNode *dag = value->original ? value->original->get() : convertBack(value->value, value->type);
     if (dag->getSort() == nullptr)
     {
         auto *context = new UserLevelRewritingContext(dag);
@@ -275,7 +271,8 @@ SmtTerm YicesConnector::add_const(SmtTerm accumulated, SmtTerm current)
     auto left = std::dynamic_pointer_cast<YicesTerm>(accumulated);
     auto right = std::dynamic_pointer_cast<YicesTerm>(current);
     return wrap(yices_and2(left->value, right->value), yices_bool_type(),
-                conv->conjoin(left->original, right->original));
+                conv->conjoin(left->original ? left->original->get() : nullptr,
+                              right->original ? right->original->get() : nullptr));
 }
 
 TermSubst YicesConnector::mk_subst(std::map<DagNode *, DagNode *> &substitution)

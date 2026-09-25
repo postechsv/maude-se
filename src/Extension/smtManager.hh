@@ -11,7 +11,7 @@ class VariableGenerator : public SmtEngineWrapperEx
 
 public:
     VariableGenerator(const SMT_Info &smtInfo, bool use_cur_module = true, bool use_folding_check = false);
-    ~VariableGenerator(){};
+    ~VariableGenerator() = default;
     //
     //	Virtual functions for SMT solving.
     //
@@ -31,6 +31,8 @@ public:
     inline Connector getConnector2() { return conn2; }; // for folding
 
 private:
+    // Declared first so the module stays protected until the SMT objects die.
+    std::shared_ptr<VisibleModule> currentModule;
     Converter conv;
     Connector conn;
     Connector conn2; // for folding check

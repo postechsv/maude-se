@@ -79,6 +79,7 @@ using Connector = std::shared_ptr<_Connector>;
 class SmtManagerFactory
 {
 public:
+    virtual ~SmtManagerFactory() = default;
     virtual Connector createConnector(Converter conv) = 0;
     virtual Converter createConverter(const SMT_Info &smtInfo) = 0;
 };
@@ -86,6 +87,7 @@ public:
 class SmtManagerFactorySetterInterface
 {
 public:
+    virtual ~SmtManagerFactorySetterInterface() = default;
     virtual void set() = 0;
 };
 

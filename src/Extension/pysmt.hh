@@ -9,6 +9,7 @@
 #include "nativeSmt.hh"
 #include "userLevelRewritingContext.hh"
 #include "smtManager.hh"
+#include "rootedDag.hh"
 
 // --- Python data wrapper ---
 class PyDataContainer
@@ -16,8 +17,27 @@ class PyDataContainer
     PyObject *data;
 
 public:
-    PyDataContainer(PyObject *data) : data(data) { Py_XINCREF(this->data); }
-    virtual ~PyDataContainer() { Py_XDECREF(this->data); }
+    PyDataContainer(PyObject *data) : data(data)
+    {
+        if (Py_IsInitialized())
+        {
+            PyGILState_STATE gil = PyGILState_Ensure();
+            Py_XINCREF(this->data);
+            PyGILState_Release(gil);
+        }
+    }
+    virtual ~PyDataContainer()
+    {
+        if (Py_IsInitialized())
+        {
+            PyGILState_STATE gil = PyGILState_Ensure();
+            Py_XDECREF(this->data);
+            PyGILState_Release(gil);
+        }
+    }
+
+    // Borrowed reference: only use while the owning term and GIL are held.
+    PyObject *borrowData() const { return data; }
 
     PyObject *getData()
     {
@@ -111,7 +131,7 @@ struct cmpExprById
 {
     bool operator()(const PySmtTerm &lhs, const PySmtTerm &rhs) const
     {
-        return lhs->getData() < rhs->getData();
+        return std::less<PyObject *>()(lhs->borrowData(), rhs->borrowData());
     }
 };
 
@@ -149,6 +169,7 @@ public:
                 if (EasyTerm *result = pyTerm2dag(t))
                 {
                     DagNode *dag = result->getDag();
+                    rootedResults.push_back(std::make_shared<RootedDag>(dag));
                     delete result; // otherwise memory becomes corrupted
                     if (dag->getSort() == nullptr)
                     {
@@ -182,6 +203,7 @@ private:
 
     Cache cache;
     ReverseCache rcache;
+    std::vector<std::shared_ptr<RootedDag>> rootedResults;
 
     void genRevCache()
     {
@@ -193,15 +215,13 @@ private:
 
     bool python_equal(PyObject *a, PyObject *b)
     {
-        Py_hash_t hash_a = PyObject_Hash(a);
-        Py_hash_t hash_b = PyObject_Hash(b);
-
-        if (hash_a == -1 || hash_b == -1)
+        int equal = PyObject_RichCompareBool(a, b, Py_EQ);
+        if (equal < 0)
         {
             PyErr_Print();
             return false;
         }
-        return hash_a == hash_b;
+        return equal == 1;
     }
 
 public:
@@ -215,10 +235,10 @@ public:
 
         genRevCache();
 
-        PyObject *pyObj = term->getData();
+        PyObject *pyObj = term->borrowData();
         for (auto &[key, val] : rcache)
         {
-            if (python_equal(key->getData(), pyObj))
+            if (python_equal(key->borrowData(), pyObj))
             {
                 return new EasyTerm(val);
             }

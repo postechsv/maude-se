@@ -7,6 +7,7 @@
 #include "nativeSmt.hh"
 #include "extGlobal.hh"
 #include "simpleRootContainer.hh"
+#include "rootedDag.hh"
 #include <map>
 #include <memory>
 #include <string>
@@ -15,10 +16,10 @@ class YicesTerm : public _SmtTerm
 {
 public:
     YicesTerm(term_t value, type_t type = NULL_TYPE, DagNode *original = nullptr)
-        : value(value), type(type), original(original) {}
+        : value(value), type(type), original(original ? std::make_shared<RootedDag>(original) : nullptr) {}
     term_t value;
     type_t type;
-    DagNode *original;
+    std::shared_ptr<RootedDag> original;
 };
 
 class YicesSubstitution : public _TermSubst
@@ -58,7 +59,6 @@ private:
     DagNode *convertBack(term_t value, type_t expectedType);
     void markReachableNodes() override;
     SymbolGetter sg;
-    std::vector<DagNode *> retainedDags;
 };
 
 class YicesConnector : public _Connector

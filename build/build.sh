@@ -206,6 +206,7 @@ prep_build_maude_se() {
   cp "$src_dir/swig/rwsmt.i" "$swig_src_dir"
   cp "$src_dir/swig/core.i" "$swig_src_dir"
   cp "$src_dir/Extension/pysmt.hh" "$bindings_dir/src"
+  cp "$src_dir/Extension/rootedDag.hh" "$bindings_dir/src"
 }
 
 build_maude_se() {

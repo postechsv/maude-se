@@ -52,6 +52,7 @@ noinst_HEADERS = \
     cvc4.hh \
     cvc5.hh \
     nativeSmt.hh \
+	rootedDag.hh \
 	smtManager.hh \
     smtOpSymbol.hh \
     extensionSymbol.hh \

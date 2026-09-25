@@ -14,7 +14,12 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 			sg.setModule(m);
 
 			SymbolGetter opSg;
-			opSg.setModule(getCurrentModule());
+			std::shared_ptr<VisibleModule> opModule(
+				getCurrentModule(), [](VisibleModule *module)
+				{
+					if (module) module->unprotect();
+				});
+			opSg.setModule(opModule.get());
 
 			bool genAssn;
 			if (!metaLevel->downBool(subject->getArgument(3), genAssn))
