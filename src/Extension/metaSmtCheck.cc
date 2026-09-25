@@ -113,9 +113,8 @@ DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m
 
 	Converter conv = vg->getConverter();
 
-	DagNode *result = emptySatAssnSet->makeDagNode();
-	std::vector<std::unique_ptr<RootedDag>> roots;
-	roots.emplace_back(new RootedDag(result));
+	DagRootFrame roots;
+	DagNode *result = roots.keep(emptySatAssnSet->makeDagNode());
 
 	PointerMap qidMap;
 	PointerMap dagMap;
@@ -123,10 +122,10 @@ DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m
 
 	for (auto k : *keys)
 	{
-		DagNode *kd = conv->term2dag(k);
-		if (kd) roots.emplace_back(new RootedDag(kd));
-		DagNode *kvd = conv->term2dag(model->get(k));
-		if (kvd) roots.emplace_back(new RootedDag(kvd));
+		DagHandle key = conv->term2dag(k);
+		DagHandle value = conv->term2dag(model->get(k));
+		DagNode *kd = key.get();
+		DagNode *kvd = value.get();
 
 		if (kd == nullptr || kvd == nullptr)
 		{
@@ -136,18 +135,14 @@ DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m
 		}
 
 		Vector<DagNode *> args(2);
-		args[0] = metaLevel->upDagNode(kd, m, qidMap, dagMap);
-		roots.emplace_back(new RootedDag(args[0]));
-		args[1] = metaLevel->upDagNode(kvd, m, qidMap, dagMap);
-		roots.emplace_back(new RootedDag(args[1]));
+		args[0] = roots.keep(metaLevel->upDagNode(kd, m, qidMap, dagMap));
+		args[1] = roots.keep(metaLevel->upDagNode(kvd, m, qidMap, dagMap));
 
 		Vector<DagNode *> r(2);
 		r[0] = result;
-		r[1] = satAssn->makeDagNode(args);
-		roots.emplace_back(new RootedDag(r[1]));
+		r[1] = roots.keep(satAssn->makeDagNode(args));
 
-		result = concatSatAssnSet->makeDagNode(r);
-		roots.emplace_back(new RootedDag(result));
+		result = roots.keep(concatSatAssnSet->makeDagNode(r));
 	}
 	Vector<DagNode *> dag(1);
 	dag[0] = result;

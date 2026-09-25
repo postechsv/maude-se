@@ -54,10 +54,13 @@ namespace std {
 // --- Converter ---
 %feature("director") _PyConverter;
 %rename(Converter) _PyConverter;
+%rename(prepareFor) py_prepareFor;
 %rename(dag2term) pyDag2term;
 %rename(term2dag) pyTerm2dag;
 %newobject _PyConverter::cache_find;
 %ignore markReachableNodes;
+%ignore _PyConverter::prepareFor;
+%ignore _PyConverter::term2dag;
 
 // --- Connector ---
 %feature("director") _PyConnector;

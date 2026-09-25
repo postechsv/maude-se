@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include "smtConst.hh"
+#include "rootedDag.hh"
 
 // forward decl
 class EasyTerm;
@@ -42,13 +43,21 @@ public:
 
 using SmtModel = std::shared_ptr<_SmtModel>;
 
+struct DagAssignment
+{
+    DagHandle variable;
+    DagHandle value;
+};
+using DagModel = std::vector<DagAssignment>;
+
 class _Converter
 {
 public:
     virtual ~_Converter() {};
     virtual void prepareFor(VisibleModule *module) = 0;
     virtual SmtTerm dag2term(DagNode *dag) = 0;
-    virtual DagNode *term2dag(SmtTerm term) = 0;
+    // The result is rooted before leaving the implementation's conversion frame.
+    virtual DagHandle term2dag(SmtTerm term) = 0;
 };
 
 using Converter = std::shared_ptr<_Converter>;

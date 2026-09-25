@@ -197,10 +197,10 @@ SmtTerm DummyConverter::dag2term(DagNode *dag)
     return nullptr;
 }
 
-DagNode *DummyConverter::term2dag(SmtTerm term)
+DagHandle DummyConverter::term2dag(SmtTerm term)
 {
     IssueWarning("No SMT solver connected at compile time.");
-    return nullptr;
+    return {};
 }
 
 SmtResult DummyConnector::check_sat(SmtTermVector consts)

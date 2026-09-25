@@ -9,6 +9,7 @@
 #include "metaModule.hh"
 #include "userLevelRewritingContext.hh"
 #include "ext.hh"
+#include "smtInterface.hh"
 
 class SymbolGetter;
 
@@ -64,27 +65,27 @@ private:
                                                           FreeDagNode *subject,
                                                           RewritingContext &context) const;
 
-  DagNode *upSmtResult(DagNode *state,
+  DagHandle upSmtResult(DagNode *state,
                        const Substitution &substitution,
                        const VariableInfo &variableInfo,
                        const NatSet &smtVariables,
-                       DagNode *constraint,
+                       const DagHandle &constraint,
                        const mpz_class &variableNumber,
                        int stateNr,
-                       MixfixModule *m, std::map<DagNode *, DagNode *> *model);
+                       MixfixModule *m, const DagModel &model);
 
-  DagNode *upSmtAssn(MixfixModule *m, std::map<DagNode *, DagNode *> *model,
+  DagHandle upSmtAssn(MixfixModule *m, const DagModel &model,
                      PointerMap &qidMap, PointerMap &dagNodeMap);
 
-  DagNode *upTrace(RewriteSmtSequenceSearch &state, MixfixModule *m, int stateNr = -1);
+  DagHandle upTrace(RewriteSmtSequenceSearch &state, MixfixModule *m, int stateNr = -1);
 
-  DagNode *upTraceStep(RewriteSmtSequenceSearch &state, int stateNr,
+  DagHandle upTraceStep(RewriteSmtSequenceSearch &state, int stateNr,
                        MixfixModule *m,
                        PointerMap &qidMap,
                        PointerMap &dagNodeMap);
 
   // non-standard: should be removed later
-  DagNode *upTraceStepFinal(RewriteSmtSequenceSearch &state,
+  DagHandle upTraceStepFinal(RewriteSmtSequenceSearch &state,
                             int stateNr,
                             MixfixModule *m,
                             PointerMap &qidMap,

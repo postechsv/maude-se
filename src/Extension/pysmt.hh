@@ -141,9 +141,16 @@ class _PyConverter : public _Converter, private SimpleRootContainer
 public:
     virtual ~_PyConverter() = default;
 
-    virtual void prepareFor(VisibleModule *module) = 0;
+    virtual void py_prepareFor(VisibleModule *module) = 0;
     virtual PySmtTerm pyDag2term(EasyTerm *dag) = 0;
     virtual EasyTerm *pyTerm2dag(PySmtTerm term) = 0;
+
+    void prepareFor(VisibleModule *module) override
+    {
+        rcache.clear();
+        cache.clear();
+        py_prepareFor(module);
+    }
 
     SmtTerm dag2term(DagNode *dag) override
     {
@@ -159,7 +166,7 @@ public:
         }
     }
 
-    DagNode *term2dag(SmtTerm term) override
+    DagHandle term2dag(SmtTerm term) override
     {
         if (PySmtTerm t = std::dynamic_pointer_cast<_PySmtTerm>(term))
         {
@@ -169,7 +176,7 @@ public:
                 if (EasyTerm *result = pyTerm2dag(t))
                 {
                     DagNode *dag = result->getDag();
-                    rootedResults.push_back(std::make_shared<RootedDag>(dag));
+                    DagHandle resultRoot(dag);
                     delete result; // otherwise memory becomes corrupted
                     if (dag->getSort() == nullptr)
                     {
@@ -177,7 +184,7 @@ public:
                         dag->computeTrueSort(*context);
                         delete context;
                     }
-                    return dag;
+                    return resultRoot;
                 }
             }
             catch (...)
@@ -186,7 +193,7 @@ public:
                 throw std::runtime_error("Python term2dag error");
             }
         }
-        return nullptr;
+        return {};
     }
 
     void markReachableNodes()
@@ -203,7 +210,6 @@ private:
 
     Cache cache;
     ReverseCache rcache;
-    std::vector<std::shared_ptr<RootedDag>> rootedResults;
 
     void genRevCache()
     {

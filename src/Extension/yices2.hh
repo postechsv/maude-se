@@ -49,7 +49,7 @@ public:
     explicit YicesConverter(const SMT_Info &info);
     void prepareFor(VisibleModule *module) override;
     SmtTerm dag2term(DagNode *dag) override;
-    DagNode *term2dag(SmtTerm term) override;
+    DagHandle term2dag(SmtTerm term) override;
     const SmtManagerVariableMap &variables() const { return smtManagerVariableMap; }
 
 private:

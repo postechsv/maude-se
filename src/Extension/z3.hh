@@ -134,7 +134,7 @@ public:
     ~_Z3Converter() {};
     void prepareFor(VisibleModule *module);
     SmtTerm dag2term(DagNode *dag);
-    DagNode *term2dag(SmtTerm term);
+    DagHandle term2dag(SmtTerm term) override;
 
 public:
     inline z3::context &getContext() { return ctx; };
@@ -151,7 +151,7 @@ private:
     z3::expr dag2termInternal(DagNode *dag);
     DagNode *term2dagInternal(z3::expr);
     DagNode *term2dagInternalUnrooted(z3::expr);
-    std::vector<std::unique_ptr<RootedDag>> conversionRoots;
+    DagRootFrame *activeFrame = nullptr;
 
 private:
     void markReachableNodes();

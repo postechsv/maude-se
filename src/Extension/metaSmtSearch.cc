@@ -108,6 +108,7 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                     return false;
 
                 DagNode *result;
+                DagHandle rootedResult;
                 while (lastSolutionNr < solutionNr)
                 {
                     // cout << "current smtState : " << smtState << " (run)"<< endl;
@@ -126,7 +127,7 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                     ++lastSolutionNr;
                 }
                 m->insert(subject, smtState, solutionNr);
-                result = upSmtResult(smtState->getStateDag(smtState->getStateNr()),
+                rootedResult = upSmtResult(smtState->getStateDag(smtState->getStateNr()),
                                      *(smtState->getSubstitution()),
                                      // *smtState->getVariableInfo(smtState->getStateNr()),
                                      *(smtState->getVariableInfo()),
@@ -135,8 +136,9 @@ bool MetaLevelSmtOpSymbol::metaSmtSearch(FreeDagNode *subject, RewritingContext 
                                      smtState->getMaxVariableNumber(),
                                      smtState->getStateNr(),
                                      m,
-                                     smtState->getStateModel(smtState->getStateNr()) // should delete this
+                                     smtState->getStateModel(smtState->getStateNr())
                 );
+                result = rootedResult.get();
             fail:
                 (void)m->unprotect();
                 return context.builtInReplace(subject, result);
@@ -168,6 +170,7 @@ bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingCont
                 return false;
 
             DagNode *result;
+            DagHandle rootedResult;
             while (lastSolutionNr < solutionNr)
             {
                 bool success = smtState->findNextMatch();
@@ -186,7 +189,8 @@ bool MetaLevelSmtOpSymbol::metaSmtSearchPath(FreeDagNode *subject, RewritingCont
                 ++lastSolutionNr;
             }
             m->insert(subject, smtState, solutionNr);
-            result = upTrace(*smtState, m);
+            rootedResult = upTrace(*smtState, m);
+            result = rootedResult.get();
             // Int64 stateNr;
             // if (metaLevel->downSaturate64(subject->getArgument(12), stateNr) && 
             //     stateNr >= 0 && stateNr < smtState->getNrStates()){

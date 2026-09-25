@@ -24,7 +24,8 @@ bool SmtOpSymbol::simplify(FreeDagNode *subject, RewritingContext &context)
 
         SmtTerm term = cn->simplify(cv->dag2term(dag));
 
-        return context.builtInReplace(subject, cv->term2dag(term));
+        DagHandle result = cv->term2dag(term);
+        return context.builtInReplace(subject, result.get());
     }
     return false;
 }

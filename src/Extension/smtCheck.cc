@@ -108,16 +108,15 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
     Symbol *concatSatAssnSet = sg->getSymbol("_,_", dom, satAssnSetK);
 
     Converter conv = vg->getConverter();
-    DagNode *result = emptySatAssnSet->makeDagNode();
-    std::vector<std::unique_ptr<RootedDag>> roots;
-    roots.emplace_back(new RootedDag(result));
+    DagRootFrame roots;
+    DagNode *result = roots.keep(emptySatAssnSet->makeDagNode());
     for (auto k : *keys)
     {
         dom.clear();
-        DagNode *kd = conv->term2dag(k);
-        if (kd) roots.emplace_back(new RootedDag(kd));
-        DagNode *kvd = conv->term2dag(model->get(k));
-        if (kvd) roots.emplace_back(new RootedDag(kvd));
+        DagHandle key = conv->term2dag(k);
+        DagHandle value = conv->term2dag(model->get(k));
+        DagNode *kd = key.get();
+        DagNode *kvd = value.get();
 
         if (kd == nullptr || kvd == nullptr)
         {
@@ -166,11 +165,9 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
 
         Vector<DagNode *> r(2);
         r[0] = result;
-        r[1] = assn->makeDagNode(args);
-        roots.emplace_back(new RootedDag(r[1]));
+        r[1] = roots.keep(assn->makeDagNode(args));
 
-        result = concatSatAssnSet->makeDagNode(r);
-        roots.emplace_back(new RootedDag(result));
+        result = roots.keep(concatSatAssnSet->makeDagNode(r));
     }
     Vector<DagNode *> dag(1);
     dag[0] = result;

@@ -105,7 +105,7 @@ public:
     ~DummyConverter() {};
     void prepareFor(VisibleModule *module) {};
     SmtTerm dag2term(DagNode *dag);
-    DagNode *term2dag(SmtTerm term);
+    DagHandle term2dag(SmtTerm term) override;
 };
 
 class DummyConnector : public Connector

@@ -31,7 +31,7 @@ public:
   //	Information particular to most recent match.
   //
   const Substitution *getSubstitution() const;
-  DagNode* getFinalConstraint();  // conjunction of constraints from state and constraints from match
+  DagHandle getFinalConstraint();  // conjunction of constraints from state and constraints from match
   const mpz_class& getMaxVariableNumber() const;  // largest fresh variable appearing in substitution or constraint
   const NatSet& getSMT_VarIndices() const;
 
@@ -102,14 +102,14 @@ RewriteSmtSequenceSearch::getStateNr() const
   return stateNr;
 }
 
-inline DagNode *
+inline DagHandle
 RewriteSmtSequenceSearch::getFinalConstraint()
 {
   // TODO
   SmtTerm finalConstTerm = this->getStateConst(stateNr);
-  DagNode* finalConst = conv->term2dag(finalConstTerm);
+  DagHandle finalConst = conv->term2dag(finalConstTerm);
 
-  finalConst->computeTrueSort(*initial);
+  finalConst.get()->computeTrueSort(*initial);
   return finalConst;
 }
 

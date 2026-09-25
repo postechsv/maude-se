@@ -90,18 +90,19 @@ SmtTerm YicesConverter::dag2term(DagNode *dag)
     return wrap(value, yices_type_of_term(value), dag);
 }
 
-DagNode *YicesConverter::term2dag(SmtTerm term)
+DagHandle YicesConverter::term2dag(SmtTerm term)
 {
     auto value = std::dynamic_pointer_cast<YicesTerm>(term);
     if (!value) throw std::runtime_error("expected a Yices SMT term");
     DagNode *dag = value->original ? value->original->get() : convertBack(value->value, value->type);
+    DagHandle result(dag);
     if (dag->getSort() == nullptr)
     {
         auto *context = new UserLevelRewritingContext(dag);
         dag->computeTrueSort(*context);
         delete context;
     }
-    return dag;
+    return result;
 }
 
 term_t YicesConverter::makeVariable(DagNode *dag)

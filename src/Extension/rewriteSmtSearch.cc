@@ -61,7 +61,8 @@ void Interpreter::doRewriteSmtSearching(Timer &timer,
 
     ++solutionCount;
     cout << "\nSolution " << solutionCount << " (state " << state->getStateNr() << ")\n";
-    cout << "where " << state->getFinalConstraint() << endl;
+    DagHandle finalConstraint = state->getFinalConstraint();
+    cout << "where " << finalConstraint.get() << endl;
     // if (showStats)
     // printStats(*(state->getContext()), prof, real, showTiming, state->getNrStates());
     UserLevelRewritingContext::printSubstitution(*(state->getSubstitution()), *variableInfo);

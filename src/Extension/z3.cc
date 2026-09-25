@@ -246,14 +246,15 @@ SmtTerm _Z3Converter::dag2term(DagNode *dag)
     return a;
 }
 
-DagNode *_Z3Converter::term2dag(SmtTerm term)
+DagHandle _Z3Converter::term2dag(SmtTerm term)
 {
     Z3SmtTerm t = std::dynamic_pointer_cast<_Z3SmtTerm>(term);
 
     if (!t)
         throw std::runtime_error("cannot convert SMT term to Maude term");
 
-    conversionRoots.clear();
+    DagRootFrame frame;
+    ActiveDagRootFrame active(activeFrame, frame);
     DagNode *d = term2dagInternal(t->expr());
     if (d->getSort() == nullptr)
     {
@@ -261,8 +262,7 @@ DagNode *_Z3Converter::term2dag(SmtTerm term)
         d->computeTrueSort(*context);
         delete context;
     }
-    conversionRoots.clear();
-    return d;
+    return DagHandle(d);
 }
 
 void _Z3Converter::markReachableNodes()
@@ -594,9 +594,7 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
 
 DagNode *_Z3Converter::term2dagInternal(z3::expr e)
 {
-    DagNode *dag = term2dagInternalUnrooted(e);
-    conversionRoots.emplace_back(new RootedDag(dag));
-    return dag;
+    return activeFrame->keep(term2dagInternalUnrooted(e));
 }
 
 DagNode *_Z3Converter::term2dagInternalUnrooted(z3::expr e)

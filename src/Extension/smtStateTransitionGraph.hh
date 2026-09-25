@@ -39,9 +39,9 @@ public:
   int getNrStates() const;
   int getNextState(int stateNr, int index);
   DagNode *getStateDag(int stateNr);
-  DagNode *getStateConstDag(int stateNr);
+  DagHandle getStateConstDag(int stateNr);
   SmtTerm getStateConst(int stateNr);
-  std::map<DagNode*, DagNode*>* getStateModel(int stateNr);
+  DagModel getStateModel(int stateNr);
   int getStateDepth(int stateNr) const;
   const ArcMap &getStateFwdArcs(int stateNr) const;
   //
@@ -111,9 +111,6 @@ protected:
   State *initState;
   int counter;
   RewritingContext *initial;
-  // Model DAGs are returned through raw-pointer maps, so retain their roots
-  // for the lifetime of the graph.
-  std::vector<std::unique_ptr<RootedDag>> modelRoots;
 
   ConstrainedTermMap consTermSeen;
   Vector<State *> seen;
@@ -200,14 +197,14 @@ SmtStateTransitionGraph::getStateConst(int stateNr)
   return ct->constraint;
 }
 
-inline DagNode *
+inline DagHandle
 SmtStateTransitionGraph::getStateConstDag(int stateNr)
 {
   // TODO
   SmtTerm constTerm = getStateConst(stateNr);
-  DagNode* constDag = conv->term2dag(constTerm);
+  DagHandle constDag = conv->term2dag(constTerm);
 
-  constDag->computeTrueSort(*initial);
+  constDag.get()->computeTrueSort(*initial);
   return constDag;
 }
 
@@ -230,7 +227,7 @@ SmtStateTransitionGraph::getStateConstDag(int stateNr)
 //   return &ct->variableInfo;
 // }
 
-inline std::map<DagNode*, DagNode*>*
+inline DagModel
 SmtStateTransitionGraph::getStateModel(int stateNr)
 {
   // TODO: return const DAG
@@ -246,7 +243,7 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
     IssueWarning("consTermseen length wrong");
   }
   ConstrainedTerm *ct = consTermSeen[state->hashConsIndex][state->constTermIndex];
-  std::map<DagNode*, DagNode*>* modelMap = new std::map<DagNode*, DagNode*>();
+  DagModel model;
   if (ct->model == nullptr){
     IssueWarning("bug occurred");
   }
@@ -254,20 +251,18 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
   SmtTermVector ks = ct->model->keys();
 
   for (auto &elem : *ks){
-    DagNode* t = conv->term2dag(elem);
-    modelRoots.emplace_back(new RootedDag(t));
-    DagNode* v = conv->term2dag(ct->model->get(elem));
-    modelRoots.emplace_back(new RootedDag(v));
+    DagHandle t = conv->term2dag(elem);
+    DagHandle v = conv->term2dag(ct->model->get(elem));
 
-    t->computeTrueSort(*initial);
-    v->computeTrueSort(*initial);
+    t.get()->computeTrueSort(*initial);
+    v.get()->computeTrueSort(*initial);
 
     // cout << tD << " ---> " << tV << endl;
     // (*modelMap)[tD] = tV;
-    modelMap->insert(std::pair<DagNode*, DagNode*>(t, v));
+    model.push_back({std::move(t), std::move(v)});
   }
 
-  return modelMap;
+  return model;
 }
 
 inline int SmtStateTransitionGraph::getStateDepth(int stateNr) const

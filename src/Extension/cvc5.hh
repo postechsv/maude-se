@@ -54,7 +54,7 @@ public:
     explicit Cvc5Converter(const SMT_Info &info);
     void prepareFor(VisibleModule *module) override;
     SmtTerm dag2term(DagNode *dag) override;
-    DagNode *term2dag(SmtTerm term) override;
+    DagHandle term2dag(SmtTerm term) override;
     cvc5::TermManager &manager() { return tm; }
     const SmtManagerVariableMap &variables() const { return smtManagerVariableMap; }
 
@@ -63,7 +63,7 @@ private:
     cvc5::Term convert(DagNode *dag);
     DagNode *convertBack(const cvc5::Term &term);
     DagNode *convertBackUnrooted(const cvc5::Term &term);
-    std::vector<std::unique_ptr<RootedDag>> conversionRoots;
+    DagRootFrame *activeFrame = nullptr;
     void markReachableNodes() override;
 
     cvc5::TermManager tm;
