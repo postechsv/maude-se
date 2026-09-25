@@ -51,14 +51,15 @@ public:
     SmtTerm dag2term(DagNode *dag) override;
     DagNode *term2dag(SmtTerm term) override;
     const SmtManagerVariableMap &variables() const { return smtManagerVariableMap; }
-    DagNode *conjoin(DagNode *left, DagNode *right);
 
 private:
     term_t makeVariable(DagNode *dag) override;
     term_t convert(DagNode *dag);
     DagNode *convertBack(term_t value, type_t expectedType);
+    DagNode *remember(term_t value, DagNode *dag);
     void markReachableNodes() override;
     SymbolGetter sg;
+    std::map<term_t, std::shared_ptr<RootedDag>> reverseCache;
 };
 
 class YicesConnector : public _Connector

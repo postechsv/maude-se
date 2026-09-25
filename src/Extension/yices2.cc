@@ -67,6 +67,7 @@ void YicesConverter::prepareFor(VisibleModule *module)
 {
     sg.setModule(module);
     smtManagerVariableMap.clear();
+    reverseCache.clear();
 }
 
 void YicesConverter::markReachableNodes()
@@ -75,23 +76,17 @@ void YicesConverter::markReachableNodes()
         entry.first->mark();
 }
 
-DagNode *YicesConverter::conjoin(DagNode *left, DagNode *right)
+DagNode *YicesConverter::remember(term_t value, DagNode *dag)
 {
-    if (!left || !right) return nullptr;
-    auto *boolean = sg.getKind("Boolean");
-    Vector<ConnectedComponent *> domain;
-    domain.push_back(boolean);
-    domain.push_back(boolean);
-    Vector<DagNode *> arguments(2);
-    arguments[0] = left;
-    arguments[1] = right;
-    DagNode *joined = sg.getSymbol("_and_", domain, boolean)->makeDagNode(arguments);
-    return joined;
+    if (reverseCache.find(value) == reverseCache.end())
+        reverseCache.emplace(value, std::make_shared<RootedDag>(dag));
+    return dag;
 }
 
 SmtTerm YicesConverter::dag2term(DagNode *dag)
 {
     term_t value = convert(dag);
+    remember(value, dag);
     return wrap(value, yices_type_of_term(value), dag);
 }
 
@@ -212,15 +207,19 @@ term_t YicesConverter::convert(DagNode *dag)
 
 DagNode *YicesConverter::convertBack(term_t value, type_t expectedType)
 {
+    auto cached = reverseCache.find(value);
+    if (cached != reverseCache.end()) return cached->second->get();
+
     for (const auto &entry : smtManagerVariableMap)
-        if (entry.second == value) return entry.first;
+        if (entry.second == value) return remember(value, entry.first);
 
     int32_t boolean;
     if (yices_bool_const_value(value, &boolean) == 0)
     {
         Vector<ConnectedComponent *> domain;
         auto *sort = sg.getKind("Boolean");
-        return sg.getSymbol(boolean ? "true" : "false", domain, sort)->makeDagNode();
+        return remember(value,
+            sg.getSymbol(boolean ? "true" : "false", domain, sort)->makeDagNode());
     }
     mpq_class number;
     if (yices_rational_const_value(value, number.get_mpq_t()) == 0)
@@ -230,8 +229,118 @@ DagNode *YicesConverter::convertBack(term_t value, type_t expectedType)
         auto *sort = sg.getKind(integer ? "Integer" : "Real");
         auto *symbol = static_cast<SMT_NumberSymbol *>(sg.getSymbol(
             integer ? "<Integers>" : "<Reals>", domain, sort));
-        return new SMT_NumberDagNode(symbol, number);
+        return remember(value, new SMT_NumberDagNode(symbol, number));
     }
+
+    const auto constructor = yices_term_constructor(value);
+    const auto boolType = yices_bool_type();
+    auto kindOf = [this](type_t type) -> ConnectedComponent *
+    {
+        if (type == yices_bool_type()) return sg.getKind("Boolean");
+        if (type == yices_int_type()) return sg.getKind("Integer");
+        if (type == yices_real_type()) return sg.getKind("Real");
+        throw std::runtime_error("unsupported Yices term type in Maude conversion");
+    };
+    auto foldBoolean = [&](const char *name, const std::vector<term_t> &children) -> DagNode *
+    {
+        if (children.empty())
+            throw std::runtime_error("Yices Boolean term has no children");
+        DagNode *result = convertBack(children[0], boolType);
+        if (children.size() == 1) return remember(value, result);
+        auto *sort = sg.getKind("Boolean");
+        Vector<ConnectedComponent *> domain;
+        domain.push_back(sort);
+        domain.push_back(sort);
+        Symbol *symbol = sg.getSymbol(name, domain, sort);
+        std::vector<std::shared_ptr<RootedDag>> intermediateRoots;
+        for (size_t i = 1; i < children.size(); ++i)
+        {
+            Vector<DagNode *> arguments(2);
+            arguments[0] = result;
+            arguments[1] = convertBack(children[i], boolType);
+            result = symbol->makeDagNode(arguments);
+            intermediateRoots.push_back(std::make_shared<RootedDag>(result));
+        }
+        return remember(value, result);
+    };
+
+    if (constructor == YICES_NOT_TERM)
+    {
+        term_t child = checked(yices_term_child(value, 0));
+        if (yices_term_constructor(child) == YICES_OR_TERM)
+        {
+            // Yices stores conjunctions as NOT(OR(...)); negating each
+            // disjunct recovers the operands, including normalized atoms.
+            const int32_t count = yices_term_num_children(child);
+            std::vector<term_t> conjuncts;
+            for (int32_t i = 0; i < count; ++i)
+            {
+                term_t disjunct = checked(yices_term_child(child, i));
+                conjuncts.push_back(checked(yices_not(disjunct)));
+            }
+            if (conjuncts.size() >= 2)
+                return foldBoolean("_and_", conjuncts);
+        }
+        Vector<ConnectedComponent *> domain;
+        auto *sort = sg.getKind("Boolean");
+        domain.push_back(sort);
+        Vector<DagNode *> argument(1);
+        argument[0] = convertBack(child, boolType);
+        return remember(value, sg.getSymbol("not_", domain, sort)->makeDagNode(argument));
+    }
+    if (yices_type_of_term(value) == boolType)
+    {
+        term_t complement = checked(yices_not(value));
+        auto opposite = reverseCache.find(complement);
+        if (opposite != reverseCache.end())
+        {
+            Vector<ConnectedComponent *> domain;
+            auto *sort = sg.getKind("Boolean");
+            domain.push_back(sort);
+            Vector<DagNode *> argument(1);
+            argument[0] = opposite->second->get();
+            return remember(value, sg.getSymbol("not_", domain, sort)->makeDagNode(argument));
+        }
+    }
+    if (constructor == YICES_OR_TERM || constructor == YICES_XOR_TERM)
+    {
+        const int32_t count = yices_term_num_children(value);
+        std::vector<term_t> children;
+        for (int32_t i = 0; i < count; ++i)
+            children.push_back(checked(yices_term_child(value, i)));
+        return foldBoolean(constructor == YICES_OR_TERM ? "_or_" : "_xor_", children);
+    }
+    if (constructor == YICES_EQ_TERM)
+    {
+        term_t left = checked(yices_term_child(value, 0));
+        term_t right = checked(yices_term_child(value, 1));
+        auto *sort = kindOf(yices_type_of_term(left));
+        Vector<ConnectedComponent *> domain;
+        domain.push_back(sort);
+        domain.push_back(sort);
+        Vector<DagNode *> arguments(2);
+        arguments[0] = convertBack(left, yices_type_of_term(left));
+        arguments[1] = convertBack(right, yices_type_of_term(right));
+        return remember(value,
+            sg.getSymbol("_===_", domain, sg.getKind("Boolean"))->makeDagNode(arguments));
+    }
+    if (constructor == YICES_ITE_TERM)
+    {
+        term_t condition = checked(yices_term_child(value, 0));
+        term_t positive = checked(yices_term_child(value, 1));
+        term_t negative = checked(yices_term_child(value, 2));
+        auto *sort = kindOf(expectedType == NULL_TYPE ? yices_type_of_term(value) : expectedType);
+        Vector<ConnectedComponent *> domain;
+        domain.push_back(sg.getKind("Boolean"));
+        domain.push_back(sort);
+        domain.push_back(sort);
+        Vector<DagNode *> arguments(3);
+        arguments[0] = convertBack(condition, boolType);
+        arguments[1] = convertBack(positive, yices_type_of_term(positive));
+        arguments[2] = convertBack(negative, yices_type_of_term(negative));
+        return remember(value, sg.getSymbol("_?_:_", domain, sort)->makeDagNode(arguments));
+    }
+
     char *description = yices_term_to_string(value, 120, 10, 0);
     std::string message = "cannot convert Yices term to Maude DAG: ";
     message += description ? description : yices_error_string();
@@ -268,11 +377,7 @@ SmtResult YicesConnector::check_sat(SmtTermVector constraints)
 SmtTerm YicesConnector::add_const(SmtTerm accumulated, SmtTerm current)
 {
     if (!accumulated) return current;
-    auto left = std::dynamic_pointer_cast<YicesTerm>(accumulated);
-    auto right = std::dynamic_pointer_cast<YicesTerm>(current);
-    return wrap(yices_and2(left->value, right->value), yices_bool_type(),
-                conv->conjoin(left->original ? left->original->get() : nullptr,
-                              right->original ? right->original->get() : nullptr));
+    return wrap(yices_and2(unwrap(accumulated), unwrap(current)), yices_bool_type());
 }
 
 TermSubst YicesConnector::mk_subst(std::map<DagNode *, DagNode *> &substitution)
