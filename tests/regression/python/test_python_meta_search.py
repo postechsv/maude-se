@@ -9,7 +9,7 @@ from maudeSE.factory import Factory
 from maudeSE.installer import import_solver
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 SOLVERS = {
     "z3": ("maudeSE.converter.z3", "Z3Converter", "maudeSE.connector.z3", "Z3Connector"),
     "cvc5": ("maudeSE.converter.cvc5", "Cvc5Converter", "maudeSE.connector.cvc5", "Cvc5Connector"),
@@ -30,7 +30,7 @@ def run(solver: str) -> None:
     maude.init(advise=False)
     for path in (
         ROOT / "examples/smt-check-ex.maude",
-        ROOT / "tests/examples/meta-gcd-python-smoke.maude",
+        ROOT / "tests/data/smoke/meta-gcd-python-smoke.maude",
     ):
         if not maude.load(str(path)):
             raise RuntimeError(f"failed to load {path}")

@@ -1,24 +1,37 @@
-# Test files for maude-se
+# Tests
 
-We give some test maude files for maude-se tool.
-the test files give a rewriting logic semantics for parametric time automata (PTAs)
-and show that symbolic reachablity analysis using Maude-se.  
+`regression/` contains executable checks. `data/` contains their inputs and
+other retained models. Public Maude-SE paper and manual examples live in the
+top-level `examples/` directory.
 
+| Directory | Contents |
+| --- | --- |
+| `regression/python/` | Python/SWIG checks for Z3, Yices, and cvc5 |
+| `regression/native/` | Standalone executable checks |
+| `data/smoke/` | Small regression inputs |
+| `data/general/` | General Maude models, including Bakery and Dining Philosophers |
+| `data/maude-se-2020/` | GCD and robot examples from the 2020 Maude-SE paper |
+| `data/pta2maude/` | Adapted PTA2Maude research models and historical script |
 
-### Maude files
+After building and installing the wheel with all three solver extras, run:
 
-The specification can be found in the folder `tests`. It includes the following files:
+```sh
+for solver in z3 yices cvc5; do
+  python tests/regression/python/test_gc_lifetime.py "$solver"
+  python tests/regression/python/test_python_meta_search.py "$solver"
+done
+```
 
-- _pta-base_: Sorts for defining locations, states and constrained terms.
-- _meta-pta_: Reachability procedures with folding.
-- _coffee.maude_: Example of the coffee machine using the command smt-search.
-- _coffee-folding_: Example of the coffee machine using folding.
-- _coffee-strategy_: Example using the strategy of the coffee machine.
-- _ex-fig3a(b)_ : Example of Infinite number of states.
-- _robot_ : Example of ROBOT movements.
-- _bakery_ : Lamport's Bakery protocol in Maude.
-- _dining-philosophers_ : Dining philosophers describing deadlock .
+After building a standalone executable, run the general-model reachability
+checks with any solver variant. The cvc5-specific model check requires the
+cvc5 executable:
 
-### Origin
+```sh
+tests/regression/native/test_general_models.sh /path/to/maude-se-cvc5
+tests/regression/native/test_native_cvc5_real_model.sh /path/to/maude-se-cvc5
+```
 
-These example files were sourced from Jaime Arias and subsequently modified.
+The general-model check searches for a Bakery critical-section state and a
+Dining Philosophers eating state. It does not establish mutual exclusion,
+deadlock freedom, or fairness. Files in `data/` without a regression check
+are retained inputs, not automatically passing tests.
