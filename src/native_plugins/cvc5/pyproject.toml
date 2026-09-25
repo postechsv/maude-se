@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maude-se-native-cvc5"
+version = "0.0.3"
+description = "Native cvc5 connector for Maude-SE"
+requires-python = ">=3.10,<3.15"
+dependencies = ["maude-se==0.0.3"]
+license = {text = "GPL-3.0-only"}
+
+[tool.setuptools]
+packages = ["maude_se_native_cvc5"]
+
+[tool.setuptools.package-data]
+maude_se_native_cvc5 = ["*.dylib", "*.so", "licenses/*"]

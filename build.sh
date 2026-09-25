@@ -20,6 +20,7 @@ setup | prep) setup_build "$@" ;;
 wheel) build_wheel "$@" ;;
 test) test_wheel "$@" ;;
 standalone) build_standalone "$@" ;;
+plugin) bash "$top_dir/build/plugins.sh" "$@" ;;
 test-standalone) test_standalone "$@" ;;
 shell) open_venv_shell "$@" ;;
 clean) clean_build "$@" ;;

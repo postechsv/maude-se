@@ -101,18 +101,88 @@ def doctor(names):
     return 1 if failed else 0
 
 
-def install(name):
+def doctor_native(names):
+    failed = False
+    try:
+        core_version = metadata.version("maude-se")
+    except metadata.PackageNotFoundError:
+        print("maude-se is not installed in this Python environment")
+        return 1
+    for name in names:
+        distribution = f"maude-se-native-{name}"
+        try:
+            version = metadata.version(distribution)
+            module = importlib.import_module(f"maude_se_native_{name}")
+            library = module.library_path()
+            if version != core_version:
+                detail = f"version {version} does not match maude-se {core_version}"
+            elif not library.is_file():
+                detail = f"library is missing: {library}"
+            else:
+                from maudeSE.maude import loadNativeSmtPlugin, nativeSmtPluginError
+                if loadNativeSmtPlugin(str(library), name):
+                    detail = f"ready ({version})"
+                else:
+                    detail = f"cannot load: {nativeSmtPluginError()}"
+        except (metadata.PackageNotFoundError, ImportError):
+            detail = "not installed"
+        print(f"native {name}: {detail}")
+        if not detail.startswith("ready"):
+            failed = True
+            print(f"  Install: maude-se-installer install native {name}")
+    return 1 if failed else 0
+
+
+def install(name, native=False, find_links=None):
     try:
         version = metadata.version("maude-se")
     except metadata.PackageNotFoundError:
         print("error: maude-se is not installed in this Python environment", file=sys.stderr)
         return 1
 
-    extra = "all-solvers" if name == "all" else name
-    requirement = "maude-se[{}]=={}".format(extra, version)
-    print("Installing {} into {}".format(requirement, sys.executable), flush=True)
+    if native:
+        names = SOLVERS if name == "all" else (name,)
+        requirements = [f"maude-se-native-{solver}=={version}" for solver in names]
+    else:
+        extra = "all-solvers" if name == "all" else name
+        requirements = ["maude-se[{}]=={}".format(extra, version)]
+    print("Installing {} into {}".format(", ".join(requirements), sys.executable), flush=True)
+    command = [sys.executable, "-m", "pip", "install"]
+    if find_links:
+        command += ["--no-index", "--find-links", find_links]
+        if native:
+            command.append("--no-deps")
+    command += requirements
     try:
-        return subprocess.call([sys.executable, "-m", "pip", "install", requirement])
+        return subprocess.call(command)
+    except OSError as exc:
+        print("error: could not run pip: {}".format(exc), file=sys.stderr)
+        return 1
+
+
+def uninstall(name, native=False):
+    names = SOLVERS if name == "all" else (name,)
+    if native:
+        distributions = [f"maude-se-native-{solver}" for solver in names]
+    else:
+        distributions = list(dict.fromkeys(
+            distribution
+            for solver in names
+            for distribution in SOLVERS[solver][0]
+        ))
+    installed = []
+    for distribution in distributions:
+        try:
+            metadata.version(distribution)
+        except metadata.PackageNotFoundError:
+            continue
+        installed.append(distribution)
+    if not installed:
+        print("No matching solver packages are installed in {}".format(sys.executable))
+        return 0
+    print("Uninstalling {} from {}".format(", ".join(installed), sys.executable), flush=True)
+    try:
+        return subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", *installed])
     except OSError as exc:
         print("error: could not run pip: {}".format(exc), file=sys.stderr)
         return 1
@@ -122,23 +192,35 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "solver":
         argv.pop(0)
+    native = len(argv) > 1 and argv[0] in ("doctor", "install", "uninstall") and argv[1] == "native"
+    if native:
+        argv.pop(1)
 
     parser = argparse.ArgumentParser(
         prog="maude-se-installer",
-        description="Check or install MaudeSE solver packages in this Python environment.",
+        description="Check, install, or uninstall MaudeSE solver packages in this Python environment.",
     )
     actions = parser.add_subparsers(dest="action", required=True)
     actions.add_parser("doctor", help="Check installed solver packages").add_argument(
         "name", nargs="?", choices=tuple(SOLVERS), help="Check one solver (default: all)"
     )
-    actions.add_parser("install", help="Install solver packages").add_argument(
+    install_parser = actions.add_parser("install", help="Install solver packages")
+    install_parser.add_argument(
+        "name", choices=tuple(SOLVERS) + ("all",)
+    )
+    install_parser.add_argument("--find-links", metavar="DIRECTORY",
+                                help="install from locally built wheels instead of an index")
+    actions.add_parser("uninstall", help="Uninstall solver packages").add_argument(
         "name", choices=tuple(SOLVERS) + ("all",)
     )
     args = parser.parse_args(argv)
 
     if args.action == "doctor":
-        return doctor((args.name,) if args.name else SOLVERS)
-    return install(args.name)
+        names = (args.name,) if args.name else SOLVERS
+        return doctor_native(names) if native else doctor(names)
+    if args.action == "uninstall":
+        return uninstall(args.name, native=native)
+    return install(args.name, native=native, find_links=args.find_links)
 
 
 if __name__ == "__main__":

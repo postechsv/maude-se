@@ -116,6 +116,7 @@ public:
     }
 };
 
+#ifndef USE_PYSMT
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
@@ -125,5 +126,6 @@ public:
         smtManagerFactory = new Cvc5SmtManagerFactory();
     }
 };
+#endif
 
 #endif

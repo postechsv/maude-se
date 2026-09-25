@@ -15,6 +15,8 @@ def main():
     parser.add_argument("-cfg", "-config", metavar="CONFIG", type=str, 
                         help="a directory to a configuration file (default: \"config.yml\")")
     parser.add_argument("-s", "-solver", metavar="SOLVER", type=str, help="solver name")
+    parser.add_argument("-native", action="store_true",
+                        help="use the native C++ SMT connection")
     parser.add_argument("-no-meta", help="no metaInterpreter", action="store_true")
     args = parser.parse_args()
 
@@ -31,7 +33,7 @@ def main():
         check_config(cfg)
 
         s = cfg["solver"]
-        if s in SOLVERS:
+        if not args.native and s in SOLVERS:
             ready, detail = check_solver(s)
             if not ready:
                 raise RuntimeError(
@@ -44,14 +46,14 @@ def main():
         setSmtSolver(s)
         factory = Factory()
 
-        s_def = cfg["solver-def"][s]
-
-        conv = load_class_from_file(s_def["converter"]["dir"], s_def["converter"]["name"])
-        conn = load_class_from_file(s_def["connector"]["dir"], s_def["connector"]["name"])
-
-        factory.register(s, conv, conn)
-
-        factory.install(s)
+        if args.native:
+            factory.install_native(s)
+        else:
+            s_def = cfg["solver-def"][s]
+            conv = load_class_from_file(s_def["converter"]["dir"], s_def["converter"]["name"])
+            conn = load_class_from_file(s_def["connector"]["dir"], s_def["connector"]["name"])
+            factory.register(s, conv, conn)
+            factory.install(s)
 
         # initialize Maude interpreter
         init(advise=False)

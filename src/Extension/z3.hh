@@ -117,7 +117,7 @@ private:
 
 using Z3SmtModel = std::shared_ptr<_Z3SmtModel>;
 
-struct cmpExprById
+struct Z3ExprLess
 {
     bool operator()(const z3::expr &lhs, const z3::expr &rhs) const
     {
@@ -127,7 +127,7 @@ struct cmpExprById
 
 // Converter should be SimpleRootContainer because it contains variable DagNode maps.
 // Otherwise, metaLevel operators such as metaSmtSearch would fail due to corrupted dags.
-class _Z3Converter : public _Converter, public NativeSmtConverter<z3::expr, cmpExprById>, private SimpleRootContainer
+class _Z3Converter : public _Converter, public NativeSmtConverter<z3::expr, Z3ExprLess>, private SimpleRootContainer
 {
 public:
     _Z3Converter(const SMT_Info &smtInfo);
@@ -203,6 +203,7 @@ public:
     }
 };
 
+#ifndef USE_PYSMT
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
@@ -213,5 +214,6 @@ public:
         smtManagerFactory = new Z3SmtManagerFactory();
     };
 };
+#endif
 
 #endif

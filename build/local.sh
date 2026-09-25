@@ -22,6 +22,8 @@ Commands:
   test          Install the wheel in an isolated environment and run smoke tests
   standalone [z3|yices|cvc5|all]
                 Build a self-contained macOS executable ZIP into out/
+  plugin [z3|yices|cvc5|all]
+                Build optional native solver plugin wheels into out/
   test-standalone [z3|yices|cvc5|all]
                 Extract and smoke-test the standalone ZIP
   shell [test|build]
@@ -272,7 +274,7 @@ test_standalone() (
 )
 
 test_wheel() {
-  local wheels=("$top_dir"/out/*.whl)
+  local wheels=("$top_dir"/out/maude_se-*.whl)
   local output
   local solver
 
@@ -280,7 +282,7 @@ test_wheel() {
     fail "no wheel found in $top_dir/out; run ./build.sh wheel first"
   fi
   if [[ ${#wheels[@]} -ne 1 ]]; then
-    fail "expected exactly one wheel in $top_dir/out, found ${#wheels[@]}"
+    fail "expected exactly one base wheel in $top_dir/out, found ${#wheels[@]}"
   fi
 
   note "creating isolated smoke-test environment"
