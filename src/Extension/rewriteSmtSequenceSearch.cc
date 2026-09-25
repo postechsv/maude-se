@@ -188,6 +188,7 @@ bool RewriteSmtSequenceSearch::findNextMatch()
         if (smtUnknown || invalidRewriteResult)
             break;
         delete matchState;
+        matchState = 0;
     }
 
     delete matchState;

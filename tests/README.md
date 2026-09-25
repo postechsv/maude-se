@@ -22,14 +22,21 @@ for solver in z3 yices cvc5; do
 done
 ```
 
-After building a standalone executable, run the general-model reachability
-checks with any solver variant. The cvc5-specific model check requires the
-cvc5 executable:
+After building a standalone executable, run the Maude-SE feature checks and
+general-model reachability checks with any solver variant. The cvc5-specific
+Real-model check requires the cvc5 executable:
 
 ```sh
+tests/regression/native/test_maude_se_features.sh /path/to/maude-se-cvc5
 tests/regression/native/test_general_models.sh /path/to/maude-se-cvc5
 tests/regression/native/test_native_cvc5_real_model.sh /path/to/maude-se-cvc5
 ```
+
+The Maude-SE feature check covers SAT/UNSAT, a concrete SMT model, both
+reachable and unreachable `smt-search` GCD goals, and the 2020 Core Maude
+GCD example using `smtCheck`. The Python GC check retains a meta-search
+result through repeated SMT calls and Python collections, then checks that
+SMT still works after releasing it.
 
 The general-model check searches for a Bakery critical-section state and a
 Dining Philosophers eating state. It does not establish mutual exclusion,

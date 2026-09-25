@@ -10,4 +10,6 @@ Maude and SMT Solvers* (WRLA 2020).
 - Earlier Maude-SE documentation, including the Core Maude versions:
   https://maude-se.github.io/old
 
-These retained inputs are not yet exercised by an automated regression check.
+`gcd.maude` is exercised by `../../regression/native/test_maude_se_features.sh`.
+`robot.maude` is retained but is not yet a runnable regression input: it
+references object-system modules that are not declared in that file.
