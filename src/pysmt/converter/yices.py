@@ -387,6 +387,14 @@ class YicesConverter(Converter):
         return SmtTerm(self._dag2term(t))
     
     def _dag2term(self, t: Term):
+        cached = self.conversion_cache_find(t)
+        if cached:
+            return get_data(cached)
+        value = self._dag2term_uncached(t)
+        self.conversion_cache_insert(t, SmtTerm(value))
+        return value
+
+    def _dag2term_uncached(self, t: Term):
         cached_term = self.cache_find(t)
         if cached_term:
             return get_data(cached_term)

@@ -17,6 +17,7 @@ After building and installing the wheel with all three solver extras, run:
 
 ```sh
 for solver in z3 yices cvc5; do
+  python tests/regression/python/test_backend_lifetime.py "$solver"
   python tests/regression/python/test_gc_lifetime.py "$solver"
   python tests/regression/python/test_python_meta_search.py "$solver"
 done

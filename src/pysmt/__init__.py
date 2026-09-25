@@ -2,7 +2,7 @@ import argparse
 
 def main():
     from maudeSE.installer import SOLVERS, check_solver
-    from maudeSE.maude import init, load, setSmtManagerFactory, setSmtSolver
+    from maudeSE.maude import init, load, setSmtSolver
     from maudeSE.factory import Factory
     from maudeSE.util import (
         check_config, load_class_from_file, load_config, load_user_config,
@@ -42,7 +42,7 @@ def main():
 
         # instantiate our interface
         setSmtSolver(s)
-        factory = Factory().__disown__()
+        factory = Factory()
 
         s_def = cfg["solver-def"][s]
 
@@ -51,7 +51,7 @@ def main():
 
         factory.register(s, conv, conn)
 
-        setSmtManagerFactory(factory)
+        factory.install(s)
 
         # initialize Maude interpreter
         init(advise=False)

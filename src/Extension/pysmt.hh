@@ -10,6 +10,7 @@
 #include "userLevelRewritingContext.hh"
 #include "smtManager.hh"
 #include "rootedDag.hh"
+#include <unordered_map>
 
 // --- Python data wrapper ---
 class PyDataContainer
@@ -147,6 +148,8 @@ public:
 
     void prepareFor(VisibleModule *module) override
     {
+        conversionCache.clear();
+        conversionCacheSize = 0;
         rcache.clear();
         cache.clear();
         py_prepareFor(module);
@@ -208,6 +211,15 @@ private:
     typedef std::map<DagNode *, PySmtTerm> Cache;
     typedef std::map<PySmtTerm, DagNode *, cmpExprById> ReverseCache;
 
+    struct ConversionCacheEntry
+    {
+        DagHandle dag;
+        PySmtTerm term;
+    };
+
+    std::unordered_map<size_t, std::vector<ConversionCacheEntry>> conversionCache;
+    size_t conversionCacheSize = 0;
+
     Cache cache;
     ReverseCache rcache;
 
@@ -262,6 +274,33 @@ private:
     }
 
 public:
+    // Unlike the variable cache below, this cache also stores compound terms.
+    // DagHandle keeps each key visible to Maude's collector.
+    PySmtTerm conversion_cache_find(EasyTerm *term)
+    {
+        DagNode *dag = term->getDag();
+        auto bucket = conversionCache.find(dag->getHashValue());
+        if (bucket != conversionCache.end())
+            for (const auto &entry : bucket->second)
+                if (dag == entry.dag.get() || dag->equal(entry.dag.get()))
+                    return entry.term;
+        return nullptr;
+    }
+
+    void conversion_cache_insert(EasyTerm *term, PySmtTerm value)
+    {
+        if (!value) return;
+        // Bound retained DAGs and solver objects for long-running searches.
+        if (conversionCacheSize >= 4096)
+        {
+            conversionCache.clear();
+            conversionCacheSize = 0;
+        }
+        DagNode *dag = term->getDag();
+        conversionCache[dag->getHashValue()].push_back({DagHandle(dag), value});
+        ++conversionCacheSize;
+    }
+
     void cache_insert(EasyTerm *dag, PySmtTerm &term)
     {
         cache[dag->getDag()] = term;
@@ -437,42 +476,6 @@ public:
     virtual void print_model() override = 0;
 };
 using PyConnector = std::shared_ptr<_PyConnector>;
-
-// --- PySmtManagerFactory ---
-class PySmtManagerFactory : public SmtManagerFactory
-{
-public:
-    virtual ~PySmtManagerFactory() = default;
-
-    virtual PyConnector py_createConnector(PyConverter conv) = 0;
-    virtual PyConverter py_createConverter() = 0;
-
-    Connector createConnector(Converter conv) override
-    {
-        try
-        {
-            return py_createConnector(std::dynamic_pointer_cast<_PyConverter>(conv));
-        }
-        catch (...)
-        {
-            PyErr_Print();
-            throw std::runtime_error("Python createConnector error");
-        }
-    }
-
-    Converter createConverter(const SMT_Info &) override
-    {
-        try
-        {
-            return py_createConverter();
-        }
-        catch (...)
-        {
-            PyErr_Print();
-            throw std::runtime_error("Python createConverter error");
-        }
-    }
-};
 
 #ifdef USE_PYSMT
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface

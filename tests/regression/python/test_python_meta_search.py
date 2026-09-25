@@ -23,10 +23,10 @@ def run(solver: str) -> None:
     converter = getattr(importlib.import_module(converter_module), converter_name)
     connector = getattr(importlib.import_module(connector_module), connector_name)
 
-    factory = Factory().__disown__()
+    factory = Factory()
     factory.register(solver, converter, connector)
     maude.setSmtSolver(solver)
-    maude.setSmtManagerFactory(factory)
+    factory.install(solver)
     maude.init(advise=False)
     for path in (
         ROOT / "examples/smt-check-ex.maude",
