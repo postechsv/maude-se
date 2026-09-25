@@ -60,15 +60,72 @@ void Folder::addState(int index, DagNode *state, int parentIndex)
   }
   newState->depth = depth;
   retainedStates.insert(RetainedStateMap::value_type(index, newState));
+  if (!fold)
+    return;
+
+  // First look under roots that cover the new pattern. Only these roots can
+  // contain a pattern equivalent to it. Keep the state even when its pattern
+  // is equivalent: its SMT constraint may be different.
+  int coveringRoot = NONE;
+  for (const auto &root : roots)
+  {
+    RetainedState *representative = retainedStates.find(root.first)->second;
+    if (!representative->subsumes(state))
+      continue;
+    if (coveringRoot == NONE)
+      coveringRoot = root.first;
+    for (int groupIndex : root.second)
+    {
+      RetainedState *group = retainedStates.find(groupIndex)->second;
+      if (group->subsumes(state) && newState->subsumes(group->state))
+      {
+        groups.find(groupIndex)->second.push_back(index);
+        newState->releaseMatcher();
+        return;
+      }
+    }
+  }
+
+  groups[index].push_back(index);
+  if (coveringRoot != NONE)
+  {
+    roots.find(coveringRoot)->second.push_back(index);
+    return;
+  }
+
+  // The new pattern may be more general than several existing roots. Move
+  // their groups under it, but never remove their constrained states.
+  std::vector<int> absorbed;
+  std::vector<int> &newRootGroups = roots[index];
+  newRootGroups.push_back(index);
+  for (const auto &root : roots)
+  {
+    if (root.first != index && newState->subsumes(retainedStates.find(root.first)->second->state))
+    {
+      newRootGroups.insert(newRootGroups.end(), root.second.begin(), root.second.end());
+      absorbed.push_back(root.first);
+    }
+  }
+  for (int oldRoot : absorbed)
+    roots.erase(oldRoot);
 }
 
 void Folder::findSubsumers(DagNode *state, std::vector<int> &indices) const
 {
   if (!fold)
     return;
-  for (const auto &entry : retainedStates)
-    if (entry.second->subsumes(state))
-      indices.push_back(entry.first);
+  for (const auto &root : roots)
+  {
+    if (!retainedStates.find(root.first)->second->subsumes(state))
+      continue;
+    for (int groupIndex : root.second)
+    {
+      if (!retainedStates.find(groupIndex)->second->subsumes(state))
+        continue;
+      const std::vector<int> &members = groups.find(groupIndex)->second;
+      indices.insert(indices.end(), members.begin(), members.end());
+    }
+  }
 }
 
 Folder::RetainedState::RetainedState(DagNode *state, int parentIndex, bool fold)
@@ -111,9 +168,16 @@ Folder::RetainedState::RetainedState(DagNode *state, int parentIndex, bool fold)
 
 Folder::RetainedState::~RetainedState()
 {
+  releaseMatcher();
+}
+
+void Folder::RetainedState::releaseMatcher()
+{
   delete matchingAutomaton;
+  matchingAutomaton = 0;
   if (stateTerm)
     stateTerm->deepSelfDestruct();
+  stateTerm = 0;
 }
 
 bool Folder::RetainedState::subsumes(DagNode *state) const

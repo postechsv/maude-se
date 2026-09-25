@@ -258,13 +258,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 				for (int cc = 0; cc < group->second.size(); ++cc)
 				{
 					ConstrainedTerm *previous = group->second[cc];
-					TermSubst substitution;
-					if (!previous->findMatching(c1, connector2, substitution))
-						continue;
-					connector2->push();
-					bool subsumed = connector2->subsume(substitution, previous->constraint, acc, cur);
-					connector2->pop();
-					if (subsumed)
+					if (previous->subsumes(c1, connector2, acc, cur))
 					{
 						auto existing = map2seen.find(make_tuple(candidate, cc));
 						Assert(existing != map2seen.end(), "missing subsuming state");
@@ -498,7 +492,8 @@ SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
 		term->deepSelfDestruct();
 }
 
-bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Connector connector, TermSubst &substitution)
+bool SmtStateTransitionGraph::ConstrainedTerm::subsumes(DagNode *other, Connector connector,
+												 SmtTerm accumulated, SmtTerm current)
 {
 	MemoryCell::okToCollectGarbage(); // otherwise we have huge accumulation of junk from matching
 
@@ -510,12 +505,18 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conn
 	matcher.clear(nrMatchingVariables);
 	Subproblem *subproblem = 0;
 
-	bool result = matchingAutomaton->match(other, matcher, subproblem) &&
-				  (subproblem == 0 || subproblem->solve(true, matcher));
-	delete subproblem;
-
-	if (result)
+	bool matched = matchingAutomaton->match(other, matcher, subproblem);
+	std::unique_ptr<Subproblem> pending(subproblem);
+	if (!matched)
+		return false;
+	bool first = true;
+	// A single E-match is not enough: a later substitution may satisfy the
+	// SMT implication even when an earlier one does not.
+	do
 	{
+		if (pending && !pending->solve(first, matcher))
+			break;
+		first = false;
 		// Protected matcher slots also include abstraction variables, which
 		// have no corresponding source variable in VariableInfo::variables.
 		int maxSize = variableInfo.getNrRealVariables();
@@ -523,13 +524,19 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conn
 		DagRootFrame substitutionRoots;
 		// term2Dag() can collect garbage. Root every matcher value before
 		// converting even the first source variable.
+		bool complete = true;
 		for (int i = 0; i < maxSize; ++i)
 		{
 			DagNode *value = matcher.value(i);
 			if (!value)
-				return false;
+			{
+				complete = false;
+				break;
+			}
 			substitutionRoots.keep(value);
 		}
+		if (!complete)
+			continue;
 		for (int i = 0; i < maxSize; i++)
 		{
 			Term *v_term = variableInfo.index2Variable(i);
@@ -540,7 +547,12 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conn
 
 			subst_dict.insert(std::pair<DagNode *, DagNode *>(left, right));
 		}
-		substitution = connector->mk_subst(subst_dict);
-	}
-	return result;
+		TermSubst substitution = connector->mk_subst(subst_dict);
+		connector->push();
+		bool subsumed = connector->subsume(substitution, constraint, accumulated, current);
+		connector->pop();
+		if (subsumed)
+			return true;
+	} while (pending);
+	return false;
 }

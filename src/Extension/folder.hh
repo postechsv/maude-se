@@ -24,6 +24,7 @@ private:
     RetainedState(DagNode *state, int parentIndex, bool fold);
     ~RetainedState();
     bool subsumes(DagNode *state) const;
+    void releaseMatcher();
 
     DagNode *const state;
     const int parentIndex;
@@ -38,12 +39,19 @@ private:
   };
 
   typedef map<int, RetainedState *> RetainedStateMap;
+  // A root is a most-general pattern. Its groups contain equivalent
+  // patterns; every group pattern is an instance of the root pattern.
+  typedef map<int, std::vector<int> > PatternGroups;
   void markReachableNodes();
 
   const bool fold;
   // SMT constraints decide whether a state can be discarded, so pattern
   // matching alone must never evict an entry from this index.
   RetainedStateMap retainedStates;
+  // Only representatives are matched during candidate discovery. The
+  // retainedStates map continues to root every constrained state for Maude GC.
+  PatternGroups groups;
+  PatternGroups roots;
 };
 
 #endif
