@@ -1,0 +1,21 @@
+mod GCD is
+  pr INTEGER .
+
+  sort GcdResult .
+  op gcd : Integer Integer -> GcdResult [ctor] .
+  op return : Integer -> GcdResult [ctor] .
+
+  vars X Y : Integer .
+
+  crl [r1] : gcd(X, Y) => gcd(X - Y, Y) if X > Y = true [nonexec] .
+  crl [r2] : gcd(X, Y) => gcd(X, Y - X) if X < Y = true [nonexec] .
+  rl [r3] : gcd(X, X) => return(X) .
+endm
+
+mod GCD-ANALYSIS is
+  pr GCD .
+  pr BOOL .
+  pr META-SMT-SEARCH .
+
+  vars I J : Integer .
+endm

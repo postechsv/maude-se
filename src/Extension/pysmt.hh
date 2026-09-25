@@ -221,10 +221,41 @@ private:
 
     bool python_equal(PyObject *a, PyObject *b)
     {
+        if (a == b)
+            return true;
+
+        // Z3's __eq__ constructs a symbolic formula rather than a Python
+        // boolean. Its eq() method compares AST identities and returns bool.
+        PyObject *eqMethod = PyObject_GetAttrString(a, "eq");
+        if (eqMethod)
+        {
+            if (PyCallable_Check(eqMethod))
+            {
+                PyObject *answer = PyObject_CallFunctionObjArgs(eqMethod, b, nullptr);
+                if (answer)
+                {
+                    if (PyBool_Check(answer))
+                    {
+                        bool equal = answer == Py_True;
+                        Py_DECREF(answer);
+                        Py_DECREF(eqMethod);
+                        return equal;
+                    }
+                    Py_DECREF(answer);
+                }
+                else
+                    PyErr_Clear();
+            }
+            Py_DECREF(eqMethod);
+        }
+        else
+            PyErr_Clear();
+
         int equal = PyObject_RichCompareBool(a, b, Py_EQ);
         if (equal < 0)
         {
-            PyErr_Print();
+            // Some solver objects expose only a symbolic comparison.
+            PyErr_Clear();
             return false;
         }
         return equal == 1;
