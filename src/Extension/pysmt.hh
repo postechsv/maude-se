@@ -75,15 +75,19 @@ public:
 
     EasyTerm *get(EasyTerm *t)
     {
-        auto it = subst.find(t);
-        return (it != subst.end()) ? it->second : nullptr;
+        // SWIG owns the wrappers returned by keys(), so compare terms rather
+        // than the addresses of those temporary wrappers.
+        for (auto &entry : subst)
+            if (entry.first->equal(t))
+                return entry.second;
+        return nullptr;
     }
 
     std::vector<EasyTerm *> keys()
     {
         std::vector<EasyTerm *> ks;
         for (auto &i : subst)
-            ks.push_back(i.first);
+            ks.push_back(new EasyTerm(i.first->getDag()));
         return ks;
     }
 

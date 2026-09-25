@@ -20,6 +20,7 @@ for solver in z3 yices cvc5; do
   python tests/regression/python/test_backend_lifetime.py "$solver"
   python tests/regression/python/test_gc_lifetime.py "$solver"
   python tests/regression/python/test_python_meta_search.py "$solver"
+  python tests/regression/python/test_folding_subsumption.py "$solver"
 done
 ```
 

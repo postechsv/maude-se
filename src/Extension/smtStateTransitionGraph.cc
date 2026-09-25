@@ -55,8 +55,7 @@ SmtStateTransitionGraph::SmtStateTransitionGraph(RewritingContext *initial,
 	map2seen.insert(Map2Seen::value_type(make_tuple(counter, 0), seen.size()));
 	seen.append(initState);
 
-	int idx;
-	stateCollection.insertState(counter, initial->root(), NONE, &idx);
+	stateCollection.addState(counter, initial->root(), NONE);
 	counter++;
 
 	nextTime = 0.0;
@@ -171,6 +170,9 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			// get replacement node
 			DagNode *replacement = rewriteState->getReplacement();
 			RewriteSmtSearchState::DagPair r = rewriteState->rebuildDag(replacement);
+			// Matching and Python solver callbacks can reach a Maude GC safe point.
+			// Keep both components of the rewritten pair alive until it is retained.
+			DagHandle rewrittenRoot(r.first);
 			RewritingContext *c = context->makeSubcontext(r.first);
 			initial->incrementRlCount();
 			if (trace)
@@ -244,98 +246,49 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 			}
 			connector->pop();
 
-			int nextState;
-			int index2;
-			bool needMerge = !fold;
-
-			ConstrainedTerm *newConsTerm = new ConstrainedTerm(c1, connector->add_const(acc, cur));
-
-			DagNode *reprDag;
-			// folding case ...
-			if (stateCollection.insertState(counter, c1, NONE, &index2))
+			int nextState = NONE;
+			bool needMerge = false;
+			std::vector<int> candidates;
+			stateCollection.findSubsumers(c1, candidates);
+			for (int candidate : candidates)
 			{
-				reprDag = c1;
-				if (!merge)
+				auto group = consTermSeen.find(candidate);
+				if (group == consTermSeen.end())
+					continue;
+				for (int cc = 0; cc < group->second.size(); ++cc)
 				{
-					nextState = seen.size();
-
-					State *newState = new State(counter, stateNr);
-					newState->avoidVariableNumber = n->rewriteState->getMaxVariableNumber();
-					newState->dag = c1;
-					newState->depth = n->depth + 1;
-
-					newState->constTermIndex = 0;
-					consTermSeen.insert(ConstrainedTermMap::value_type(counter, Vector<ConstrainedTerm *>()));
-					consTermSeen[counter].append(newConsTerm);
-					map2seen.insert(Map2Seen::value_type(make_tuple(counter, 0), seen.size()));
-					seen.append(newState);
-
-					counter++;
-					needMerge = false;
+					ConstrainedTerm *previous = group->second[cc];
+					TermSubst substitution;
+					if (!previous->findMatching(c1, connector2, substitution))
+						continue;
+					connector2->push();
+					bool subsumed = connector2->subsume(substitution, previous->constraint, acc, cur);
+					connector2->pop();
+					if (subsumed)
+					{
+						auto existing = map2seen.find(make_tuple(candidate, cc));
+						Assert(existing != map2seen.end(), "missing subsuming state");
+						nextState = existing->second;
+						break;
+					}
 				}
-				else
-				{
-					needMerge = true;
-				}
+				if (nextState != NONE)
+					break;
 			}
-			else
+			if (nextState == NONE)
 			{
-				stateCollection.getState(index2, reprDag);
-
-				auto it = consTermSeen.find(index2);
-				bool exists = false;
-				if (it != consTermSeen.end())
-				{
-					int cc = 0;
-					for (auto &constTerm : it->second)
-					{
-						Verbose("  check folding from " << c1 << " to " << constTerm->dag);
-						// check the conjunt dag is subsumed by an older one
-						bool isMatch = constTerm->findMatching(c1, conv, connector2);
-
-						if (!isMatch)
-						{
-							IssueWarning("subsumption is wrong (" << constTerm->dag << " should be renaming equivalent with " << c1 << ")");
-						}
-
-						connector2->push();
-						bool subsumedResult = connector2->subsume(constTerm->subst, constTerm->constraint, acc, cur);
-						connector2->pop();
-
-						if (subsumedResult)
-						{
-							Verbose("constraints subsumed by another");
-							nextState = map2seen[make_tuple(index2, cc)];
-							exists = true;
-							needMerge = false;
-							break;
-						}
-						cc++;
-					}
-				}
-
-				if (!exists)
-				{
-					Verbose("constraints not subsumed by any others");
-					if (!merge)
-					{
-						nextState = seen.size();
-						State *newState = new State(index2, stateNr);
-						newState->avoidVariableNumber = n->rewriteState->getMaxVariableNumber();
-						newState->constTermIndex = consTermSeen[index2].size();
-						newState->dag = reprDag;
-						newState->depth = n->depth + 1;
-
-						consTermSeen[index2].append(newConsTerm);
-						map2seen.insert(Map2Seen::value_type(make_tuple(index2, newState->constTermIndex), seen.size()));
-						seen.append(newState);
-						needMerge = false;
-					}
-					else
-					{
-						needMerge = true;
-					}
-				}
+				// A matching pattern alone cannot discard a constrained state.
+				stateCollection.addState(counter, c1, n->hashConsIndex);
+				nextState = seen.size();
+				State *newState = new State(counter, stateNr);
+				newState->avoidVariableNumber = n->rewriteState->getMaxVariableNumber();
+				newState->constTermIndex = 0;
+				newState->dag = c1;
+				newState->depth = n->depth + 1;
+				consTermSeen[counter].append(new ConstrainedTerm(c1, connector->add_const(acc, cur)));
+				map2seen.insert(Map2Seen::value_type(make_tuple(counter, 0), nextState));
+				seen.append(newState);
+				++counter;
 			}
 
 			if (merge && needMerge)
@@ -536,7 +489,6 @@ SmtStateTransitionGraph::ConstrainedTerm::ConstrainedTerm(DagNode *dag, SmtTerm 
 	term = t;
 	nrMatchingVariables = variableInfo.getNrProtectedVariables();
 
-	subst = nullptr;
 }
 
 SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
@@ -546,14 +498,9 @@ SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
 		term->deepSelfDestruct();
 }
 
-bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Converter converter, Connector connector)
+bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Connector connector, TermSubst &substitution)
 {
 	MemoryCell::okToCollectGarbage(); // otherwise we have huge accumulation of junk from matching
-	// DO NOT: this will cause memory corruption
-	// if (subst){
-	// 	Py_DECREF(subst);
-	// }
-	// cout << "dag : " << dag << " checking matching with " << other << endl;
 
 	int nrSlotsToAllocate = nrMatchingVariables;
 	if (nrSlotsToAllocate == 0)
@@ -567,25 +514,33 @@ bool SmtStateTransitionGraph::ConstrainedTerm::findMatching(DagNode *other, Conv
 				  (subproblem == 0 || subproblem->solve(true, matcher));
 	delete subproblem;
 
-	// delete old subst, if any exists
-	// if (subst) {
-	// 	subst = nullptr;
-	// }
-
 	if (result)
 	{
-		int maxSize = matcher.nrFragileBindings();
+		// Protected matcher slots also include abstraction variables, which
+		// have no corresponding source variable in VariableInfo::variables.
+		int maxSize = variableInfo.getNrRealVariables();
 		std::map<DagNode *, DagNode *> subst_dict;
+		DagRootFrame substitutionRoots;
+		// term2Dag() can collect garbage. Root every matcher value before
+		// converting even the first source variable.
+		for (int i = 0; i < maxSize; ++i)
+		{
+			DagNode *value = matcher.value(i);
+			if (!value)
+				return false;
+			substitutionRoots.keep(value);
+		}
 		for (int i = 0; i < maxSize; i++)
 		{
 			Term *v_term = variableInfo.index2Variable(i);
 
 			DagNode *left = v_term->term2Dag();
+			substitutionRoots.keep(left);
 			DagNode *right = matcher.value(i);
 
 			subst_dict.insert(std::pair<DagNode *, DagNode *>(left, right));
 		}
-		subst = connector->mk_subst(subst_dict);
+		substitution = connector->mk_subst(subst_dict);
 	}
 	return result;
 }

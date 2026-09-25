@@ -1,10 +1,10 @@
 //
-//	Class for folding and maintaining the history of a search.
+//	Pattern candidate index for constrained-state folding.
 //
 #ifndef _folder_hh_
 #define _folder_hh_
-#include <set>
 #include <map>
+#include <vector>
 #include "simpleRootContainer.hh"
 
 class Folder : private SimpleRootContainer
@@ -15,8 +15,8 @@ public:
   Folder(bool fold);
   ~Folder();
 
-  bool insertState(int index, DagNode *state, int parentIndex, int *gIdx);
-  void getState(int index, DagNode *&state) const;
+  void addState(int index, DagNode *state, int parentIndex);
+  void findSubsumers(DagNode *state, std::vector<int> &indices) const;
 
 private:
   struct RetainedState
@@ -38,21 +38,12 @@ private:
   };
 
   typedef map<int, RetainedState *> RetainedStateMap;
-  typedef set<int> StateSet;
-
   void markReachableNodes();
 
-  const bool fold; // we do folding to prune less general states
-  RetainedStateMap mostGeneralSoFar;
-  int currentStateIndex;
+  const bool fold;
+  // SMT constraints decide whether a state can be discarded, so pattern
+  // matching alone must never evict an entry from this index.
+  RetainedStateMap retainedStates;
 };
-
-inline void
-Folder::getState(int index, DagNode *&state) const
-{
-  RetainedStateMap::const_iterator i = mostGeneralSoFar.find(index);
-  Assert(i != mostGeneralSoFar.end(), "couldn't find state with index " << index);
-  state = i->second->state;
-}
 
 #endif

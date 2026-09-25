@@ -1,0 +1,18 @@
+mod FOLDING-SUBSUMPTION is
+  pr INTEGER .
+
+  sort FoldState .
+  ops source branch : Integer -> FoldState [ctor] .
+  var X : Integer .
+
+  crl [zero] : source(X) => branch(X) if X === 0 = true [nonexec] .
+  crl [one] : source(X) => branch(X) if X === 1 = true [nonexec] .
+endm
+
+mod FOLDING-SUBSUMPTION-ANALYSIS is
+  pr FOLDING-SUBSUMPTION .
+  pr BOOL .
+  pr META-SMT-SEARCH .
+
+  var I : Integer .
+endm
