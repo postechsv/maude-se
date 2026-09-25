@@ -65,6 +65,7 @@ YicesConverter::YicesConverter(const SMT_Info &info)
 
 void YicesConverter::prepareFor(VisibleModule *module)
 {
+    clearConversionCache();
     sg.setModule(module);
     smtManagerVariableMap.clear();
     reverseCache.clear();
@@ -156,6 +157,14 @@ term_t YicesConverter::makeVariable(DagNode *dag)
 }
 
 term_t YicesConverter::convert(DagNode *dag)
+{
+    if (auto cached = cachedConversion(dag)) return *cached;
+    term_t result = convertUncached(dag);
+    rememberConversion(dag, result);
+    return result;
+}
+
+term_t YicesConverter::convertUncached(DagNode *dag)
 {
     if (auto *number = dynamic_cast<SMT_NumberDagNode *>(dag))
         return checked(yices_mpq(number->getValue().get_mpq_t()));

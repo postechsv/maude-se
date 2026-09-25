@@ -131,7 +131,11 @@ class _Z3Converter : public _Converter, public NativeSmtConverter<z3::expr, cmpE
 {
 public:
     _Z3Converter(const SMT_Info &smtInfo);
-    ~_Z3Converter() {};
+    ~_Z3Converter() override
+    {
+        clearConversionCache();
+        smtManagerVariableMap.clear();
+    }
     void prepareFor(VisibleModule *module);
     SmtTerm dag2term(DagNode *dag);
     DagHandle term2dag(SmtTerm term) override;
@@ -149,6 +153,7 @@ private:
 
     // Aux
     z3::expr dag2termInternal(DagNode *dag);
+    z3::expr dag2termInternalUncached(DagNode *dag);
     DagNode *term2dagInternal(z3::expr);
     DagNode *term2dagInternalUnrooted(z3::expr);
     DagRootFrame *activeFrame = nullptr;

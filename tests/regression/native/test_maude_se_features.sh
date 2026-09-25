@@ -69,3 +69,16 @@ check_output 'unsatisfiable symbolic GCD reachability' "$output"
 output="$(printf 'quit\n' | MAUDE_LIB="$bundle_dir:$repo_dir/src" \
   "$binary" -no-banner "$repo_dir/tests/data/maude-se-2020/gcd.maude" 2>&1)"
 check_output '2020 Core Maude GCD' "$output" 'Solution 1' 'NN:IntegerExpr -->'
+
+# Exercise repeated conversion of shared SMT subexpressions within one process.
+output="$(printf '%s\n' \
+  "smt-search [1,40] [ l0 : 0/1 ] =>* [ bad : X' ] ." \
+  "smt-search [1,160] [ l0 : 0/1 ] =>* [ bad : X' ] ." \
+  'quit' | MAUDE_LIB="$bundle_dir:$repo_dir/tests/data/pta2maude:$repo_dir/src" \
+  "$binary" -no-banner "$repo_dir/tests/data/pta2maude/ex-fig3b.maude" 2>&1)"
+check_output 'repeated PTA SMT search' "$output" 'rewrites: 40' 'rewrites: 160'
+if [[ "$(grep -Fc 'No solution.' <<< "$output")" -ne 3 ]]; then
+  echo "repeated PTA SMT search returned an unexpected result:" >&2
+  echo "$output" >&2
+  exit 1
+fi

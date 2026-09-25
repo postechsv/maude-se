@@ -53,6 +53,7 @@ Cvc5Converter::Cvc5Converter(const SMT_Info &info)
 
 void Cvc5Converter::prepareFor(VisibleModule *module)
 {
+    clearConversionCache();
     sg.setModule(module);
     smtManagerVariableMap.clear();
 }
@@ -146,6 +147,14 @@ cvc5::Term Cvc5Converter::makeVariable(DagNode *dag)
 }
 
 cvc5::Term Cvc5Converter::convert(DagNode *dag)
+{
+    if (auto cached = cachedConversion(dag)) return *cached;
+    cvc5::Term result = convertUncached(dag);
+    rememberConversion(dag, result);
+    return result;
+}
+
+cvc5::Term Cvc5Converter::convertUncached(DagNode *dag)
 {
     if (auto *number = dynamic_cast<SMT_NumberDagNode *>(dag))
     {
