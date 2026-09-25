@@ -258,7 +258,7 @@ int SmtStateTransitionGraph::getNextState(int stateNr, int index)
 				for (int cc = 0; cc < group->second.size(); ++cc)
 				{
 					ConstrainedTerm *previous = group->second[cc];
-					if (previous->subsumes(c1, connector2, acc, cur))
+					if (previous->subsumes(c1, connector2, smtInfo, acc, cur))
 					{
 						auto existing = map2seen.find(make_tuple(candidate, cc));
 						Assert(existing != map2seen.end(), "missing subsuming state");
@@ -493,6 +493,7 @@ SmtStateTransitionGraph::ConstrainedTerm::~ConstrainedTerm()
 }
 
 bool SmtStateTransitionGraph::ConstrainedTerm::subsumes(DagNode *other, Connector connector,
+												 const SMT_Info &smtInfo,
 												 SmtTerm accumulated, SmtTerm current)
 {
 	MemoryCell::okToCollectGarbage(); // otherwise we have huge accumulation of junk from matching
@@ -540,10 +541,15 @@ bool SmtStateTransitionGraph::ConstrainedTerm::subsumes(DagNode *other, Connecto
 		for (int i = 0; i < maxSize; i++)
 		{
 			Term *v_term = variableInfo.index2Variable(i);
-
 			DagNode *left = v_term->term2Dag();
 			substitutionRoots.keep(left);
 			DagNode *right = matcher.value(i);
+			// Ordinary Maude sorts must not reach the SMT converter. A user
+			// sort with an SMT equality operator is still part of EUF and
+			// must be substituted even though getType() is NOT_SMT.
+			if (smtInfo.getType(v_term->symbol()->getRangeSort()) == SMT_Info::NOT_SMT &&
+				!smtInfo.getEqualityOperator(left, right))
+				continue;
 
 			subst_dict.insert(std::pair<DagNode *, DagNode *>(left, right));
 		}

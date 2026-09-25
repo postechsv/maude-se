@@ -1,0 +1,23 @@
+mod FOLDING-PATTERN-INDEX is
+  pr INTEGER .
+
+  sorts Shape FoldState .
+  op node : Integer -> Shape [ctor] .
+  op source : Shape Integer -> FoldState [ctor] .
+  op reached : Shape -> FoldState [ctor] .
+  op never : -> FoldState [ctor] .
+  var S : Shape .
+  var I : Integer .
+
+  crl [specific] : source(S, I) => reached(node(I)) if I === 0 = true [nonexec] .
+  crl [general] : source(S, I) => reached(S) if I === 1 = true [nonexec] .
+  crl [specific-again] : source(S, I) => reached(node(I)) if I === 2 = true [nonexec] .
+endm
+
+mod FOLDING-PATTERN-INDEX-ANALYSIS is
+  pr FOLDING-PATTERN-INDEX .
+  pr BOOL .
+  pr META-SMT-SEARCH .
+  var S : Shape .
+  var I : Integer .
+endm

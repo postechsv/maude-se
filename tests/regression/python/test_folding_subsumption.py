@@ -24,14 +24,23 @@ def run(solver: str) -> None:
     converter = getattr(importlib.import_module(converter_module), converter_name)
     connector = getattr(importlib.import_module(connector_module), connector_name)
 
+    class CountingConnector(connector):
+        checks = 0
+
+        def check_sat(self, consts):
+            type(self).checks += 1
+            return super().check_sat(consts)
+
+
     factory = Factory()
-    factory.register(solver, converter, connector)
+    factory.register(solver, converter, CountingConnector)
     maude.setSmtSolver(solver)
     factory.install(solver)
     maude.init(advise=False)
     for path in (
         ROOT / "examples/smt-check-ex.maude",
         ROOT / "tests/data/smoke/folding-subsumption.maude",
+        ROOT / "tests/data/smoke/folding-pattern-index.maude",
         ROOT / "tests/data/smoke/meta-gcd-python-smoke.maude",
     ):
         if not maude.load(str(path)):
@@ -55,6 +64,24 @@ def run(solver: str) -> None:
                 raise RuntimeError(f"fold={fold} discarded the satisfiable branch: {result}")
             if target == 2 and "failure" not in result:
                 raise RuntimeError(f"fold={fold} reported an unreachable branch: {result}")
+
+    # A more general representative arrives after a specific one. The Maude
+    # pattern index may replace the root, but all constrained states must stay.
+    pattern_module = maude.getModule("FOLDING-PATTERN-INDEX-ANALYSIS")
+    pattern_query = pattern_module.parseTerm(
+        "metaSmtSearch(upModule('FOLDING-PATTERN-INDEX, false), "
+        "upTerm(source(S, I)), upTerm(never), "
+        "upTerm((true).Boolean) = upTerm((true).Boolean), "
+        "'*, unbounded, 0, 'QF_LRA, true)"
+    )
+    if pattern_query is None:
+        raise RuntimeError("could not parse pattern-index search")
+    checks_before = CountingConnector.checks
+    pattern_query.reduce()
+    if "failure" not in str(pattern_query):
+        raise RuntimeError(f"unexpected pattern-index result: {pattern_query}")
+    if CountingConnector.checks - checks_before < 3:
+        raise RuntimeError("pattern-index search did not explore all three branches")
 
     # Exercise more than one candidate match and Python-owned key wrappers.
     gcd = maude.getModule("GCD-ANALYSIS")

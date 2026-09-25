@@ -7,6 +7,8 @@
 #include <vector>
 #include "simpleRootContainer.hh"
 
+class NarrowingFolder;
+
 class Folder : private SimpleRootContainer
 {
   NO_COPYING(Folder);
@@ -45,6 +47,9 @@ private:
   void markReachableNodes();
 
   const bool fold;
+  // Maude's folder owns only representative patterns. It must not decide
+  // whether a constrained state can be discarded.
+  NarrowingFolder *patternIndex;
   // SMT constraints decide whether a state can be discarded, so pattern
   // matching alone must never evict an entry from this index.
   RetainedStateMap retainedStates;

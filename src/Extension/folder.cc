@@ -5,10 +5,12 @@
 //	utility stuff
 #include "macros.hh"
 #include "vector.hh"
+#include <set>
 
 //	forward declarations
 #include "interface.hh"
 #include "core.hh"
+class VariantSearch;
 
 //	interface class definitions
 #include "symbol.hh"
@@ -21,17 +23,21 @@
 #include "rewritingContext.hh"
 #include "variableInfo.hh"
 #include "subproblemAccumulator.hh"
+#include "narrowingFolder.hh"
 
 //	higher class definitions
 #include "folder.hh"
 
 Folder::Folder(bool fold)
-    : fold(fold)
+    : fold(fold),
+      // The context and generator are only used by variant folding (vfold).
+      patternIndex(fold ? new NarrowingFolder(0, 0, true, false, false) : 0)
 {
 }
 
 Folder::~Folder()
 {
+  delete patternIndex;
   for (auto &i : retainedStates)
     delete i.second;
 }
@@ -63,44 +69,50 @@ void Folder::addState(int index, DagNode *state, int parentIndex)
   if (!fold)
     return;
 
-  // First look under roots that cover the new pattern. Only these roots can
-  // contain a pattern equivalent to it. Keep the state even when its pattern
-  // is equivalent: its SMT constraint may be different.
-  int coveringRoot = NONE;
-  for (const auto &root : roots)
+  // The official Maude folder maintains the antichain of most-general
+  // representative patterns. Its pattern-only rejection/eviction is safe
+  // here because every constrained state remains in retainedStates.
+  if (!patternIndex->insertState(index, state, NONE, NONE))
   {
-    RetainedState *representative = retainedStates.find(root.first)->second;
-    if (!representative->subsumes(state))
-      continue;
-    if (coveringRoot == NONE)
-      coveringRoot = root.first;
-    for (int groupIndex : root.second)
+    // Only a rejected pattern needs classification under an existing root.
+    // An equivalent pattern keeps its own constraint as a separate child.
+    int coveringRoot = NONE;
+    for (const auto &root : roots)
     {
-      RetainedState *group = retainedStates.find(groupIndex)->second;
-      if (group->subsumes(state) && newState->subsumes(group->state))
+      RetainedState *representative = retainedStates.find(root.first)->second;
+      if (!representative->subsumes(state))
+        continue;
+      if (coveringRoot == NONE)
+        coveringRoot = root.first;
+      for (int groupIndex : root.second)
       {
-        groups.find(groupIndex)->second.push_back(index);
-        newState->releaseMatcher();
-        return;
+        RetainedState *group = retainedStates.find(groupIndex)->second;
+        if (group->subsumes(state) && newState->subsumes(group->state))
+        {
+          groups.find(groupIndex)->second.push_back(index);
+          newState->releaseMatcher();
+          return;
+        }
       }
     }
-  }
-
-  groups[index].push_back(index);
-  if (coveringRoot != NONE)
-  {
+    Assert(coveringRoot != NONE, "Maude folder rejected a pattern without a covering root");
+    groups[index].push_back(index);
     roots.find(coveringRoot)->second.push_back(index);
     return;
   }
 
-  // The new pattern may be more general than several existing roots. Move
-  // their groups under it, but never remove their constrained states.
+  // A newly admitted pattern may evict older roots from the official folder.
+  // Move their groups under it without removing any constrained states.
+  groups[index].push_back(index);
+  Vector<DagNode *> mostGeneral = patternIndex->getMostGeneralStates();
+  std::set<DagNode *> surviving(mostGeneral.begin(), mostGeneral.end());
   std::vector<int> absorbed;
   std::vector<int> &newRootGroups = roots[index];
   newRootGroups.push_back(index);
   for (const auto &root : roots)
   {
-    if (root.first != index && newState->subsumes(retainedStates.find(root.first)->second->state))
+    if (root.first != index &&
+        surviving.find(retainedStates.find(root.first)->second->state) == surviving.end())
     {
       newRootGroups.insert(newRootGroups.end(), root.second.begin(), root.second.end());
       absorbed.push_back(root.first);
@@ -108,6 +120,7 @@ void Folder::addState(int index, DagNode *state, int parentIndex)
   }
   for (int oldRoot : absorbed)
     roots.erase(oldRoot);
+  Assert(roots.size() == surviving.size(), "pattern groups disagree with Maude folder");
 }
 
 void Folder::findSubsumers(DagNode *state, std::vector<int> &indices) const
