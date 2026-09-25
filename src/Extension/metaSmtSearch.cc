@@ -53,13 +53,14 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
                         Converter conv = vg->getConverter();
                         Connector conn = vg->getConnector();
                         Connector conn2 = vg->getConnector2();
-                        // prepare for the current module
-                        conv->prepareFor(m);
                         if (logic)
                         {
                             conn->set_logic(logic);
                             conn2->set_logic(logic);
                         }
+                        // Select the solver logic before module preparation
+                        // creates any SMT terms or declarations.
+                        conv->prepareFor(m);
                         // vg->setUnderline(conn, conv);
 
                         // cout << "   !!! Made cached SMT_RewriteSequenceSearch !!!" << endl;

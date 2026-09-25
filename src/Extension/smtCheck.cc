@@ -37,8 +37,6 @@ bool SmtOpSymbol::smtCheck(FreeDagNode *subject, RewritingContext &context)
         // auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(mid1 - mid);
         // std::cout << "SmtCheck::Init elapsed time : " << duration1.count() << " ms\n";
 
-        vg.getConverter()->prepareFor(m);
-
         // auto mid2 = std::chrono::high_resolution_clock::now();
 
         // auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(mid2 - mid1);
@@ -46,6 +44,8 @@ bool SmtOpSymbol::smtCheck(FreeDagNode *subject, RewritingContext &context)
 
         if (logic)
             vg.getConnector()->set_logic(logic);
+
+        vg.getConverter()->prepareFor(m);
 
         VariableGenerator::Result result = vg.assertDag(subject->getArgument(0));
         // auto mid3 = std::chrono::high_resolution_clock::now();

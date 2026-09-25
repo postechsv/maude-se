@@ -19,8 +19,7 @@ class Cvc5Connector(Connector):
         self._s.setOption("produce-models", "true")
         self._logic = None
         if logic is not None:
-            self._s.setLogic(logic)
-            self._logic = logic
+            self.set_logic(logic)
 
         self._m = None
     
@@ -129,14 +128,17 @@ class Cvc5Connector(Connector):
 
     def set_logic(self, logic):
         self._s.resetAssertions()
-        if self._logic is None:
-            self._s.setLogic(logic)
-            self._logic = logic
-        elif self._logic != logic:
+        if self._s.isLogicSet():
+            current_logic = self._s.getLogic()
+            if current_logic == logic:
+                self._logic = logic
+                return
             raise ValueError(
-                f"cvc5 connector already uses logic {self._logic}; "
+                f"cvc5 connector already uses logic {current_logic}; "
                 f"cannot switch to {logic}"
             )
+        self._s.setLogic(logic)
+        self._logic = logic
 
     def get_converter(self):
         return self._c

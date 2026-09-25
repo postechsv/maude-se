@@ -228,7 +228,7 @@ DagNode *Cvc5Converter::convertBackUnrooted(const cvc5::Term &term)
     }
     if (term.isIntegerValue() || term.isRealValue())
     {
-        const bool integer = term.isIntegerValue();
+        const bool integer = term.getSort().isInteger();
         auto *sort = sg.getKind(integer ? "Integer" : "Real");
         Vector<ConnectedComponent *> domain;
         auto *symbol = static_cast<SMT_NumberSymbol *>(

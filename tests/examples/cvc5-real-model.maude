@@ -1,0 +1,12 @@
+load smt
+load smt-check
+
+fmod REAL-ONLY is
+  pr REAL .
+  pr META-SMT-CHECK .
+
+  var X : Real .
+endfm
+
+red metaSmtCheck(upModule('REAL-ONLY, false), upTerm(X === 0/1),
+                 'QF_LRA, true) .

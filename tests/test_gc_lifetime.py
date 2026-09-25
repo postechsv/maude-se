@@ -6,6 +6,7 @@ from pathlib import Path
 
 import maudeSE.maude as maude
 from maudeSE.factory import Factory
+from maudeSE.installer import import_solver
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,7 @@ SOLVERS = {
 def run(solver: str, iterations: int = 100) -> None:
     import importlib
 
+    import_solver(solver, solver)
     converter_module, converter_name, connector_module, connector_name = SOLVERS[solver]
     converter = getattr(importlib.import_module(converter_module), converter_name)
     connector = getattr(importlib.import_module(connector_module), connector_name)

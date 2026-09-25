@@ -35,10 +35,10 @@ bool MetaLevelSmtOpSymbol::metaSmtCheck(FreeDagNode *subject, RewritingContext &
 			const char *logic = downLogic(subject->getArgument(2));
 
 			VariableGenerator vg(smtInfo, false);
-			vg.getConverter()->prepareFor(m);
 
 			if (logic)
 				vg.getConnector()->set_logic(logic);
+			vg.getConverter()->prepareFor(m);
 
 			VariableGenerator::Result result = vg.assertDag(d);
 			switch (result)
