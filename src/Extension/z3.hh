@@ -28,6 +28,7 @@
 #include "z3++.h"
 #include "smtInterface.hh"
 #include "nativeSmt.hh"
+#include "rootedDag.hh"
 #include "extGlobal.hh"
 #include <vector>
 #include <sstream>
@@ -149,6 +150,8 @@ private:
     // Aux
     z3::expr dag2termInternal(DagNode *dag);
     DagNode *term2dagInternal(z3::expr);
+    DagNode *term2dagInternalUnrooted(z3::expr);
+    std::vector<std::unique_ptr<RootedDag>> conversionRoots;
 
 private:
     void markReachableNodes();

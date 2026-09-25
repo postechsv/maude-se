@@ -3,6 +3,7 @@
 #include "smtManager.hh"
 // #include "smtManagerFactory.hh"
 #include "extGlobal.hh"
+#include "rootedDag.hh"
 
 // #include <chrono>
 
@@ -108,11 +109,15 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
 
     Converter conv = vg->getConverter();
     DagNode *result = emptySatAssnSet->makeDagNode();
+    std::vector<std::unique_ptr<RootedDag>> roots;
+    roots.emplace_back(new RootedDag(result));
     for (auto k : *keys)
     {
         dom.clear();
         DagNode *kd = conv->term2dag(k);
+        if (kd) roots.emplace_back(new RootedDag(kd));
         DagNode *kvd = conv->term2dag(model->get(k));
+        if (kvd) roots.emplace_back(new RootedDag(kvd));
 
         if (kd == nullptr || kvd == nullptr)
         {
@@ -162,8 +167,10 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
         Vector<DagNode *> r(2);
         r[0] = result;
         r[1] = assn->makeDagNode(args);
+        roots.emplace_back(new RootedDag(r[1]));
 
         result = concatSatAssnSet->makeDagNode(r);
+        roots.emplace_back(new RootedDag(result));
     }
     Vector<DagNode *> dag(1);
     dag[0] = result;

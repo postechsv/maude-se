@@ -4,11 +4,13 @@
 #include "cvc5/cvc5.h"
 #include "smtInterface.hh"
 #include "nativeSmt.hh"
+#include "rootedDag.hh"
 #include "extGlobal.hh"
 #include "simpleRootContainer.hh"
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 class Cvc5Term : public _SmtTerm
 {
@@ -60,6 +62,8 @@ private:
     cvc5::Term makeVariable(DagNode *dag) override;
     cvc5::Term convert(DagNode *dag);
     DagNode *convertBack(const cvc5::Term &term);
+    DagNode *convertBackUnrooted(const cvc5::Term &term);
+    std::vector<std::unique_ptr<RootedDag>> conversionRoots;
     void markReachableNodes() override;
 
     cvc5::TermManager tm;

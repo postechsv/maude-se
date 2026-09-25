@@ -254,12 +254,12 @@ test_standalone() (
   grep -Fq 'result: sat' <<<"$output" || fail "standalone $solver SAT smoke test failed"
   grep -Fq 'result: unsat' <<<"$output" || fail "standalone $solver UNSAT smoke test failed"
 
-  if [[ "$solver" == cvc5 || "$solver" == yices ]]; then
-    output="$(cd "$bundle_dir" && \
-      printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\nshow model .\nquit\n' | \
-      "$executable" smt-check-ex.maude smt-check.maude maude-se-meta.maude)"
-    grep -Fq 'X:Integer |-->' <<<"$output" || fail "standalone $solver model smoke test failed"
+  output="$(cd "$bundle_dir" && \
+    printf 'check in SIMPLE : X:Integer > 4 using QF_LRA .\nshow model .\nquit\n' | \
+    "$executable" smt-check-ex.maude smt-check.maude maude-se-meta.maude)"
+  grep -Fq 'X:Integer |-->' <<<"$output" || fail "standalone $solver model smoke test failed"
 
+  if [[ "$solver" == cvc5 || "$solver" == yices ]]; then
     cp "$top_dir/examples/smt-search-ex.maude" "$bundle_dir/"
     output="$(cd "$bundle_dir" && \
       printf 'smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) such that I:Integer > 0 and I:Integer < 9 using QF_LRA .\nquit\n' | \

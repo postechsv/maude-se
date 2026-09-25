@@ -233,6 +233,7 @@ _Z3Converter::_Z3Converter(const SMT_Info &smtInfo)
 void _Z3Converter::prepareFor(VisibleModule *module)
 {
     sg.setModule(module);
+    smtManagerVariableMap.clear();
 }
 
 SmtTerm _Z3Converter::dag2term(DagNode *dag)
@@ -252,6 +253,7 @@ DagNode *_Z3Converter::term2dag(SmtTerm term)
     if (!t)
         throw std::runtime_error("cannot convert SMT term to Maude term");
 
+    conversionRoots.clear();
     DagNode *d = term2dagInternal(t->expr());
     if (d->getSort() == nullptr)
     {
@@ -259,6 +261,7 @@ DagNode *_Z3Converter::term2dag(SmtTerm term)
         d->computeTrueSort(*context);
         delete context;
     }
+    conversionRoots.clear();
     return d;
 }
 
@@ -591,14 +594,16 @@ z3::expr _Z3Converter::makeVariable(DagNode *dag)
 
 DagNode *_Z3Converter::term2dagInternal(z3::expr e)
 {
-    ReverseSmtManagerVariableMap *rsv = generateReverseVariableMap();
-    if (rsv != nullptr)
+    DagNode *dag = term2dagInternalUnrooted(e);
+    conversionRoots.emplace_back(new RootedDag(dag));
+    return dag;
+}
+
+DagNode *_Z3Converter::term2dagInternalUnrooted(z3::expr e)
+{
+    for (const auto &entry : smtManagerVariableMap)
     {
-        auto it = rsv->find(e);
-        if (it != rsv->end())
-        {
-            return it->second;
-        }
+        if (z3::eq(entry.second, e)) return entry.first;
     }
 
     // z3::expr e = dynamic_cast<Z3SmtTerm*>(term)->getTerm();

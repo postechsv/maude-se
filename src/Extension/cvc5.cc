@@ -70,6 +70,7 @@ SmtTerm Cvc5Converter::dag2term(DagNode *dag)
 
 DagNode *Cvc5Converter::term2dag(SmtTerm term)
 {
+    conversionRoots.clear();
     DagNode *dag = convertBack(unwrap(term));
     if (dag->getSort() == nullptr)
     {
@@ -77,6 +78,7 @@ DagNode *Cvc5Converter::term2dag(SmtTerm term)
         dag->computeTrueSort(*context);
         delete context;
     }
+    conversionRoots.clear();
     return dag;
 }
 
@@ -208,6 +210,13 @@ cvc5::Term Cvc5Converter::convert(DagNode *dag)
 }
 
 DagNode *Cvc5Converter::convertBack(const cvc5::Term &term)
+{
+    DagNode *dag = convertBackUnrooted(term);
+    conversionRoots.emplace_back(new RootedDag(dag));
+    return dag;
+}
+
+DagNode *Cvc5Converter::convertBackUnrooted(const cvc5::Term &term)
 {
     for (const auto &entry : smtManagerVariableMap)
         if (entry.second == term)

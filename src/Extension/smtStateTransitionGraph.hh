@@ -16,7 +16,10 @@
 #include "SMT_EngineWrapper.hh"
 
 #include "smtInterface.hh"
+#include "rootedDag.hh"
 #include <ctime>
+#include <memory>
+#include <vector>
 
 class SmtStateTransitionGraph
 {
@@ -108,6 +111,9 @@ protected:
   State *initState;
   int counter;
   RewritingContext *initial;
+  // Model DAGs are returned through raw-pointer maps, so retain their roots
+  // for the lifetime of the graph.
+  std::vector<std::unique_ptr<RootedDag>> modelRoots;
 
   ConstrainedTermMap consTermSeen;
   Vector<State *> seen;
@@ -249,7 +255,9 @@ SmtStateTransitionGraph::getStateModel(int stateNr)
 
   for (auto &elem : *ks){
     DagNode* t = conv->term2dag(elem);
+    modelRoots.emplace_back(new RootedDag(t));
     DagNode* v = conv->term2dag(ct->model->get(elem));
+    modelRoots.emplace_back(new RootedDag(v));
 
     t->computeTrueSort(*initial);
     v->computeTrueSort(*initial);
