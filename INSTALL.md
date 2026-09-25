@@ -54,7 +54,7 @@ their version from that value during the build. The banner build date is also
 generated at build time, so building does not modify tracked source files.
 
 Release tags must use the matching `v<version>` form. For example, version
-`0.1.0` must be released with tag `v0.1.0`; the standalone release build fails
+`0.0.3` must be released with tag `v0.0.3`; the standalone release build fails
 early when the tag and package version differ.
 
 ## Build locally on macOS
