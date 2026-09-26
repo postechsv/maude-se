@@ -146,6 +146,8 @@ public:
     {
         conversionCache.clear();
         conversionCacheSize = 0;
+        reverseConversionCache.clear();
+        reverseConversionCacheSize = 0;
         rcache.clear();
         unhashableReverseEntries.clear();
         cache.clear();
@@ -174,6 +176,8 @@ public:
             // this is handled by Python
             try
             {
+                if (DagHandle cached = reverse_conversion_cache_find(t))
+                    return cached;
                 if (EasyTerm *result = pyTerm2dag(t))
                 {
                     DagNode *dag = result->getDag();
@@ -185,6 +189,7 @@ public:
                         dag->computeTrueSort(*context);
                         delete context;
                     }
+                    reverse_conversion_cache_insert(t, resultRoot);
                     return resultRoot;
                 }
             }
@@ -218,8 +223,16 @@ private:
         PySmtTerm term;
     };
 
+    struct ReverseConversionCacheEntry
+    {
+        PySmtTerm term;
+        DagHandle dag;
+    };
+
     std::unordered_map<size_t, std::vector<ConversionCacheEntry>> conversionCache;
     size_t conversionCacheSize = 0;
+    std::unordered_map<Py_hash_t, std::vector<ReverseConversionCacheEntry>> reverseConversionCache;
+    size_t reverseConversionCacheSize = 0;
 
     Cache cache;
     ReverseCache rcache;
@@ -288,6 +301,40 @@ private:
         return equal == 1;
     }
 
+    DagHandle reverse_conversion_cache_find(const PySmtTerm &term)
+    {
+        Py_hash_t hash = PyObject_Hash(term->borrowData());
+        if (hash == -1)
+        {
+            PyErr_Clear();
+            return {};
+        }
+        auto bucket = reverseConversionCache.find(hash);
+        if (bucket != reverseConversionCache.end())
+            for (const auto &entry : bucket->second)
+                if (python_equal(entry.term->borrowData(), term->borrowData()))
+                    return entry.dag;
+        return {};
+    }
+
+    void reverse_conversion_cache_insert(const PySmtTerm &term, const DagHandle &dag)
+    {
+        Py_hash_t hash = PyObject_Hash(term->borrowData());
+        if (hash == -1)
+        {
+            PyErr_Clear();
+            return;
+        }
+        // Both the Python AST and the Maude GC root have bounded retention.
+        if (reverseConversionCacheSize >= 4096)
+        {
+            reverseConversionCache.clear();
+            reverseConversionCacheSize = 0;
+        }
+        reverseConversionCache[hash].push_back({term, dag});
+        ++reverseConversionCacheSize;
+    }
+
 public:
     // Unlike the variable cache below, this cache also stores compound terms.
     // DagHandle keeps each key visible to Maude's collector.
@@ -320,6 +367,8 @@ public:
     {
         cache[dag->getDag()] = term;
         reverseCacheDirty = true;
+        reverseConversionCache.clear();
+        reverseConversionCacheSize = 0;
     }
 
     EasyTerm *cache_find(PySmtTerm &term)

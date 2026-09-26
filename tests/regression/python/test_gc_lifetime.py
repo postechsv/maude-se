@@ -57,6 +57,7 @@ def run(solver: str, iterations: int = 100) -> None:
         ("smtCheck(X:Integer > 4)", "(true).Bool"),
         ("smtCheck(X:Integer > 4 and X:Integer < 3)", "(false).Bool"),
         ("smtCheck(X:Integer === 7, true)", "{X:Integer |-> (7).Integer}"),
+        ("simplifyFormula(X:Integer + 0)", "X:Integer"),
     )
     for _ in range(iterations):
         for expression, expected in cases:
