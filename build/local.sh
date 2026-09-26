@@ -143,7 +143,7 @@ doctor() {
 
   if have_command brew; then
     installed_formulae="$(brew list --formula -1 2>/dev/null || true)"
-    local formulae=(bison flex cmake swig)
+    local formulae=(bison flex cmake)
     if [[ "$profile" == "standalone" ]]; then
       formulae+=(autoconf automake)
       for command_name in autoreconf cmake zip unzip; do
@@ -154,6 +154,8 @@ doctor() {
           failed=1
         fi
       done
+    else
+      formulae+=(swig)
     fi
     for formula in "${formulae[@]}"; do
       if grep -Fxq "$formula" <<<"$installed_formulae"; then

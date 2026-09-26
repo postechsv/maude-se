@@ -253,6 +253,7 @@ patch_maude() {
 
   apply_patch_once "$maude_dir" "$top_dir/src/patch/$MAUDE_NATIVE_PATCH"
   apply_patch_once "$maude_dir" "$top_dir/src/patch/native-cvc5.patch"
+  apply_patch_once "$maude_dir" "$top_dir/src/patch/native-dlopen.patch"
 }
 
 make_patch() {

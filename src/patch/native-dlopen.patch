@@ -1,0 +1,10 @@
+diff --git configure.ac configure.ac
+--- configure.ac
++++ configure.ac
+@@ -73,5 +73,6 @@
+ #AC_CHECK_LIB(nsl, inet_addr)	# Adds unnecessary dependencies to the binaries in Linux
+ AC_CHECK_LIB(socket, socket)
++AC_SEARCH_LIBS([dlopen], [dl])
+ #
+ #	Check if user set particular Buddy library to use and if
+ #	not set default.

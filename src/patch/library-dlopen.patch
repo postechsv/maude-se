@@ -1,0 +1,13 @@
+diff --git meson.build meson.build
+--- meson.build
++++ meson.build
+@@ -133,5 +133,9 @@
+ libraries += [gmp]
+ 
++if host_machine.system() == 'linux'
++    libraries += [cxx.find_library('dl')]
++endif
++
+ # GNU readline (https://tiswww.case.edu/php/chet/readline/rltop.html)
+ readline = dependency('readline',
+ 		static: 'readline' in staticLibs,

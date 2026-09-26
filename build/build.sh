@@ -130,6 +130,7 @@ patch_maude() {
     "$top_dir/src/patch/$MAUDE_BINDINGS_PATCH"
   apply_patch_once "$bindings_dir" "$top_dir/src/patch/b-smt-search-api.patch"
   apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_BUILD_PATCH"
+  apply_patch_once "$smc_dir" "$top_dir/src/patch/library-dlopen.patch"
   apply_patch_once "$smc_dir" "$top_dir/src/patch/$MAUDESMC_SOURCE_PATCH"
 }
 
