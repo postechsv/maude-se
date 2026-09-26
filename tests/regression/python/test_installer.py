@@ -2,6 +2,8 @@
 
 from importlib import metadata
 from pathlib import Path
+import contextlib
+import io
 import sys
 from types import SimpleNamespace
 import unittest
@@ -11,6 +13,19 @@ from maudeSE import installer
 
 
 class UninstallTests(unittest.TestCase):
+    def test_help_describes_native_plugin_commands(self):
+        for arguments, expected in (
+            (["--help"], "install native z3"),
+            (["install", "--help"], "native"),
+            (["install", "native", "--help"], "solver plugin to manage"),
+            (["doctor", "native", "--help"], "default: all"),
+        ):
+            with self.subTest(arguments=arguments), contextlib.redirect_stdout(io.StringIO()) as output:
+                with self.assertRaises(SystemExit) as exit_result:
+                    installer.main(arguments)
+            self.assertEqual(exit_result.exception.code, 0)
+            self.assertIn(expected, output.getvalue())
+
     def test_native_install_fetches_assets(self):
         with patch.object(installer.metadata, "version", return_value="0.0.3"), patch.object(
             installer.subprocess, "call", return_value=0

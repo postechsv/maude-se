@@ -10,14 +10,22 @@ def main():
     )
     import os
     
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Run Maude-SE with a Python SMT solver or a native C++ solver plugin.",
+        epilog=("Solvers: z3, yices, cvc5 (default from config.yml).\n"
+                "Install Python solver: maude-se-installer install z3\n"
+                "Install native plugin: maude-se-installer install native z3\n"
+                "Check installation: maude-se-installer doctor native"),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     parser.add_argument('file', nargs='?', type=str, help="input Maude file")
     parser.add_argument("-cfg", "-config", metavar="CONFIG", type=str, 
-                        help="a directory to a configuration file (default: \"config.yml\")")
-    parser.add_argument("-s", "-solver", metavar="SOLVER", type=str, help="solver name")
+                        help="path to a YAML configuration file (default: bundled config.yml)")
+    parser.add_argument("-s", "-solver", metavar="SOLVER",
+                        help="SMT solver (built-ins: z3, yices, cvc5; custom solvers may be configured)")
     parser.add_argument("-native", action="store_true",
-                        help="use the native C++ SMT connection")
-    parser.add_argument("-no-meta", help="no metaInterpreter", action="store_true")
+                        help="use the native C++ SMT plugin for the selected solver")
+    parser.add_argument("-no-meta", help="do not load the Maude-SE meta-interpreter", action="store_true")
     args = parser.parse_args()
 
     try:

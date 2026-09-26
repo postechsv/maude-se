@@ -218,40 +218,51 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "solver":
         argv.pop(0)
-    native = len(argv) > 1 and argv[0] in ("doctor", "install", "uninstall") and argv[1] == "native"
-    if native:
-        argv.pop(1)
-
     parser = argparse.ArgumentParser(
         prog="maude-se-installer",
-        description="Check, install, or uninstall MaudeSE solver packages in this Python environment.",
+        description="Manage Python SMT solvers and native C++ solver plugins in this Python environment.",
+        epilog="Examples: install z3 (Python solver); install native z3 (C++ plugin); doctor native",
     )
     actions = parser.add_subparsers(dest="action", required=True)
-    actions.add_parser("doctor", help="Check installed solver packages").add_argument(
-        "name", nargs="?", choices=tuple(SOLVERS), help="Check one solver (default: all)"
-    )
-    install_parser = actions.add_parser("install", help="Install solver packages")
-    install_parser.add_argument(
-        "name", choices=tuple(SOLVERS) + ("all",)
-    )
-    install_parser.add_argument("--find-links", metavar="DIRECTORY",
-                                help="install from locally built wheels instead of an index")
-    install_parser.add_argument("--asset-archive", metavar="FILE",
-                                help="use a locally downloaded, checksum-verified upstream archive")
-    actions.add_parser("uninstall", help="Uninstall solver packages").add_argument(
-        "name", choices=tuple(SOLVERS) + ("all",)
-    )
+    for action, description in (
+        ("doctor", "Check solver availability"),
+        ("install", "Install solver packages"),
+        ("uninstall", "Uninstall solver packages"),
+    ):
+        action_parser = actions.add_parser(action, help=description)
+        targets = action_parser.add_subparsers(dest="target", required=action != "doctor")
+        for solver in (*SOLVERS, "all"):
+            if action == "doctor" and solver == "all":
+                continue
+            solver_parser = targets.add_parser(solver, help=f"{action.capitalize()} Python {solver} solver packages")
+            if action == "install":
+                solver_parser.add_argument("--find-links", metavar="DIRECTORY",
+                                           help="install from locally built wheels instead of an index")
+        native_parser = targets.add_parser("native", help=f"{action.capitalize()} native C++ solver plugins")
+        if action == "doctor":
+            native_parser.add_argument("name", nargs="?", choices=tuple(SOLVERS),
+                                       help="check one solver (default: all)")
+        else:
+            native_parser.add_argument("name", choices=(*SOLVERS, "all"),
+                                       help="solver plugin to manage")
+        if action == "install":
+            native_parser.add_argument("--find-links", metavar="DIRECTORY",
+                                       help="install plugin wheels from a local directory")
+            native_parser.add_argument("--asset-archive", metavar="FILE",
+                                       help="use a locally downloaded, checksum-verified solver archive")
     args = parser.parse_args(argv)
+    native = args.target == "native"
+    name = args.name if native else args.target
 
     if args.action == "doctor":
-        names = (args.name,) if args.name else SOLVERS
+        names = (name,) if name else SOLVERS
         return doctor_native(names) if native else doctor(names)
     if args.action == "uninstall":
-        return uninstall(args.name, native=native)
-    if args.asset_archive and (not native or args.name == "all"):
+        return uninstall(name, native=native)
+    if native and args.asset_archive and name == "all":
         parser.error("--asset-archive requires one native solver")
-    return install(args.name, native=native, find_links=args.find_links,
-                   asset_archive=args.asset_archive)
+    return install(name, native=native, find_links=args.find_links,
+                   asset_archive=args.asset_archive if native else None)
 
 
 if __name__ == "__main__":
