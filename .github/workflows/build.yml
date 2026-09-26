@@ -93,7 +93,7 @@ jobs:
         path: out/
 
   manylinux_native:
-    name: Linux standalone (manylinux_2_28)
+    name: Linux standalone (manylinux_2_34)
     runs-on: ubuntu-latest
     needs: verify-version
     steps:
@@ -105,11 +105,11 @@ jobs:
         docker run --rm \
           -v "$PWD:/work" -w /work \
           -e GITHUB_TOKEN="${{ github.token }}" \
-          quay.io/pypa/manylinux_2_28_x86_64 \
+          quay.io/pypa/manylinux_2_34_x86_64 \
           bash -c "./build/native.sh build \"$TAG\""
     - name: Test standalone executable
       run: |
-        docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_28_x86_64 \
+        docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_34_x86_64 \
           bash ./build/test-linux.sh standalone
     - name: Build and test cvc5 standalone
       env:
@@ -117,7 +117,7 @@ jobs:
       run: |
         docker run --rm -v "$PWD:/work" -w /work \
           -e GITHUB_TOKEN="${{ github.token }}" -e TAG="$TAG" \
-          quay.io/pypa/manylinux_2_28_x86_64 \
+          quay.io/pypa/manylinux_2_34_x86_64 \
           bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh set-env && ./build/native.sh deps cvc5 && ./build/native.sh build-maude-se "$release_tag" cvc5 && bash ./build/test-linux.sh standalone cvc5'
     - name: Build and test Yices standalone
       env:
@@ -125,7 +125,7 @@ jobs:
       run: |
         docker run --rm -v "$PWD:/work" -w /work \
           -e GITHUB_TOKEN="${{ github.token }}" -e TAG="$TAG" \
-          quay.io/pypa/manylinux_2_28_x86_64 \
+          quay.io/pypa/manylinux_2_34_x86_64 \
           bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh set-env && ./build/native.sh deps yices && ./build/native.sh build-maude-se "$release_tag" yices && bash ./build/test-linux.sh standalone yices'
     - name: Store standalone distribution
       uses: actions/upload-artifact@v4
