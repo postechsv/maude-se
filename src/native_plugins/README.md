@@ -17,10 +17,12 @@ then build the base wheel and the plugin wheels:
 ```
 
 Install the locally built base wheel, then the plugins. The `out/` directory
-should contain one base wheel for your Python version and platform:
+may contain wheels for several Python versions; select the current one:
 
 ```sh
-python -m pip install out/maude_se-*.whl
+python_tag="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')"
+arch="$(uname -m)"
+python3 -m pip install out/maude_se-*-"$python_tag"-"$python_tag"-macosx_*_"$arch".whl
 maude-se-installer install native all --find-links out
 maude-se-installer doctor native
 maude-se model.maude -s z3 -native

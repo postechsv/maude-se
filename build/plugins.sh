@@ -2,6 +2,23 @@
 set -euo pipefail
 
 top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+if [[ -n "${MAUDE_SE_WHEEL_WORK_DIR:-}" ]]; then
+  work_dir="$MAUDE_SE_WHEEL_WORK_DIR"
+else
+  if [[ "$(uname -s)" == Darwin ]]; then
+    python_tag="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')"
+    work_dir="$top_dir/.build-wheel/$python_tag-$(uname -m)"
+  else
+    work_dir="$top_dir/.build-wheel"
+  fi
+fi
+if [[ -n "${MAUDE_SE_WHEEL_DEPS_DIR:-}" ]]; then
+  wheel_deps_dir="$MAUDE_SE_WHEEL_DEPS_DIR"
+elif [[ "$(uname -s)" == Darwin ]]; then
+  wheel_deps_dir="$top_dir/.build-wheel"
+else
+  wheel_deps_dir="$work_dir"
+fi
 source "$top_dir/build/versions.env"
 source "$top_dir/build/version.sh"
 
@@ -12,10 +29,10 @@ if [[ "$solver" == all ]]; then
 fi
 case "$solver" in z3 | yices | cvc5) ;; *) echo "usage: $0 z3|yices|cvc5|all" >&2; exit 2 ;; esac
 
-source_dir="$top_dir/.build-wheel/sources/maude-bindings/subprojects/maudesmc"
+source_dir="$work_dir/sources/maude-bindings/subprojects/maudesmc"
 release_dir="$source_dir/release"
 native_prefix="${MAUDE_SE_NATIVE_PREFIX:-$top_dir/.build-standalone/install}"
-build_python="$top_dir/.build-wheel/venv-build/bin/python"
+build_python="$work_dir/venv-build/bin/python"
 [[ -x "$build_python" ]] || { echo "error: build virtualenv is missing" >&2; exit 1; }
 python_include="$($build_python -c 'import sysconfig; print(sysconfig.get_path("include"))')"
 project_version="$(maude_se_version)"
@@ -75,7 +92,7 @@ for archive in "${archives[@]+"${archives[@]}"}"; do
   archive_paths+=("$path")
 done
 
-asset_dir="$top_dir/.build-wheel/native-plugin-deps/$solver"
+asset_dir="$work_dir/native-plugin-deps/$solver"
 PYTHONPATH="$top_dir/src/pysmt" "$build_python" -c \
   'import native_assets, sys; native_assets.install(sys.argv[1], sys.argv[2], archive=sys.argv[3] or None)' \
   "$solver" "$asset_dir" "${MAUDE_SE_ASSET_ARCHIVE:-}"
@@ -89,7 +106,7 @@ else
   solver_links=(-L"$asset_dir" "-l$solver")
 fi
 
-stage="$(mktemp -d "$top_dir/.build-wheel/native-plugin-${solver}.XXXXXX")"
+stage="$(mktemp -d "$work_dir/native-plugin-${solver}.XXXXXX")"
 cp "$top_dir/src/native_plugins/$solver/pyproject.toml" "$stage/"
 cp "$top_dir/src/native_plugins/setup.py" "$stage/"
 cp "$top_dir/LICENSE" "$stage/"
@@ -109,8 +126,8 @@ case "$solver" in
     ;;
 esac
 
-includes=(-I"$release_dir" -I"$python_include" -I"$native_prefix/include" -I"$top_dir/.build-wheel/install/include" \
-  -I"$top_dir/.build-wheel/sources/maude-bindings/src")
+includes=(-I"$release_dir" -I"$python_include" -I"$native_prefix/include" -I"$wheel_deps_dir/install/include" \
+  -I"$work_dir/sources/maude-bindings/src")
 for directory in "$source_dir"/src/*; do
   [[ -d "$directory" ]] && includes+=(-I"$directory")
 done

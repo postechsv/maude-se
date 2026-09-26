@@ -101,8 +101,16 @@ To install missing Homebrew tools, run:
 ```
 
 This checks prerequisites, prepares the pinned upstream sources and patches,
-and creates the build environment in `.build-wheel/venv-build`. It can be run
-again when the environment needs updating.
+and creates the build environment in `.build-wheel/cp<version>-<architecture>/venv-build`.
+Each Python version and architecture keeps its own Maude sources, native Maude
+build files, and virtual environments. Python-independent static dependencies
+are built under `.build-wheel/dependencies/` and installed to
+`.build-wheel/install/` for reuse by other Python versions. Changes to the
+architecture, macOS deployment target, compiler, SDK, or dependency build
+inputs trigger a rebuild. Switching the selected `python3` does not require
+`clean`; `setup` reuses the matching environment. If the selected Python
+installation changes within the same version, its build virtual environment
+is recreated automatically.
 
 ### 3. Build the wheel
 
@@ -116,11 +124,13 @@ wheel to `out/`.
 ### 4. Test the wheel
 
 ```bash
-./build.sh test
+./build.sh test-wheel
 ```
 
-This uses the existing wheel in `out/` and recreates
-`.build-wheel/venv-test`. It installs the solver extras and checks imports,
+This selects the wheel in `out/` matching the selected `python3` and Mac
+architecture, then recreates the corresponding
+`.build-wheel/cp<version>-<architecture>/venv-test`. Multiple Python wheels
+can coexist in `out/`. The test installs the solver extras and checks imports,
 the installer, and SAT/UNSAT examples with Z3, Yices2, and cvc5. It also
 checks the wheel's native library dependencies.
 
@@ -157,7 +167,12 @@ To build the native Yices executable, or all three independent executables:
 ```
 
 The Yices ZIP contains `maude-se-yices`. Each standalone variant includes its
-own solver and can be run without installing a Python solver package.
+own solver and can be run without installing a Python solver package. When
+building multiple variants, common static libraries in
+`.build-standalone/install/` are reused; only solver-specific dependencies and
+the Maude executable are built separately. Changes to the architecture,
+deployment target, compiler, SDK, or pinned dependency inputs trigger a
+rebuild of the affected dependencies.
 
 ### 6. Build native solver plugins (optional)
 
@@ -175,7 +190,8 @@ Open an isolated shell containing the tested MaudeSE installation:
 ./build.sh shell
 ```
 
-This opens `.build-wheel/venv-test`. Inside that shell, commands use the tested
+This opens the selected Python's `.build-wheel/cp<version>-<architecture>/venv-test`.
+Inside that shell, commands use the tested
 installation:
 
 ```bash

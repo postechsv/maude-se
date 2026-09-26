@@ -111,25 +111,106 @@ setup_build() {
   fi
 }
 
-build_deps() {
+dependency_signature() {
+  {
+    printf '%s\n' "$os" "$arch" "$deployment_target" \
+      "$native_cflags" "$native_cxxflags" "$native_ldflags"
+    c++ --version | sed -n '1p'
+    if [[ "$os" == Darwin ]]; then
+      xcrun --show-sdk-path
+    fi
+    git hash-object "$top_dir/build/native.sh" "$top_dir/build/versions.env" \
+      "$top_dir/build/source-integrity.sh" "$top_dir/build/config.guess" \
+      "$top_dir/build/config.sub"
+  } | git hash-object --stdin
+}
+
+dependencies_present() {
+  local item
+  for item in "$@"; do
+    [[ -f "$build_dir/$item" ]] || return 1
+  done
+}
+
+build_deps() (
   local solver="${1:-z3}"
-
-  build_libsigsegv
-  build_gmp
-  build_buddy
-  build_tecla
-  build_ncurses
-
-  case "$solver" in
-    z3) build_z3 ;;
-    yices) get_yices; get_cvc5; build_cudd ;;
-    cvc5) get_cvc5 ;;
-    *) echo "error: unsupported native standalone solver: $solver" >&2; return 2 ;;
+  local signature marker lock_dir cvc5_platform cvc5_source
+  case "$solver" in z3 | yices | cvc5) ;; *)
+    echo "error: unsupported native standalone solver: $solver" >&2
+    return 2 ;;
   esac
+
+  mkdir -p "$work_dir"
+  lock_dir="$work_dir/.deps-build-lock"
+  if ! mkdir "$lock_dir" 2>/dev/null; then
+    echo "error: standalone dependencies are already being built: $lock_dir" >&2
+    return 1
+  fi
+  trap 'rmdir -- "$lock_dir"' EXIT
+  signature="$(dependency_signature)"
+
+  marker="$work_dir/.common-deps-signature"
+  if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]] &&
+      dependencies_present lib/libsigsegv.a lib/libgmp.a lib/libgmpxx.a \
+        lib/libbdd.a lib/libtecla.a lib/libncursesw.a include/sigsegv.h \
+        include/gmp.h include/bdd.h include/libtecla.h include/ncursesw/ncurses.h; then
+    progress "Reusing common standalone dependencies from $build_dir"
+  else
+    rm -f "$marker" "$work_dir"/.{z3,yices,cvc5}-deps-signature
+    build_libsigsegv
+    build_gmp
+    build_buddy
+    build_tecla
+    build_ncurses
+    printf '%s\n' "$signature" >"$marker"
+  fi
+
+  cvc5_platform="$os"
+  [[ "$os" == Darwin ]] && cvc5_platform=macOS
+  cvc5_source="$third_party/cvc5-$cvc5_platform-$arch-static"
+
+  if [[ "$solver" == z3 ]]; then
+    marker="$work_dir/.z3-deps-signature"
+    if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]] &&
+        dependencies_present lib/libz3.a include/z3.h; then
+      progress "Reusing Z3 standalone dependency from $build_dir"
+    else
+      rm -f "$marker"
+      build_z3
+      printf '%s\n' "$signature" >"$marker"
+    fi
+  else
+    marker="$work_dir/.cvc5-deps-signature"
+    if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]] &&
+        dependencies_present lib/libcvc5.a lib/libpicpolyxx.a \
+          lib/libpicpoly.a lib/libcadical.a lib/libmpfr.a include/cvc5/cvc5.h &&
+        [[ -f "$cvc5_source/COPYING" && -d "$cvc5_source/licenses" ]]; then
+      progress "Reusing cvc5 standalone dependency from $build_dir"
+    else
+      rm -f "$marker"
+      get_cvc5
+      printf '%s\n' "$signature" >"$marker"
+    fi
+
+    if [[ "$solver" == yices ]]; then
+      marker="$work_dir/.yices-deps-signature"
+      if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]] &&
+          dependencies_present lib/libyices.a lib/libcudd.a include/yices.h &&
+          [[ -f "$third_party/yices-$os-$arch/yices-$YICES_VERSION/LICENSE" &&
+             -f "$third_party/cudd-3.0.0/LICENSE" ]]; then
+        progress "Reusing Yices standalone dependencies from $build_dir"
+      else
+        rm -f "$marker"
+        get_yices
+        build_cudd
+        printf '%s\n' "$signature" >"$marker"
+      fi
+    fi
+  fi
 
   rm -rf "$build_dir"/lib/*.so*
   rm -rf "$build_dir"/lib/*.dylib*
-}
+)
 
 get_cvc5() {
   local package_name expected archive source_dir

@@ -3,8 +3,24 @@
 set -euo pipefail
 
 top_dir="${MAUDE_SE_TOP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-build_venv="$top_dir/.build-wheel/venv-build"
-test_venv="$top_dir/.build-wheel/venv-test"
+
+select_wheel_environment() {
+  have_command python3 || fail "python3 is required for wheel builds"
+  python_tag="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')"
+  selected_python="$(python3 -c 'import os, sys; print(os.path.realpath(sys.executable))')"
+  wheel_arch="$(uname -m)"
+  wheel_work_dir="$top_dir/.build-wheel/$python_tag-$wheel_arch"
+  wheel_deps_dir="$top_dir/.build-wheel"
+  build_venv="$wheel_work_dir/venv-build"
+  test_venv="$wheel_work_dir/venv-test"
+  export MAUDE_SE_WHEEL_WORK_DIR="$wheel_work_dir"
+  export MAUDE_SE_WHEEL_DEPS_DIR="$wheel_deps_dir"
+}
+
+venv_uses_selected_python() {
+  [[ -x "$1/bin/python" ]] || return 1
+  [[ "$("$1/bin/python" -c 'import os, sys; print(os.path.realpath(sys._base_executable))' 2>/dev/null)" == "$selected_python" ]]
+}
 
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
@@ -19,7 +35,7 @@ Commands:
   install-deps  Install required Homebrew packages
   setup         Create the build virtualenv and prepare pinned upstream sources
   wheel         Build a macOS wheel into out/
-  test          Install the wheel in an isolated environment and run smoke tests
+  test-wheel    Install the wheel in an isolated environment and run smoke tests
   standalone [z3|yices|cvc5|all]
                 Build a self-contained macOS executable ZIP into out/
   plugin [z3|yices|cvc5|all]
@@ -168,9 +184,9 @@ install_deps() {
 }
 
 ensure_build_venv() {
-  if [[ ! -x "$build_venv/bin/python" ]]; then
-    note "creating isolated Python build environment"
-    python3 -m venv "$build_venv"
+  if ! venv_uses_selected_python "$build_venv"; then
+    note "creating Python $python_tag build environment in $wheel_work_dir"
+    python3 -m venv --clear "$build_venv"
   fi
 
   "$build_venv/bin/python" -m pip install --disable-pip-version-check \
@@ -183,6 +199,7 @@ ensure_build_venv() {
 
 setup_build() {
   doctor
+  select_wheel_environment
   ensure_build_venv
   "$top_dir/build/build.sh" prep
 }
@@ -274,15 +291,16 @@ test_standalone() (
 )
 
 test_wheel() {
-  local wheels=("$top_dir"/out/maude_se-*.whl)
+  select_wheel_environment
+  local wheels=("$top_dir"/out/maude_se-*-"$python_tag"-"$python_tag"-macosx_*_"$wheel_arch".whl)
   local output
   local solver
 
   if [[ ! -e "${wheels[0]}" ]]; then
-    fail "no wheel found in $top_dir/out; run ./build.sh wheel first"
+    fail "no $python_tag/$wheel_arch wheel found in $top_dir/out; run ./build.sh wheel first"
   fi
   if [[ ${#wheels[@]} -ne 1 ]]; then
-    fail "expected exactly one base wheel in $top_dir/out, found ${#wheels[@]}"
+    fail "expected exactly one $python_tag/$wheel_arch base wheel in $top_dir/out, found ${#wheels[@]}"
   fi
 
   note "creating isolated smoke-test environment"
@@ -331,6 +349,7 @@ open_venv_shell() {
   local shell_path="${SHELL:-/bin/bash}"
   local shell_name
 
+  select_wheel_environment
   case "$environment" in
   test) venv_dir="$test_venv" ;;
   build) venv_dir="$build_venv" ;;
@@ -339,9 +358,16 @@ open_venv_shell() {
 
   if [[ ! -x "$venv_dir/bin/python" ]]; then
     if [[ "$environment" == "test" ]]; then
-      fail "test environment not found; run ./build.sh test first"
+      fail "test environment not found; run ./build.sh test-wheel first"
     else
       fail "build environment not found; run ./build.sh setup first"
+    fi
+  fi
+  if ! venv_uses_selected_python "$venv_dir"; then
+    if [[ "$environment" == test ]]; then
+      fail "test environment uses a different Python; run ./build.sh test-wheel first"
+    else
+      fail "build environment uses a different Python; run ./build.sh setup first"
     fi
   fi
 

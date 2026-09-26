@@ -60,7 +60,7 @@ jobs:
     - name: Build Python wheel
       run: ./build/macos.sh
     - name: Test Z3, Yices, and cvc5
-      run: ./build.sh test
+      run: ./build.sh test-wheel
     - name: Store wheel distribution
       uses: actions/upload-artifact@v4
       with:
