@@ -2,6 +2,7 @@
 // #include "variableGenerator.hh"
 #include "smtManager.hh"
 #include "rewriteSmtSequenceSearch.hh"
+#include "rewriteSmtSearchFactory.hh"
 #include "extGlobal.hh"
 
 RewriteSmtSequenceSearch *
@@ -42,39 +43,9 @@ MetaLevelSmtOpSymbol::make_RewriteSmtSequenceSearch(MetaModule *m,
 
                         Pattern *goal = new Pattern(target, false, condition);
                         Pattern *smtGoal = new Pattern(smtGoalTerm, false);
-                        const SMT_Info &smtInfo = m->getSMT_Info();
-                        // SmtManager *vg = new SmtManager(smtInfo);
-                        VariableGenerator *vg = new VariableGenerator(smtInfo, false, true);
-                        // SmtManagerFactory *factory = new SmtFactory();
-                        // WrapperFactory *factory = m->getOwner()->getWrapperFactory();
-                        // Converter *conv = factory->createConverter();
-                        // Connector *conn = factory->createConnector();
-
-                        Converter conv = vg->getConverter();
-                        Connector conn = vg->getConnector();
-                        Connector conn2 = vg->getConnector2();
-                        if (logic)
-                        {
-                            conn->set_logic(logic);
-                            conn2->set_logic(logic);
-                        }
-                        // Select the solver logic before module preparation
-                        // creates any SMT terms or declarations.
-                        conv->prepareFor(m);
-                        // vg->setUnderline(conn, conv);
-
-                        // cout << "   !!! Made cached SMT_RewriteSequenceSearch !!!" << endl;
-
-                        return new RewriteSmtSequenceSearch(startContext, // pass responsibility for deletion
-                                                            searchType,
-                                                            goal,    // pass responsibility for deletion
-                                                            smtGoal, // pass responsibility for deletion
-                                                            smtInfo,
-                                                            vg, // pass responsibility for deletion
-                                                            new FreshVariableSource(m),
-                                                            fold, merge,
-                                                            maxDepth,
-                                                            varNumber);
+                        return makeRewriteSmtSearch(m, startContext, searchType,
+                                                    goal, smtGoal, logic, fold,
+                                                    merge, maxDepth, varNumber);
                     }
                 }
             }
