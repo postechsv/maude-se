@@ -49,6 +49,8 @@ At the `MaudeSE>` prompt, run
 Use `maude-se --help` for command options. For a standalone executable that
 includes its own solver, see the [release downloads](https://github.com/postechsv/maude-se/releases)
 and the [website installation page](https://maude-se.github.io/installation.html).
+CI-built Linux standalone ZIPs require glibc 2.34 or newer; Linux wheels
+continue to target manylinux_2_28.
 
 ## Build from source on macOS
 
