@@ -6,6 +6,7 @@
 .build-wheel/
 .build-standalone/
 .build-docs/
+.ci-deps/
 # Legacy build directories from before the layout change.
 .venv-build/
 .venv-test/

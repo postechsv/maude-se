@@ -47,6 +47,26 @@ jobs:
         name: py-package-dist-many-linux
         path: out/
 
+  macos_deps:
+    name: Prepare macOS dependencies
+    if: ${{ !inputs.linux_standalone_only }}
+    strategy:
+      matrix:
+        os: ['macos-latest','macos-15-intel']
+    runs-on: ${{ matrix.os }}
+    needs: verify-version
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build shared wheel and standalone dependencies
+      run: bash ./build/ci-macos-deps.sh prepare
+    - name: Store macOS dependencies
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-deps-${{ matrix.os }}
+        path: .ci-deps/macos-deps.tar.gz
+        if-no-files-found: error
+        include-hidden-files: true
+
   macos:
     name: macOS wheel
     if: ${{ !inputs.linux_standalone_only }}
@@ -55,9 +75,16 @@ jobs:
         os: ['macos-latest','macos-15-intel']
         python-version: ['3.10','3.11','3.12','3.13','3.14']
     runs-on: ${{ matrix.os }}
-    needs: verify-version
+    needs: macos_deps
     steps:
     - uses: actions/checkout@v4
+    - name: Download shared macOS dependencies
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-deps-${{ matrix.os }}
+        path: .ci-deps/
+    - name: Restore shared macOS dependencies
+      run: bash ./build/ci-macos-deps.sh restore
     - name: Setup Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -147,9 +174,16 @@ jobs:
       matrix:
         os: ['macos-latest','macos-15-intel']
     runs-on: ${{ matrix.os }}
-    needs: verify-version
+    needs: macos_deps
     steps:
     - uses: actions/checkout@v4
+    - name: Download shared macOS dependencies
+      uses: actions/download-artifact@v4
+      with:
+        name: macos-deps-${{ matrix.os }}
+        path: .ci-deps/
+    - name: Restore shared macOS dependencies
+      run: bash ./build/ci-macos-deps.sh restore
     - name: Build MaudeSE
       env:
         TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
