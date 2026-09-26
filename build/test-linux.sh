@@ -58,6 +58,19 @@ wheel)
         exit 1
       }
     done
+
+    "$venv/bin/python" -m unittest discover -s tests/regression/python -p 'test_*.py'
+    for solver in z3 yices cvc5; do
+      "$venv/bin/python" tests/regression/python/test_backend_lifetime.py "$solver"
+      "$venv/bin/python" tests/regression/python/test_gc_lifetime.py "$solver"
+      "$venv/bin/python" tests/regression/python/test_python_meta_search.py "$solver"
+      "$venv/bin/python" tests/regression/python/test_folding_subsumption.py "$solver"
+    done
+    "$venv/bin/python" tests/regression/python/test_custom_connector_interface.py
+    "$venv/bin/python" tests/regression/python/test_managed_z3_converter.py
+    for solver in yices cvc5; do
+      "$venv/bin/python" tests/regression/python/test_managed_other_converters.py "$solver"
+    done
   done
   ;;
 standalone)
