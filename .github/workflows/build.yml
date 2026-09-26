@@ -1,6 +1,11 @@
 name: Build and test
 on:
   workflow_dispatch:
+    inputs:
+      linux_standalone_only:
+        description: Recheck only the Linux standalone build
+        type: boolean
+        default: false
   workflow_call:
 
 permissions:
@@ -27,6 +32,7 @@ jobs:
 
   manylinux_2_28:
     name: Linux wheels (manylinux_2_28)
+    if: ${{ !inputs.linux_standalone_only }}
     runs-on: ubuntu-latest
     needs: verify-version
     steps:
@@ -43,6 +49,7 @@ jobs:
 
   macos:
     name: macOS wheel
+    if: ${{ !inputs.linux_standalone_only }}
     strategy:
       matrix:
         os: ['macos-latest','macos-15-intel']
@@ -135,6 +142,7 @@ jobs:
 
   macos_native:
     name: macOS standalone
+    if: ${{ !inputs.linux_standalone_only }}
     strategy:
       matrix:
         os: ['macos-latest','macos-15-intel']
