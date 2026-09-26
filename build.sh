@@ -27,6 +27,7 @@ plugin)
   bash "$top_dir/build/plugins.sh" "$@"
   ;;
 test-standalone) test_standalone "$@" ;;
+docs) build_docs "$@" ;;
 shell) open_venv_shell "$@" ;;
 clean) clean_build "$@" ;;
 deps | patch | build-maude | build-maude-se | prep-build-maude-se | make-patch)

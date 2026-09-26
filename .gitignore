@@ -5,6 +5,7 @@
 .python-version
 .build-wheel/
 .build-standalone/
+.build-docs/
 # Legacy build directories from before the layout change.
 .venv-build/
 .venv-test/

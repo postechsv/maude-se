@@ -1,0 +1,5 @@
+Sphinx>=7
+myst-parser>=3
+sphinx-design>=0.6
+sphinxcontrib-bibtex>=2.6
+sphinx-rtd-theme>=3

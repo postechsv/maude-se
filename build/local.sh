@@ -40,6 +40,7 @@ Commands:
                 Build a self-contained macOS executable ZIP into out/
   test-standalone [z3|yices|cvc5|all]
                 Extract and smoke-test the standalone ZIP
+  docs          Build the Sphinx website in a dedicated virtual environment
   shell [test|build]
                 Open a shell using the test or build virtualenv
   clean         Remove generated local build directories
@@ -208,6 +209,23 @@ build_wheel() {
   "$top_dir/build/build.sh" build-maude
   "$top_dir/build/build.sh" build-maude-se
   note "wheel artifacts are available in $top_dir/out"
+}
+
+build_docs() {
+  [[ $# -eq 0 ]] || fail "docs does not accept arguments"
+  select_wheel_environment
+  local docs_venv="$top_dir/.build-docs/$python_tag/venv"
+
+  if ! venv_uses_selected_python "$docs_venv"; then
+    note "creating Python $python_tag documentation environment in $docs_venv"
+    "$selected_python" -m venv --clear "$docs_venv"
+  fi
+
+  "$docs_venv/bin/python" -m pip install --disable-pip-version-check \
+    -r "$top_dir/build/docs-requirements.txt"
+
+  (cd "$top_dir" && PATH="$docs_venv/bin:$PATH" bash "$top_dir/build/docs.sh" build)
+  note "documentation is available in $top_dir/docs/build/html"
 }
 
 build_standalone() {
@@ -387,6 +405,7 @@ clean_build() {
   local paths=(
     "$top_dir/.build-wheel"
     "$top_dir/.build-standalone"
+    "$top_dir/.build-docs"
     "$top_dir/out"
   )
 

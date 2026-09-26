@@ -1,8 +1,8 @@
 # Installation
 
-MaudeSE is available as a Python package or a standalone executable. The
-Python package supports custom solver connectors; standalone executables
-include a solver and do not require Python.
+This page describes the MaudeSE 0.0.4 installation options: a Python package
+and standalone executables. The Python package supports custom solver
+connectors; standalone executables include a solver and do not require Python.
 
 ```{note}
 The standalone executable uses its solver through a native C++ connection.
@@ -17,16 +17,12 @@ can be customized only with the Python package.
 
 ### Install with a solver
 
-The upcoming release supports Python 3.10–3.14 on macOS and Linux. Install
-MaudeSE with Z3, its default solver:
+MaudeSE 0.0.4 supports Python 3.10–3.14 on macOS and Linux. Install it with
+Z3, the default solver:
 
 ```sh
 python3 -m pip install 'maude-se[z3]'
 ```
-
-This command applies after the upcoming release is published. The existing
-release downloads listed below do not yet include solver extras or
-`maude-se-installer`.
 
 The extra installs the Z3 Python package; MaudeSE already includes its
 connector and converter. For Yices2 or cvc5, use `maude-se[yices]` or
