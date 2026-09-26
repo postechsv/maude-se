@@ -1,14 +1,11 @@
-# Optional native solver plugins
+# Building native solver plugins
 
-The base `maude-se` wheel contains the Maude engine and the Python connector
-interface, but no native SMT solver. Each native plugin wheel contains one
-Maude-SE converter/connector and links to the base wheel's `libmaude`.
-The three plugin wheels do not bundle solver binaries. The installer fetches
-checksum-pinned shared libraries into each plugin's `solver/` directory. Z3
-and cvc5 come from their upstream releases (the Linux Z3 library comes from
-the upstream-published PyPI wheel). Yices comes from the same `yices-solver`
-PyPI wheel used by the Python backend; that wheel is published separately from
-the SRI Yices release archive.
+These optional plugins use a native C++ connection to Z3, Yices2, or cvc5.
+They are for local testing and have not been published to a package index.
+They are separate from the Python solver packages installed by extras such as
+`maude-se[z3]`.
+The base `maude-se` wheel contains Maude; each plugin wheel contains one
+connector and requires a matching version of the base package.
 
 For a local macOS build, prepare the pinned standalone dependencies first,
 then build the base wheel and the plugin wheels:
@@ -19,32 +16,26 @@ then build the base wheel and the plugin wheels:
 ./build.sh plugin all
 ```
 
-Install the base wheel, then use the installer with locally built wheels:
+Install the locally built base wheel, then the plugins. The `out/` directory
+should contain one base wheel for your Python version and platform:
 
 ```sh
-python -m pip install out/maude_se-0.0.3-*.whl
+python -m pip install out/maude_se-*.whl
 maude-se-installer install native all --find-links out
 maude-se-installer doctor native
 maude-se model.maude -s z3 -native
-maude-se-installer uninstall native z3
 ```
 
-Without `--find-links`, the installer requests `maude-se-native-<solver>` at
-exactly the installed Maude-SE version from the configured package index. It
-then downloads the matching solver archive, verifies its SHA-256, and extracts
-only shared libraries and license files. For an offline local test, use
-`--asset-archive FILE` with one native solver. The
-plugins have not yet been published to an index. Local validation has covered
-macOS arm64 with Python 3.12; Linux, Intel macOS, and the other supported
-Python versions still need build and runtime verification. The selected Yices
-wheel requires macOS 14 on arm64 or macOS 13 on x86_64; other plugin wheels
-may support older macOS versions.
+The installer gets each solver's shared library separately, verifies its
+SHA-256 checksum, and installs it alongside the plugin. For an offline test
+with one solver, pass `--asset-archive FILE`. Local validation has covered
+macOS arm64 with Python 3.12; Linux, Intel macOS, and other Python versions
+still need runtime verification. The selected Yices wheel requires macOS 14
+on arm64 or macOS 13 on x86_64.
 
-`uninstall native all` removes all three native plugin packages, while
-`uninstall all` removes the Python solver packages. Neither removes `maude-se`.
+`maude-se-installer uninstall native all` removes the three native plugins.
+`maude-se-installer uninstall all` removes the Python solver packages. Neither
+command removes `maude-se`.
 
-The plugin ABI number and solver identity are checked when loading, and the
-plugin binary is kept loaded for the lifetime of the process. A matching
-package version is required because the plugin uses Maude's C++ ABI. Before
-public distribution, audit every wheel's linked dependencies and license
-notices.
+Each plugin uses Maude's C++ ABI, so its package version must match the base
+package. The loader also checks the plugin ABI and solver identity.

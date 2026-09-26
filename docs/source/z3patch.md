@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Z3 with tactics
 
 We extend MaudeSE-Z3 to support Z3 tactics. 

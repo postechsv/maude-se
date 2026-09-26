@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Old version
 
 MaudeSE is available in three versions: Z3, Yices2, and CVC4. To access a variant with extended Z3 tactics, visit {doc}`here <z3patch>`.

@@ -1,95 +1,79 @@
 # Installation
 
-MaudeSE can be installed in two ways: (i) as a Python package, or (ii) as a standalone executable.
-If you are looking for an older version, you can find it {doc}`here <old>`.
+MaudeSE is available as a Python package or a standalone executable. The
+Python package supports custom solver connectors; standalone executables
+include a solver and do not require Python.
 
 ```{note}
-The standalone executable tightly integrates with its underlying SMT solver at the C++ level, and is more efficient than the Python package. 
-However, its [connector](https://github.com/postechsv/maude-se/tree/main/src/pysmt/connector) and [converter](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter) cannot be extended or customized at the Python level.
+The standalone executable uses its solver through a native C++ connection.
+Python [connectors](https://github.com/postechsv/maude-se/tree/main/src/pysmt/connector)
+and [converters](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter)
+can be customized only with the Python package.
 ```
 
 ---
 
 ## MaudeSE Python Package
 
-### Wheel Installation
+### Install with a solver
 
-Use `pip` to install the latest version of the MaudeSE Python package from PyPi.
+For the published release, install MaudeSE and Z3, its default solver, in the
+same Python environment. Published wheels cover Python 3.8–3.13 on macOS and
+Linux:
 
-```console
-$ pip install maude-se
+```sh
+python3 -m pip install maude-se 'z3-solver==4.13.0.0'
 ```
 
-```{important}
-Python version 3.8 or newer is required.
+MaudeSE includes the Python connectors and converters for Z3, Yices2, and
+cvc5, but the published release does not install a solver. To use Yices2 or
+cvc5, install the corresponding solver Python package and select it with
+`-s yices` or `-s cvc5`. Solver extras and `maude-se-installer` are available
+in the current source build, but not yet in the published release.
+
+From a checkout of the repository, open an included example:
+
+```sh
+maude-se examples/smt-check-ex.maude -s z3
 ```
 
-You can also manually install the MaudeSE wheel that matches your operating system (`macOS` or `Linux`) and machine architecture (`arm64` or `x86_64`) from
-our GitHub repository:
+At the `MaudeSE>` prompt, run
+`check in SIMPLE : X:Integer > 4 using QF_LRA .` and expect `result: sat`.
 
-* [https://github.com/postechsv/maude-se/releases](https://github.com/postechsv/maude-se/releases)
+### Add a solver to an existing installation
 
-```console
-$ pip install ./maude_se-<MAUDE_SE_VERSION>-cp<PYTHON_VERSION>-cp<PYTHON_VERSION>-<OS>_<ARCH>.whl
+If you installed the published `maude-se` wheel without Z3, add it in that
+same Python environment:
+
+```sh
+python3 -m pip install 'z3-solver==4.13.0.0'
 ```
 
-```{include} wheels.md
-```
-
-### Smoke Test 
-
-Use the following command to test successful installation.
-
-```console
-$ maude-se -h
-```
-
-If the installation was successful, you can see the following message.
-
-```
-usage: maude-se [-h] [-cfg CONFIG] [-s SOLVER] [-no-meta] [file]
-
-positional arguments:
-file                  input Maude file
-
-options:
--h, --help            show this help message and exit
--cfg CONFIG, -config CONFIG
-                        a directory to a configuration file (default: "config.yml")
--s SOLVER, -solver SOLVER
-                        solver name
--no-meta              no metaInterpreter
-```
-
-### SMT Solvers
-
-MaudeSE is shipped with [connectors](https://github.com/postechsv/maude-se/tree/main/src/pysmt/connector) and [converters](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter) for integrating various SMT solvers (Z3, Yices2, and CVC5), but not containing the solvers. 
-You need to download SMT solvers and their Python bindings by yourself. 
-
-* [https://github.com/Z3Prover/z3](https://github.com/Z3Prover/z3)
-* [https://github.com/SRI-CSL/yices2](https://github.com/SRI-CSL/yices2)
-* [https://github.com/cvc5/cvc5](https://github.com/cvc5/cvc5)
-
-For example, if you want to use MaudeSE with Z3, use the following command to install the Z3 Python package along with all required dependencies:
-
-```console
-$ pip install z3-solver
-```
+For a wheel built from the current checkout, `pip install 'maude-se[z3]'`
+installs both packages instead. That wheel also provides
+`maude-se-installer install z3` for an existing base installation. These
+commands are alternatives, not successive steps.
 
 ```{tip}
-You can also connect other SMT solvers to MaudeSE by implementing the MaudeSE *generic* interface.
+You can connect another SMT solver by implementing the MaudeSE *generic* interface.
 See {ref}`generic`.
+```
+
+Published wheel downloads are listed below. Check the wheel's Python and
+platform tags before installing it.
+
+```{include} wheels.md
 ```
 
 ---
 
 ## Standalone Executable
 
-Currently, we provide standalone executables for macOS and Linux, statically linked with Z3.
+Download a standalone executable for your platform from the releases below.
+The listed executables include Z3 and do not need a Python installation.
 
 ```{include} native.md
 ```
 
-```{note}
-Standalone executables for Yices2 and CVC5 will be updated soon.
-```
+For local source builds, including the Yices2 and cvc5 standalone variants,
+see [INSTALL.md](https://github.com/postechsv/maude-se/blob/main/INSTALL.md).
