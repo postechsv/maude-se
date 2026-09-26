@@ -17,15 +17,15 @@ It contains four functional modules:
 
 * `SIMPLE` 
 * `EUF` 
-* `EUF-ARRAY`
+* `ARRAY`
 * `EUF-XOR` 
 
 
-**1. The `SIMPLE` module**: A minimal example that imports the INTEGER module.
+**1. The `SIMPLE` module**: A minimal example that imports the REAL-INTEGER module.
 
 ```maude
 fmod SIMPLE is
-  pr INTEGER .
+  pr REAL-INTEGER .
   pr META-SMT-CHECK .
 endfm
 ```
@@ -43,7 +43,7 @@ fmod EUF is
 endfm
 ```
 
-**3. The `EUF-ARRAY` module**: Connects interpreted symbols from the SMT theory to Maude operators.
+**3. The `ARRAY` module**: Connects interpreted symbols from the SMT theory to Maude operators.
 
 ```maude
 fmod ARRAY is
@@ -80,14 +80,11 @@ In the ARRAY module, for instance, `select` is associated with both `select` and
 To connect interpreted symbols to Maude, you need to extend or implement an SMT [converter](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter).
 ```
 
-As usual, we can check the satisfiability of various formulas under the EUF and Array theories. 
-For example, the following formula can be checked using the QF_UF logic. Additional example commands are available in the file.
-
-```maude
-MaudeSE> check in EUF : f(f(X:A)) === X:A and f(X:A) === Y:A 
-                        and not (X:A === Y:A) using QF_UF .
-result: sat
-```
+The downloadable `smt-check-meta-ex.maude` file contains satisfiability
+checks for these EUF and Array terms using `metaSmtCheck` without requesting
+a model. When a model is requested, assignments that cannot be represented
+as Maude terms (such as uninterpreted-function or array values) are retained
+as solver-text `String` assignments.
 
 <!-- ```
 red metaSmtCheck(upModule('INTEGER, false), upTerm(X:Integer > 4), 'QF_LRA, true) .

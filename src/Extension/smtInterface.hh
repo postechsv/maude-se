@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <string>
 #include "smtConst.hh"
 #include "rootedDag.hh"
 
@@ -21,6 +22,8 @@ class _SmtTerm
 {
 public:
     virtual ~_SmtTerm() {};
+    virtual bool isTextFallback() const { return false; }
+    virtual std::string text() const { return {}; }
 };
 
 class _TermSubst

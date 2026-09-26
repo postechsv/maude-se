@@ -104,6 +104,7 @@ endfm
 
 fmod SATISFYING-ASSIGNMENTS is
   pr BOOL .
+  pr STRING .
   pr REAL-INTEGER-EXPR .
 
   sort SatAssignment .
@@ -111,6 +112,7 @@ fmod SATISFYING-ASSIGNMENTS is
   op _|->_ : IntegerExpr IntegerExpr -> SatAssignment [ctor] .
   op _|->_ : BooleanExpr BooleanExpr -> SatAssignment [ctor] .
   op _|->_ : RealExpr RealExpr -> SatAssignment [ctor] .
+  op {_|->_} : String String -> SatAssignment [ctor] .
 
   sort SatAssignmentSet .
   subsort SatAssignment < SatAssignmentSet .
@@ -156,7 +158,6 @@ fmod META-SATISFYING-ASSIGNMENTS is
   pr SATISFYING-ASSIGNMENTS .
 
   op _|->_ : Term Term -> SatAssignment [ctor] .
-  op {_|->_} : String String -> SatAssignment [ctor] .
 endfm
 
 fmod META-SMT-CHECK is

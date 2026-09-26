@@ -53,6 +53,23 @@ class _PySmtTerm : public _SmtTerm, public PyDataContainer
 public:
     _PySmtTerm(PyObject *data) : PyDataContainer(data) {}
     ~_PySmtTerm() override = default;
+
+    bool isTextFallback() const override
+    {
+        PyGILState_STATE gil = PyGILState_Ensure();
+        bool result = PyUnicode_Check(borrowData());
+        PyGILState_Release(gil);
+        return result;
+    }
+
+    std::string text() const override
+    {
+        PyGILState_STATE gil = PyGILState_Ensure();
+        const char *value = PyUnicode_AsUTF8(borrowData());
+        std::string result = value ? value : "";
+        PyGILState_Release(gil);
+        return result;
+    }
 };
 
 using PySmtTerm = std::shared_ptr<_PySmtTerm>;

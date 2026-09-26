@@ -1,8 +1,9 @@
 diff --git swig/maude.i swig/maude.i
 --- swig/maude.i
 +++ swig/maude.i
-@@ -25,3 +25,4 @@
- #include "maude_wrappers.hh"
- #include "easyTerm.hh"
- #include "narrowing.hh"
+@@ -30,4 +30,5 @@
+ #include "equation.hh"
+ #include "rule.hh"
+ #include "sortConstraint.hh"
 +#include "rewriteSmtSearchFactory.hh"
+ #include "strategyDefinition.hh"

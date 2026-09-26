@@ -4,6 +4,8 @@
 // #include "smtManagerFactory.hh"
 #include "extGlobal.hh"
 #include "rootedDag.hh"
+#include "stringDagNode.hh"
+#include "stringSymbol.hh"
 
 // #include <chrono>
 
@@ -113,8 +115,27 @@ DagNode *SmtOpSymbol::make_model(VariableGenerator *vg, SymbolGetter *sg)
     for (auto k : *keys)
     {
         dom.clear();
+        SmtTerm v = model->get(k);
+        if (k->isTextFallback() && v->isTextFallback())
+        {
+            ConnectedComponent *stringK = sg->getKind("String");
+            Vector<ConnectedComponent *> textDom(2);
+            textDom[0] = stringK;
+            textDom[1] = stringK;
+            Symbol *textAssn = sg->getSymbol("{_|->_}", textDom, satAssnK);
+            VisibleModule *module = safeCast(VisibleModule *, this->getModule());
+            StringSymbol *stringSymbol = module->findStringSymbol(stringK);
+            Vector<DagNode *> args(2);
+            args[0] = roots.keep(new StringDagNode(stringSymbol, Rope(k->text())));
+            args[1] = roots.keep(new StringDagNode(stringSymbol, Rope(v->text())));
+            Vector<DagNode *> r(2);
+            r[0] = result;
+            r[1] = roots.keep(textAssn->makeDagNode(args));
+            result = roots.keep(concatSatAssnSet->makeDagNode(r));
+            continue;
+        }
         DagHandle key = conv->term2dag(k);
-        DagHandle value = conv->term2dag(model->get(k));
+        DagHandle value = conv->term2dag(v);
         DagNode *kd = key.get();
         DagNode *kvd = value.get();
 

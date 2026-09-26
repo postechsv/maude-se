@@ -17,19 +17,21 @@ can be customized only with the Python package.
 
 ### Install with a solver
 
-For the published release, install MaudeSE and Z3, its default solver, in the
-same Python environment. Published wheels cover Python 3.8–3.13 on macOS and
-Linux:
+The upcoming release supports Python 3.10–3.14 on macOS and Linux. Install
+MaudeSE with Z3, its default solver:
 
 ```sh
-python3 -m pip install maude-se 'z3-solver==4.13.0.0'
+python3 -m pip install 'maude-se[z3]'
 ```
 
-MaudeSE includes the Python connectors and converters for Z3, Yices2, and
-cvc5, but the published release does not install a solver. To use Yices2 or
-cvc5, install the corresponding solver Python package and select it with
-`-s yices` or `-s cvc5`. Solver extras and `maude-se-installer` are available
-in the current source build, but not yet in the published release.
+This command applies after the upcoming release is published. The existing
+release downloads listed below do not yet include solver extras or
+`maude-se-installer`.
+
+The extra installs the Z3 Python package; MaudeSE already includes its
+connector and converter. For Yices2 or cvc5, use `maude-se[yices]` or
+`maude-se[cvc5]` instead and select the solver with `-s yices` or `-s cvc5`.
+The Yices2 extra installs both `yices` and `yices-solver`.
 
 From a checkout of the repository, open an included example:
 
@@ -42,25 +44,25 @@ At the `MaudeSE>` prompt, run
 
 ### Add a solver to an existing installation
 
-If you installed the published `maude-se` wheel without Z3, add it in that
-same Python environment:
+If you installed the base `maude-se` package without a solver extra, add Z3
+in that same Python environment:
 
 ```sh
-python3 -m pip install 'z3-solver==4.13.0.0'
+maude-se-installer install z3
 ```
 
-For a wheel built from the current checkout, `pip install 'maude-se[z3]'`
-installs both packages instead. That wheel also provides
-`maude-se-installer install z3` for an existing base installation. These
-commands are alternatives, not successive steps.
+Installing `maude-se[z3]` is an alternative, not a preceding step. The
+installer also accepts `yices`, `cvc5`, or `all` and can check the environment
+with `maude-se-installer doctor`.
 
 ```{tip}
 You can connect another SMT solver by implementing the MaudeSE *generic* interface.
 See {ref}`generic`.
 ```
 
-Published wheel downloads are listed below. Check the wheel's Python and
-platform tags before installing it.
+Existing release downloads are listed below. Check the wheel's Python and
+platform tags before installing it. For local source builds, see
+[INSTALL.md](https://github.com/postechsv/maude-se/blob/main/INSTALL.md).
 
 ```{include} wheels.md
 ```

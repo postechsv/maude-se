@@ -89,7 +89,11 @@ class YicesConnector(Connector):
             try:
                 ty = Terms.type_of_term(t)
 
-                k, v = (t, ty), (raw_m.get_value_as_term(t), ty)
+                value_term = raw_m.get_value_as_term(t)
+                value = (value_term, ty)
+                if Terms.to_string(value_term) is None:
+                    value = self._model_definition(raw_m, t)
+                k, v = (t, ty), value
                 pairs.append((k, v))
             except:
                 continue
@@ -98,6 +102,26 @@ class YicesConnector(Connector):
     
     def print_model(self):
         print(self._m.to_string(80, 100, 0))
+
+    @staticmethod
+    def model_term_to_string(term):
+        if isinstance(term, str):
+            return term
+        return str(Terms.to_string(term[0]))
+
+    @staticmethod
+    def _model_definition(model, term):
+        text = model.to_string(120, 1000, 0)
+        marker = f"(function {Terms.to_string(term)}"
+        start = text.find(marker)
+        if start < 0:
+            return text
+        depth = 0
+        for end in range(start, len(text)):
+            depth += (text[end] == "(") - (text[end] == ")")
+            if depth == 0:
+                return text[start:end + 1]
+        return text[start:]
 
     def set_logic(self, logic):
         self._ctx.dispose()

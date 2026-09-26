@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -21,7 +22,7 @@ def setup(app):
 # Project info
 project = 'MaudeSE'
 author = 'Geunyeol Yu'
-copyright = '2019-2025, Geunyeol Yu'
+copyright = f'2019-{datetime.now().year}, Geunyeol Yu'
 
 html_show_sourcelink = False
 html_last_updated_fmt = '%b %d, %Y'

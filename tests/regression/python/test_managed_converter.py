@@ -183,7 +183,8 @@ class ManagedConverterTests(unittest.TestCase):
                 return (acc or 0) + cur
 
             def get_model(self):
-                return [("x", 7)]
+                return [("x", 7), ("unsupported", "value"),
+                        ("array", "unsupported")]
 
             def simplify(self, term):
                 return term + 1
@@ -199,6 +200,9 @@ class ManagedConverterTests(unittest.TestCase):
             def dag2term(self, dag):
                 return FakeSmtTerm(dag)
 
+            def term2dag(self, term):
+                return None if term.value == "unsupported" else term.value
+
         managed = self.connector(RawConnector)()
         self.assertEqual(managed.check_sat([FakeSmtTerm(2)]), [2])
         self.assertEqual(managed.add_const(None, FakeSmtTerm(3)).value, 3)
@@ -206,7 +210,10 @@ class ManagedConverterTests(unittest.TestCase):
         self.assertEqual(managed.simplify(FakeSmtTerm(3)).value, 4)
         self.assertEqual(managed.subsume({2: 3}, FakeSmtTerm(4), FakeSmtTerm(5), FakeSmtTerm(6)),
                          ([(2, 3)], 4, 5, 6))
-        self.assertEqual(managed.get_model().values, {"x": 7})
+        self.assertEqual(
+            managed.get_model().values,
+            {"x": 7, "unsupported": "value", "array": "unsupported"},
+        )
 
 
 if __name__ == "__main__":

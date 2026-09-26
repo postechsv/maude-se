@@ -64,7 +64,15 @@ def connector(cls):
     def get_model(self, _callback=original):
         pairs = _callback(self)
         model = SmtModel()
+        converter = self.get_converter()
+        format_term = getattr(self, "model_term_to_string", str)
         for variable, value in pairs:
+            # Keep an unsupported assignment as solver text instead of passing
+            # it to the C++ term converter, which requires a Maude DAG.
+            if (converter.term2dag(SmtTerm(variable)) is None or
+                    converter.term2dag(SmtTerm(value)) is None):
+                model.set(format_term(variable), format_term(value))
+                continue
             model.set(variable, value)
         return model
     cls.get_model = get_model

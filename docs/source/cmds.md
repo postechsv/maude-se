@@ -17,8 +17,8 @@ it checks whether `f` is satisfiable under `Th`.
 MaudeSE> check in M : f using Th .
 ```
 
-For example, consider the module `EUF-EX` ({download}`euf-ex.maude <assets/euf-ex.maude>`) which contains uninterpreted function symbols
-declared using `metadata` with `smt euf`.
+For example, consider the module `EUF-EX` ({download}`euf-ex.maude <assets/euf-ex.maude>`).
+The command below checks an integer formula in that module.
 
 ```maude
 fmod EUF-EX is
@@ -38,8 +38,7 @@ See {doc}`examples` to learn how to declare SMT symbols using `metadata`.
 You can check satisfiability using the following command:
 
 ```maude
-MaudeSE> check in EUF-EX : I:Integer > 2 and 
-            f(X:A) === (I:Integer xor J:Integer) using QF_UFLIA .
+MaudeSE> check in EUF-EX : I:Integer > 2 and J:Integer > 1 using QF_LIA .
 result: sat
 ```
 

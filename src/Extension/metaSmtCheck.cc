@@ -122,8 +122,24 @@ DagNode *MetaLevelSmtOpSymbol::make_model(VariableGenerator *vg, MixfixModule *m
 
 	for (auto k : *keys)
 	{
+		SmtTerm v = model->get(k);
+		if (k->isTextFallback() && v->isTextFallback())
+		{
+			Vector<ConnectedComponent *> textDom(2);
+			textDom[0] = sg->getKind("String");
+			textDom[1] = textDom[0];
+			Symbol *textAssn = sg->getSymbol("{_|->_}", textDom, satAssnK);
+			Vector<DagNode *> args(2);
+			args[0] = roots.keep(metaLevel->upString(k->text()));
+			args[1] = roots.keep(metaLevel->upString(v->text()));
+			Vector<DagNode *> r(2);
+			r[0] = result;
+			r[1] = roots.keep(textAssn->makeDagNode(args));
+			result = roots.keep(concatSatAssnSet->makeDagNode(r));
+			continue;
+		}
 		DagHandle key = conv->term2dag(k);
-		DagHandle value = conv->term2dag(model->get(k));
+		DagHandle value = conv->term2dag(v);
 		DagNode *kd = key.get();
 		DagNode *kvd = value.get();
 

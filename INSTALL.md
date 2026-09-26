@@ -2,45 +2,37 @@
 
 ## Install the Python package
 
-For the published release, install MaudeSE and Z3, its default solver, in the
-same Python environment. Published wheels cover Python 3.8–3.13 on macOS and
-Linux:
+The upcoming release supports Python 3.10–3.14 on macOS and Linux. Install
+MaudeSE with Z3, the default solver:
 
 ```bash
-python3 -m pip install maude-se 'z3-solver==4.13.0.0'
+python3 -m pip install 'maude-se[z3]'
 ```
 
+This command applies after the upcoming release is published. To use the
+current checkout now, build a wheel using the steps below.
+
 MaudeSE already contains the connectors and converters for Z3, Yices2, and
-cvc5. The published release does not include solver extras or the
-`maude-se-installer` command. The current source build adds both and targets
-Python 3.10–3.14.
+cvc5. The `z3` extra installs the Z3 Python package; it does not install a
+separate connector.
 
 ### Add a solver to an existing installation
 
-The base `maude-se` package includes no solver Python package. If you already
-installed the published release without Z3, add it with:
-
-```bash
-python3 -m pip install 'z3-solver==4.13.0.0'
-```
-
-For Yices2 or cvc5, install the corresponding solver package in the same
-environment and select it with `-s yices` or `-s cvc5`.
-
-### Solver extras in a source build
-
-After building and installing a wheel from this checkout, you can instead
-install MaudeSE and a solver together with `maude-se[z3]`, `maude-se[yices]`,
-or `maude-se[cvc5]`. To add a solver to an existing installation of that
-source-built wheel, use:
+The base wheel includes no solver Python package. If you installed `maude-se`
+without an extra, add Z3 to that environment with:
 
 ```bash
 maude-se-installer install z3
 ```
 
-The installer also accepts `yices`, `cvc5`, or `all`. Its `doctor` command
-checks solver availability without installing anything. The published PyPI
-release does not yet provide this command.
+For a fresh installation with another solver, replace `[z3]` with `[yices]`
+or `[cvc5]`; the Yices2 extra installs both `yices` and
+`yices-solver`. For an existing installation, the installer accepts `yices`,
+`cvc5`, or `all`. Run `maude-se-installer doctor` to check solver availability
+without installing anything. Select the solver with `-s yices` or `-s cvc5`.
+
+For a local wheel built using the steps below, install that wheel file with
+its `[z3]` extra instead of fetching the package from PyPI.
 
 ### Run an example
 
