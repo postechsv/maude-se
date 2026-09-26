@@ -630,6 +630,12 @@ build_cudd() {
   ensure_repo "https://github.com/ivmai/cudd.git" "$cudd_dir" "$CUDD_REF"
   (
     cd "$cudd_dir"
+    # Git checkout timestamps can make CUDD's generated files appear stale.
+    # Keep the release's generated autotools files instead of invoking its
+    # pinned, usually unavailable aclocal-1.14 during make.
+    touch aclocal.m4
+    touch configure config.h.in
+    touch Makefile.in
     ./configure CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
       LDFLAGS="$native_ldflags" --prefix="$build_dir" --disable-shared
     make -j4
