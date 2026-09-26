@@ -29,9 +29,13 @@ if [[ "$(uname -s)" == Darwin ]]; then
   suffix=dylib
   core_library="$release_dir/libmaude.dylib"
   link_mode=(-dynamiclib "-Wl,-install_name,@rpath/libmaude_se_$solver.dylib" \
-    -Wl,-rpath,@loader_path/../maudeSE/maude)
+    -Wl,-rpath,@loader_path/../maudeSE/maude -Wl,-rpath,@loader_path/solver)
   if [[ "$solver" == yices ]]; then
-    target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-13.0}"
+    if [[ "$(uname -m)" == arm64 ]]; then
+      target=14.0
+    else
+      target=13.0
+    fi
   elif [[ "$(uname -m)" == arm64 ]]; then
     target="${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-11.0}"
   else
@@ -41,7 +45,8 @@ if [[ "$(uname -s)" == Darwin ]]; then
 else
   suffix=so
   core_library="$release_dir/libmaude.so"
-  link_mode=(-shared '-Wl,-rpath,$ORIGIN/../maudeSE/maude')
+  link_mode=(-shared '-Wl,-rpath,$ORIGIN/../maudeSE/maude' '-Wl,-rpath,$ORIGIN/solver' \
+    -Wl,--disable-new-dtags)
   target=""
 fi
 [[ -f "$core_library" ]] || { echo "error: build the base wheel first: $core_library" >&2; exit 1; }
@@ -50,25 +55,39 @@ case "$solver" in
   z3)
     source_file=z3.cc
     plugin_define=MAUDE_SE_PLUGIN_Z3
-    archives=(libz3.a)
+    archives=()
     ;;
   yices)
     source_file=yices2.cc
     plugin_define=MAUDE_SE_PLUGIN_YICES
-    archives=(libyices.a libpicpoly.a libcudd.a libgmp.a)
+    archives=()
     ;;
   cvc5)
     source_file=cvc5.cc
     plugin_define=MAUDE_SE_PLUGIN_CVC5
-    archives=(libcvc5.a libpicpolyxx.a libpicpoly.a libcadical.a libmpfr.a libgmpxx.a libgmp.a)
+    archives=()
     ;;
 esac
 archive_paths=()
-for archive in "${archives[@]}"; do
+for archive in "${archives[@]+"${archives[@]}"}"; do
   path="$native_prefix/lib/$archive"
   [[ -f "$path" ]] || { echo "error: missing $path" >&2; exit 1; }
   archive_paths+=("$path")
 done
+
+asset_dir="$top_dir/.build-wheel/native-plugin-deps/$solver"
+PYTHONPATH="$top_dir/src/pysmt" "$build_python" -c \
+  'import native_assets, sys; native_assets.install(sys.argv[1], sys.argv[2], archive=sys.argv[3] or None)' \
+  "$solver" "$asset_dir" "${MAUDE_SE_ASSET_ARCHIVE:-}"
+if [[ "$solver" == yices ]]; then
+  if [[ "$(uname -s)" == Darwin ]]; then
+    solver_links=("$asset_dir/libyices.2.dylib")
+  else
+    solver_links=("$asset_dir/libyices.so.2.6.5")
+  fi
+else
+  solver_links=(-L"$asset_dir" "-l$solver")
+fi
 
 stage="$(mktemp -d "$top_dir/.build-wheel/native-plugin-${solver}.XXXXXX")"
 cp "$top_dir/src/native_plugins/$solver/pyproject.toml" "$stage/"
@@ -83,16 +102,10 @@ case "$solver" in
     cp "$top_dir/.build-standalone/dependencies/z3-$Z3_VERSION/LICENSE.txt" "$package_dir/licenses/Z3-LICENSE.txt"
     ;;
   yices)
-    cp "$top_dir/.build-standalone/dependencies/yices-$(uname -s)-$(uname -m)/yices-$YICES_VERSION/LICENSE" "$package_dir/licenses/YICES-LICENSE"
-    cp "$top_dir/.build-standalone/dependencies/yices-$(uname -s)-$(uname -m)/yices-$YICES_VERSION/NOTICES" "$package_dir/licenses/YICES-NOTICES"
-    cp "$top_dir/.build-standalone/dependencies/cudd-3.0.0/LICENSE" "$package_dir/licenses/CUDD-LICENSE"
+    cp "$asset_dir/LICENSE" "$package_dir/licenses/YICES-LICENSE"
     ;;
   cvc5)
-    platform="$(uname -s)"
-    [[ "$platform" == Darwin ]] && platform=macOS
-    bundle="$top_dir/.build-standalone/dependencies/cvc5-$platform-$(uname -m)-static"
-    cp "$bundle/COPYING" "$package_dir/licenses/CVC5-COPYING"
-    cp "$bundle/licenses/"* "$package_dir/licenses/"
+    cp "$asset_dir/COPYING" "$package_dir/licenses/CVC5-COPYING"
     ;;
 esac
 
@@ -108,8 +121,15 @@ output="$package_dir/libmaude_se_$solver.$suffix"
   "${link_mode[@]}" \
   "$top_dir/src/native_plugins/plugin.cc" \
   "$top_dir/src/Extension/$source_file" \
-  -L"$release_dir" -lmaude "${archive_paths[@]}" \
+  -L"$release_dir" -lmaude "${archive_paths[@]+"${archive_paths[@]}"}" "${solver_links[@]}" \
   -o "$output"
+
+if [[ "$(uname -s)" == Darwin && "$solver" == z3 ]]; then
+  install_name_tool -change libz3.dylib @rpath/libz3.dylib "$output"
+elif [[ "$(uname -s)" == Darwin && "$solver" == yices ]]; then
+  yices_install_name="$(otool -D "$asset_dir/libyices.2.dylib" | tail -n 1)"
+  install_name_tool -change "$yices_install_name" @rpath/libyices.2.dylib "$output"
+fi
 
 mkdir -p "$top_dir/out"
 MACOSX_DEPLOYMENT_TARGET="$target" "$build_python" -m pip wheel \

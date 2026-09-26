@@ -8,6 +8,7 @@ from maudeSE.maude import (
     loadNativeSmtPlugin,
     nativeSmtPluginError,
 )
+from . import native_assets
 
 
 class Factory:
@@ -42,5 +43,10 @@ class Factory:
         path = plugin.library_path()
         if not path.is_file():
             raise RuntimeError(f"native {solver} plugin library is missing: {path}")
+        if not native_assets.ready(solver, path.parent / "solver"):
+            raise RuntimeError(
+                f"native {solver} upstream library is missing; run: "
+                f"maude-se-installer install native {solver}"
+            )
         if not loadNativeSmtPlugin(str(path), solver):
             raise RuntimeError(f"native {solver} plugin could not load: {nativeSmtPluginError()}")
