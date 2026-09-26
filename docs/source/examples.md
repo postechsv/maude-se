@@ -77,7 +77,7 @@ Additionally, a single interpreted symbol can be connected to multiple Maude ope
 In the ARRAY module, for instance, `select` is associated with both `select` and `_[_]`.
 
 ```{important}
-To connect interpreted symbols to Maude, you need to extend or implement an SMT [converter](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter).
+The built-in converters already support the array `select` and `store` operators shown above. To connect a new interpreted SMT symbol that is not supported, extend or implement an SMT [converter](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter).
 ```
 
 The downloadable `smt-check-meta-ex.maude` file contains satisfiability
@@ -159,6 +159,7 @@ result SmtCheckResult: {('N:Integer |-> '1.Integer),{"_xor_" |-> "(lambda ((_arg
 ## smt-search-ex.maude
 
 This file includes examples demonstrating the use of `smt-search` with the `gcd` and `robot` modules.
+The search commands shown below are commented out in the example file; enter them at the MaudeSE prompt after loading the file.
 
 ```maude
 mod GCD is
@@ -177,11 +178,11 @@ endm
 ```
 
 The following command searches for the first solution term that matches `return(J)` and satisfies
-the consition `I < 9 and I > 0`, starting from the initial term `gcd(10, I)` under the `QF_LRA` logic.
+the condition `I < 9 and I > 0`, starting from the initial term `gcd(10, I)` under the `QF_LIA` logic.
 
 ```maude
 MaudeSE> smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) 
-                such that I:Integer > 0 and I:Integer < 9 using QF_LRA .
+                such that I:Integer > 0 and I:Integer < 9 using QF_LIA .
 
 Solution 1 (state 3)
 
@@ -248,8 +249,8 @@ omod ROBOT-DYNAMICS is
 endom
 ```
 
-This command searches for the first solution, using the `QF_NRA` logic, that matches the goal pattern `< r : Robot | pos : [NPX, NPY], ATTRSET >` 
-and satisfies the consition `NPX === 10/1 and NPY === 10/1`, starting from an initial term where all its attributes are set to zeros.
+The following command searches for the first solution, using the `QF_NRA` logic, that matches the goal pattern `< r : Robot | pos : [NPX, NPY], ATTRSET >`
+and satisfies the condition `NPX === 10/1 and NPY === 10/1`. The initial term uses symbolic variables; the `such that` condition requires all initial attribute values to be zero.
 
 ```maude
 MaudeSE> smt-search [1] in ROBOT-DYNAMICS :

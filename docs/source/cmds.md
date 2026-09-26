@@ -42,11 +42,18 @@ MaudeSE> check in EUF-EX : I:Integer > 2 and J:Integer > 1 using QF_LIA .
 result: sat
 ```
 
+The same module also supports checks involving the uninterpreted function `f`. This formula requires `f(X)` to equal `X` while `X` and `Y` are distinct:
+
+```maude
+MaudeSE> check in EUF-EX : f(X:A) === X:A and not (X:A === Y:A) using QF_UF .
+result: sat
+```
+
 (show-model)=
 ## show model
 
-The show model command returns the satisfying assignment, if any, for the most recent `check` command.
-For example, you can obtain the assignment for the above check example as follows:
+The show model command returns a satisfying assignment, if one exists, for the most recent `check` command.
+For example, one possible assignment for the integer check above is:
 
 ```maude
 MaudeSE> show model .
@@ -56,19 +63,34 @@ MaudeSE> show model .
     J:Integer |--> 2
 ```
 
+The values in a satisfying assignment may differ between SMT solvers or runs.
+
+For the EUF check above, `show model` also includes an interpretation of `f`. For example, Z3 may return:
+
+```maude
+MaudeSE> show model .
+
+  assignment:
+    X |--> A!val!0
+    Y |--> A!val!1
+    f |--> [else -> A!val!0]
+```
+
+The values for sort `A` and the interpretation of `f` are shown as solver-generated strings, not Maude terms. Their syntax and the chosen values depend on the solver.
+
 (smt-search)=
 ## smt-search
 
-This command performs symbolic reachability analysis with folding. Given an initial term `t`, a goal pattern `u`, and a goal condition `c`, it searches for the `n`-th solution that is reachable from `t` within `m` rewrite steps, matches the goal pattern `u`, and satisfies the condition `c` under the SMT theory `Th`:
+This command performs symbolic reachability analysis. Given an initial term `t`, a goal pattern `u`, and a goal condition `c`, it searches for the `n`-th solution that is reachable from `t` within `m` rewrite steps, matches the goal pattern `u`, and satisfies the condition `c` under the SMT theory `Th`:
 
 ```maude
 MaudeSE> {fold} smt-search [n,m] in M : t =>* u such that c using Th .
 ```
 
-The arguments `{fold}`, `n`, and `m` are optional. If `{fold}` is specified, the command ignores constrained terms that are subsumed by others.
+The `{fold}` prefix and the solution number `n` and depth bound `m` are optional. If `{fold}` is specified, the command ignores constrained terms that are subsumed by others.
 
 As an example, consider the coffee machine module, introduced in {doc}`getting_started`.
-The following command finds the first solution that reaches the `cdone` state, where all clocks and parameters are greater than or equal to 0.
+The following command finds the first solution that reaches the `cdone` state. Its condition requires the initial clock values and parameters to be nonnegative and the initial clock values to be equal.
 
 ```maude
 MaudeSE> {fold} smt-search [1] in COFFEE-MACHINE : 
@@ -106,7 +128,7 @@ Concrete state:
 
 This command returns either a symbolic or concrete path for the most recent `smt-search` result. It takes a path type as an argument (symbolic or concrete). 
 
-A symbolic path consists of a sequence of contracted terms and rewrite rules. The corresponding concrete path is an instance of the symbolic path instantiated with a satisfying assignment. For example, the following show the symbolic and concrete paths of the above search command.
+A symbolic path consists of a sequence of constrained terms and rewrite rules. The corresponding concrete path is an instance of the symbolic path instantiated with a satisfying assignment. For example, the following commands show the concrete and symbolic paths of the above search result.
 
 ```maude
 MaudeSE> show smt-path concrete .

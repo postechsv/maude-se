@@ -15,8 +15,8 @@ mod GCD is
   rl [r3] : gcd(X, X) => return (X) .
 endm
 
---- smt-search [1] in GCD : gcd(X:Integer, Y:Integer) =>* return(Z:Integer) such that Z:Integer === 3 and X:Integer + Y:Integer === 27 using QF_LRA .
---- smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) such that I:Integer > 0 and I:Integer < 9 using QF_LRA .
+--- smt-search [1] in GCD : gcd(X:Integer, Y:Integer) =>* return(Z:Integer) such that Z:Integer === 3 and X:Integer + Y:Integer === 27 using QF_LIA .
+--- smt-search [1] in GCD : gcd(10, I:Integer) =>* return(J:Integer) such that I:Integer > 0 and I:Integer < 9 using QF_LIA .
 
 omod ROBOT is
   pr REAL .

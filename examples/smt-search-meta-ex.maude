@@ -9,7 +9,7 @@ mod GCD-ANALYSIS is
 endm
 
 red metaSmtSearch(upModule('GCD, false), upTerm(gcd(10, I)), upTerm(return(J)), 
-                  upTerm(I < 9 and I > 0) = upTerm((true).Boolean), '*, unbounded, 0, 'QF_LRA) .
+                  upTerm(I < 9 and I > 0) = upTerm((true).Boolean), '*, unbounded, 0, 'QF_LIA) .
 
 mod ROBOT-ANALYSIS is
   pr ROBOT-DYNAMICS .
