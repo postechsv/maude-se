@@ -1,14 +1,11 @@
 """Register Python or separately installed native SMT backends."""
 
-import importlib
-from importlib import metadata
-
 from maudeSE.maude import (
     install_python_smt_factory,
     loadNativeSmtPlugin,
     nativeSmtPluginError,
 )
-from . import native_assets
+from . import native_assets, native_plugin
 
 
 class Factory:
@@ -26,23 +23,9 @@ class Factory:
     def install_native(self, solver):
         if solver not in ("z3", "yices", "cvc5"):
             raise ValueError(f"native backend is unavailable for {solver}")
-        distribution = f"maude-se-native-{solver}"
-        try:
-            version = metadata.version(distribution)
-            plugin = importlib.import_module(f"maude_se_native_{solver}")
-        except (metadata.PackageNotFoundError, ImportError) as exc:
-            raise RuntimeError(
-                f"native {solver} plugin is unavailable; run: "
-                f"maude-se-installer install native {solver}"
-            ) from exc
-        core_version = metadata.version("maude-se")
-        if version != core_version:
-            raise RuntimeError(
-                f"{distribution} {version} does not match maude-se {core_version}"
-            )
-        path = plugin.library_path()
+        path = native_plugin.library_path(solver)
         if not path.is_file():
-            raise RuntimeError(f"native {solver} plugin library is missing: {path}")
+            raise RuntimeError(f"native {solver} plugin is unavailable; run: maude-se-installer install native {solver}")
         if not native_assets.ready(solver, path.parent / "solver"):
             raise RuntimeError(
                 f"native {solver} upstream library is missing; run: "

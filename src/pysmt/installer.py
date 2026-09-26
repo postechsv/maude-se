@@ -7,12 +7,9 @@ import importlib.util
 from importlib import metadata
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
-from zipfile import BadZipFile
-
-from . import native_assets
+from . import native_assets, native_build, native_plugin
 
 
 SOLVERS = {
@@ -107,31 +104,21 @@ def doctor(names):
 
 def doctor_native(names):
     failed = False
-    try:
-        core_version = metadata.version("maude-se")
-    except metadata.PackageNotFoundError:
-        print("maude-se is not installed in this Python environment")
-        return 1
     for name in names:
-        distribution = f"maude-se-native-{name}"
         try:
-            version = metadata.version(distribution)
-            module = importlib.import_module(f"maude_se_native_{name}")
-            library = module.library_path()
-            if version != core_version:
-                detail = f"version {version} does not match maude-se {core_version}"
-            elif not library.is_file():
+            library = native_plugin.library_path(name)
+            if not library.is_file():
                 detail = f"library is missing: {library}"
             elif not native_assets.ready(name, library.parent / "solver"):
                 detail = "upstream shared library is not installed"
             else:
                 from maudeSE.maude import loadNativeSmtPlugin, nativeSmtPluginError
                 if loadNativeSmtPlugin(str(library), name):
-                    detail = f"ready ({version})"
+                    detail = "ready"
                 else:
                     detail = f"cannot load: {nativeSmtPluginError()}"
-        except (metadata.PackageNotFoundError, ImportError):
-            detail = "not installed"
+        except (ImportError, OSError, ValueError) as exc:
+            detail = f"cannot check: {exc}"
         print(f"native {name}: {detail}")
         if not detail.startswith("ready"):
             failed = True
@@ -139,7 +126,7 @@ def doctor_native(names):
     return 1 if failed else 0
 
 
-def install(name, native=False, find_links=None, asset_archive=None):
+def install(name, native=False, find_links=None, asset_archive=None, source_dir=None, build_dir=None):
     try:
         version = metadata.version("maude-se")
     except metadata.PackageNotFoundError:
@@ -148,7 +135,13 @@ def install(name, native=False, find_links=None, asset_archive=None):
 
     if native:
         names = SOLVERS if name == "all" else (name,)
-        requirements = [f"maude-se-native-{solver}=={version}" for solver in names]
+        try:
+            native_build.install(names, source_dir=source_dir, build_dir=build_dir,
+                                 asset_archive=asset_archive)
+            return doctor_native(names)
+        except (OSError, RuntimeError, subprocess.CalledProcessError) as exc:
+            print(f"error: native build failed: {exc}", file=sys.stderr)
+            return 1
     else:
         extra = "all-solvers" if name == "all" else name
         requirements = ["maude-se[{}]=={}".format(extra, version)]
@@ -156,32 +149,24 @@ def install(name, native=False, find_links=None, asset_archive=None):
     command = [sys.executable, "-m", "pip", "install"]
     if find_links:
         command += ["--no-index", "--find-links", find_links]
-        if native:
-            command.append("--no-deps")
     command += requirements
     try:
         result = subprocess.call(command)
-        if result or not native:
-            return result
-        for solver in names:
-            importlib.invalidate_caches()
-            plugin = importlib.import_module(f"maude_se_native_{solver}")
-            native_assets.install(
-                solver, plugin.library_path().parent / "solver", archive=asset_archive
-            )
-        return 0
+        return result
     except OSError as exc:
         print("error: could not run pip: {}".format(exc), file=sys.stderr)
-        return 1
-    except (ImportError, RuntimeError, ValueError, BadZipFile) as exc:
-        print(f"error: native solver installation failed: {exc}", file=sys.stderr)
         return 1
 
 
 def uninstall(name, native=False):
     names = SOLVERS if name == "all" else (name,)
     if native:
-        distributions = [f"maude-se-native-{solver}" for solver in names]
+        try:
+            native_build.uninstall(names)
+            return 0
+        except (OSError, RuntimeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
     else:
         distributions = list(dict.fromkeys(
             distribution
@@ -198,14 +183,6 @@ def uninstall(name, native=False):
     if not installed:
         print("No matching solver packages are installed in {}".format(sys.executable))
         return 0
-    if native:
-        for solver in names:
-            if f"maude-se-native-{solver}" not in installed:
-                continue
-            plugin = importlib.import_module(f"maude_se_native_{solver}")
-            destination = plugin.library_path().parent / "solver"
-            if native_assets.managed(solver, destination):
-                shutil.rmtree(destination)
     print("Uninstalling {} from {}".format(", ".join(installed), sys.executable), flush=True)
     try:
         return subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", *installed])
@@ -246,8 +223,10 @@ def main(argv=None):
             native_parser.add_argument("name", choices=(*SOLVERS, "all"),
                                        help="solver plugin to manage")
         if action == "install":
-            native_parser.add_argument("--find-links", metavar="DIRECTORY",
-                                       help="install plugin wheels from a local directory")
+            native_parser.add_argument("--source-dir", metavar="DIRECTORY",
+                                       help="use a local maude-se source checkout instead of cloning the release tag")
+            native_parser.add_argument("--build-dir", metavar="DIRECTORY",
+                                       help="directory for cloned sources and build files")
             native_parser.add_argument("--asset-archive", metavar="FILE",
                                        help="use a locally downloaded, checksum-verified solver archive")
     args = parser.parse_args(argv)
@@ -261,8 +240,10 @@ def main(argv=None):
         return uninstall(name, native=native)
     if native and args.asset_archive and name == "all":
         parser.error("--asset-archive requires one native solver")
-    return install(name, native=native, find_links=args.find_links,
-                   asset_archive=args.asset_archive if native else None)
+    return install(name, native=native, find_links=getattr(args, "find_links", None),
+                   asset_archive=args.asset_archive if native else None,
+                   source_dir=args.source_dir if native else None,
+                   build_dir=args.build_dir if native else None)
 
 
 if __name__ == "__main__":

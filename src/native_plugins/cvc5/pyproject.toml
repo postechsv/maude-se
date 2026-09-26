@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maude-se-native-cvc5"
-version = "0.0.3"
+version = "0.0.4"
 description = "Native cvc5 connector for Maude-SE"
 requires-python = ">=3.10,<3.15"
-dependencies = ["maude-se==0.0.3"]
+dependencies = ["maude-se==0.0.4"]
 license = {text = "GPL-3.0-only"}
 
 [tool.setuptools]
