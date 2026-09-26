@@ -68,6 +68,15 @@ class FakeSmtModel:
 class ManagedConverterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        decorator_modules = (
+            "maudeSE.decorators",
+            "maudeSE.decorators.converter",
+            "maudeSE.decorators.connector",
+        )
+        cls.previous_decorators = {
+            name: sys.modules.pop(name)
+            for name in decorator_modules if name in sys.modules
+        }
         package = types.ModuleType("maudeSE")
         package.__path__ = [str(Path(__file__).resolve().parents[3] / "src/pysmt")]
         fake = types.ModuleType("maudeSE.maude")
@@ -83,10 +92,11 @@ class ManagedConverterTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.patch.stop()
         sys.modules.pop("maudeSE.decorators", None)
         sys.modules.pop("maudeSE.decorators.converter", None)
         sys.modules.pop("maudeSE.decorators.connector", None)
+        cls.patch.stop()
+        sys.modules.update(cls.previous_decorators)
 
     def test_wrapping_recursion_cache_and_reverse_binding(self):
         calls = []

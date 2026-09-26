@@ -6,14 +6,26 @@ top-level `examples/` directory.
 
 | Directory | Contents |
 | --- | --- |
-| `regression/python/` | Python/SWIG checks for Z3, Yices, and cvc5 |
+| `regression/python/` | Python/SWIG unit and solver integration checks |
 | `regression/native/` | Standalone executable checks |
+| `performance/` | Opt-in Python-versus-native comparison; see its README for limitations |
 | `data/smoke/` | Small regression inputs |
 | `data/general/` | General Maude models, including Bakery and Dining Philosophers |
 | `data/maude-se-2020/` | GCD and robot examples from the 2020 Maude-SE paper |
 | `data/pta2maude/` | Adapted PTA2Maude research models and historical script |
 
-After building and installing the wheel with all three solver extras, run:
+From the repository root, build and install the wheel and solver extras into
+the test environment with `./build.sh wheel` and `./build.sh test-wheel`.
+Open that environment with `./build.sh shell`, then run the unit checks and
+solver integration checks below. The `python` command must be from that shell,
+not an unrelated system installation.
+
+```sh
+python -m unittest discover -s tests/regression/python -p 'test_*.py'
+```
+
+Integration scripts are not run by unittest discovery. Most take a solver
+name; the Z3-specific checks run without an argument:
 
 ```sh
 for solver in z3 yices cvc5; do
@@ -21,6 +33,22 @@ for solver in z3 yices cvc5; do
   python tests/regression/python/test_gc_lifetime.py "$solver"
   python tests/regression/python/test_python_meta_search.py "$solver"
   python tests/regression/python/test_folding_subsumption.py "$solver"
+done
+python tests/regression/python/test_custom_connector_interface.py
+python tests/regression/python/test_managed_z3_converter.py
+for solver in yices cvc5; do
+  python tests/regression/python/test_managed_other_converters.py "$solver"
+done
+```
+
+Native plugin checks additionally require running
+`maude-se-installer install native all --source-dir .` in that shell. Then run
+both native scripts for each solver:
+
+```sh
+for solver in z3 yices cvc5; do
+  python tests/regression/python/test_native_plugin_only.py "$solver"
+  python tests/regression/python/test_native_backends.py "$solver"
 done
 ```
 
