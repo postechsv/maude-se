@@ -118,7 +118,7 @@ jobs:
         docker run --rm -v "$PWD:/work" -w /work \
           -e GITHUB_TOKEN="${{ github.token }}" -e TAG="$TAG" \
           quay.io/pypa/manylinux_2_28_x86_64 \
-          bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh deps cvc5 && ./build/native.sh build-maude-se "$release_tag" cvc5 && bash ./build/test-linux.sh standalone cvc5'
+          bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh set-env && ./build/native.sh deps cvc5 && ./build/native.sh build-maude-se "$release_tag" cvc5 && bash ./build/test-linux.sh standalone cvc5'
     - name: Build and test Yices standalone
       env:
         TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
@@ -126,7 +126,7 @@ jobs:
         docker run --rm -v "$PWD:/work" -w /work \
           -e GITHUB_TOKEN="${{ github.token }}" -e TAG="$TAG" \
           quay.io/pypa/manylinux_2_28_x86_64 \
-          bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh deps yices && ./build/native.sh build-maude-se "$release_tag" yices && bash ./build/test-linux.sh standalone yices'
+          bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh set-env && ./build/native.sh deps yices && ./build/native.sh build-maude-se "$release_tag" yices && bash ./build/test-linux.sh standalone yices'
     - name: Store standalone distribution
       uses: actions/upload-artifact@v4
       with:
