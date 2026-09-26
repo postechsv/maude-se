@@ -280,8 +280,15 @@ int RewriteSmtSequenceSearch::findNextInterestingState()
 Rule *
 RewriteSmtSequenceSearch::getStateRule(int stateNr) const
 {
-    const ArcMap &fwdArcs = getStateFwdArcs(getStateParent(stateNr));
-    return *(fwdArcs.find(stateNr)->second.begin());
+    if (stateNr <= 0 || stateNr >= getNrStates())
+        return nullptr;
+    int parent = getStateParent(stateNr);
+    if (parent < 0)
+        return nullptr;
+    const ArcMap &fwdArcs = getStateFwdArcs(parent);
+    auto arc = fwdArcs.find(stateNr);
+    return arc != fwdArcs.end() && !arc->second.empty()
+        ? *arc->second.begin() : nullptr;
 }
 
 void RewriteSmtSequenceSearch::findSMT_Variables()

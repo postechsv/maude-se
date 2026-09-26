@@ -38,13 +38,23 @@ def run(solver: str) -> None:
     false_goal = module.parseTerm("(false).Boolean")
     assert all(term is not None for term in (initial, target, true_goal, false_goal))
 
-    search = initial.smtSearch(maude.ANY_STEPS, target, true_goal, fold=False)
+    search = initial.smtSearch(maude.ANY_STEPS, target, true_goal)
     assert search is not None
+    assert not search.hasCurrentMatch()
+    assert search.getStateNr() == -1
+    assert search.getSubstitution() is None
+    assert search.getFinalConstraint() is None
+    assert search.getRule() is None
+    assert search.getStateConstraint(-1) is None
     state = next(search)
+    assert search.hasCurrentMatch()
+    assert search.getRule() is None  # The initial state has no incoming rule.
     constraint = search.getFinalConstraint()
+    state_constraint = search.getStateConstraint(0)
     substitution = search.getSubstitution()
     assert str(state) == str(initial)
     assert "X:Integer" in str(constraint)
+    assert state_constraint is not None
     assert "Y:Integer" in str(substitution)
     del search
     gc.collect()
@@ -52,10 +62,14 @@ def run(solver: str) -> None:
     assert "X:Integer" in str(constraint)
     assert "Y:Integer" in str(substitution)
 
-    no_solution = initial.smtSearch(maude.ANY_STEPS, target, false_goal, fold=False)
+    no_solution = initial.smtSearch(maude.ANY_STEPS, target, false_goal)
     assert list(no_solution) == []
     assert not no_solution.isSmtUnknown()
     assert not no_solution.hasInvalidRewriteResult()
+    assert not no_solution.hasCurrentMatch()
+    assert no_solution.getSubstitution() is None
+    assert no_solution.getFinalConstraint() is None
+    assert no_solution.getRule() is None
 
 
 if __name__ == "__main__":

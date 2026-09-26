@@ -21,6 +21,7 @@ public:
 
 	%newobject getSubstitution;
 	%newobject getStateTerm;
+	%newobject getStateConstraint;
 	%newobject getFinalConstraint;
 	%newobject __next;
 
@@ -36,6 +37,7 @@ public:
 		 * Get the matching substitution of the solution into the pattern.
 		 */
 		EasySubstitution* getSubstitution() {
+			if (!$self->hasCurrentMatch()) return nullptr;
 			return new EasySubstitution($self->getSubstitution(),
 						    $self->getGoal(),
 						    nullptr);
@@ -48,8 +50,12 @@ public:
 		 * or -1 for the current one.
 		 */
 		Rule* getRule(int stateNr = -1) {
-			return $self->getStateRule(stateNr == -1
-				? $self->getStateNr() : stateNr);
+			if (stateNr == -1) {
+				if (!$self->hasCurrentMatch()) return nullptr;
+				stateNr = $self->getStateNr();
+			}
+			return stateNr > 0 && stateNr < $self->getNrStates()
+				? $self->getStateRule(stateNr) : nullptr;
 		}
 
 		/**
@@ -58,10 +64,18 @@ public:
 		 * @param stateNr The number of a state in the search graph.
 		 */
 		EasyTerm* getStateTerm(int stateNr) {
-			return new EasyTerm($self->getStateDag(stateNr));
+			return stateNr >= 0 && stateNr < $self->getNrStates()
+				? new EasyTerm($self->getStateDag(stateNr)) : nullptr;
+		}
+
+		EasyTerm* getStateConstraint(int stateNr) {
+			if (stateNr < 0 || stateNr >= $self->getNrStates()) return nullptr;
+			DagHandle constraint = $self->getStateConstDag(stateNr);
+			return constraint ? new EasyTerm(constraint.get()) : nullptr;
 		}
 
 		EasyTerm* getFinalConstraint() {
+			if (!$self->hasCurrentMatch()) return nullptr;
 			DagHandle constraint = $self->getFinalConstraint();
 			return constraint ? new EasyTerm(constraint.get()) : nullptr;
 		}
@@ -77,39 +91,20 @@ public:
 			return hasNext ? new EasyTerm($self->getStateDag($self->getStateNr())) : nullptr;
 		}
 
-		/**
-		 * Get the number of rewrites until this term has been found.
-		 */
-		SmtTerm getStateConst(int stateNr) {
-			return $self->getStateConst(stateNr);
+		int getStateNr() const {
+			return $self->hasCurrentMatch() ? $self->getStateNr() : -1;
+		}
+
+		int getStateParent(int stateNr) const {
+			return stateNr >= 0 && stateNr < $self->getNrStates()
+				? $self->getStateParent(stateNr) : -1;
 		}
 	}
 
-	/**
-	 * Get an internal state number that allows reconstructing 
-	 * the path to this term.
-	 */
-	int getStateNr() const;
-
-	/**
-	 * Get the parent state.
-	 *
-	 * @param stateNr The number of a state in the search graph.
-	 *
-	 * @return The number of the parent or -1 for the root.
-	 */
-	int getStateParent(int stateNr) const;
+	/** Whether a successful match is available to the result getters. */
+	bool hasCurrentMatch() const;
 	bool isSmtUnknown() const;
 	bool hasInvalidRewriteResult() const;
-
-	/**
-	 * Get the constraint of a constrained term.
-	 *
-	 * @param stateNr The number of a state in the search graph.
-	 *
-	 * @return An SMT constraint
-	 */
-	SmtTerm getStateConst(int stateNr);
 
 	%unprotectDestructor(RewriteSmtSequenceSearch);
 };
@@ -142,7 +137,10 @@ public:
 
 %extend EasyTerm {
 	/**
-	 * Search symbolically from this term using the installed Maude-SE solver.
+	 * Invoke the Maude-SE core search engine on this module and term.
+	 * Unlike metaSmtSearch, this does not transform source rules or abstract
+	 * SMT subterms; callers needing source-level semantics must use the meta
+	 * interface until a high-level term API provides that preparation.
 	 * smtGoal is the initial Boolean SMT constraint; condition constrains the
 	 * target pattern as in Term.search(). The returned search owns its Maude
 	 * context and can be iterated for matching state terms. After each match,
@@ -151,7 +149,7 @@ public:
 	RewriteSmtSequenceSearch* smtSearch(
 		SearchType type, EasyTerm* target, EasyTerm* smtGoal,
 		const Vector<ConditionFragment*>& condition = EasyTerm::NO_CONDITION,
-		int depth = -1, bool fold = true, bool merge = false,
+		int depth = -1, bool fold = false, bool merge = false,
 		const char* logic = "QF_LRA") {
 		if (!target || !smtGoal)
 			throw std::invalid_argument("target and smtGoal are required");
@@ -162,7 +160,8 @@ public:
 		    smtGoal->symbol()->getModule() != module)
 			throw std::invalid_argument("all search terms must belong to the same module");
 
-		std::unique_ptr<Term> targetTerm(target->termCopy());
+		std::unique_ptr<Term, void (*)(Term*)> targetTerm(
+		    target->termCopy(), [](Term* term) { term->deepSelfDestruct(); });
 		VariableInfo variables;
 		if (module->findSMT_Symbol(targetTerm.get()) ||
 		    MixfixModule::findNonlinearVariable(targetTerm.get(), variables))

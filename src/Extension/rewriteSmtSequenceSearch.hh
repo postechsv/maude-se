@@ -38,6 +38,7 @@ public:
   const Pattern *getGoal() const;
   Rule *getStateRule(int stateNr) const;
   int getStateNr() const;
+  bool hasCurrentMatch() const;
 
   VariableInfo* getVariableInfo();
 
@@ -100,6 +101,12 @@ inline int
 RewriteSmtSequenceSearch::getStateNr() const
 {
   return stateNr;
+}
+
+inline bool
+RewriteSmtSequenceSearch::hasCurrentMatch() const
+{
+  return matchState != nullptr;
 }
 
 inline DagHandle

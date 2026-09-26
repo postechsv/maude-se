@@ -84,6 +84,7 @@ SmtStateTransitionGraph::~SmtStateTransitionGraph()
 			delete ct;
 		}
 	}
+	delete freshVariableGenerator;
 	delete initial;
 }
 
