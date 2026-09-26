@@ -132,14 +132,6 @@ public:
 
 using PySmtModel = std::shared_ptr<_PySmtModel>;
 
-struct cmpExprById
-{
-    bool operator()(const PySmtTerm &lhs, const PySmtTerm &rhs) const
-    {
-        return std::less<PyObject *>()(lhs->borrowData(), rhs->borrowData());
-    }
-};
-
 // --- PyConverter ---
 class _PyConverter : public _Converter, private SimpleRootContainer
 {
@@ -155,7 +147,9 @@ public:
         conversionCache.clear();
         conversionCacheSize = 0;
         rcache.clear();
+        unhashableReverseEntries.clear();
         cache.clear();
+        reverseCacheDirty = true;
         py_prepareFor(module);
     }
 
@@ -213,7 +207,10 @@ public:
 
 private:
     typedef std::map<DagNode *, PySmtTerm> Cache;
-    typedef std::map<PySmtTerm, DagNode *, cmpExprById> ReverseCache;
+    // Hashable solver expressions use Python's hash/equality contract; custom
+    // unhashable expressions still use the equality-only fallback below.
+    using ReverseEntry = std::pair<PySmtTerm, DagNode *>;
+    using ReverseCache = std::unordered_map<Py_hash_t, std::vector<ReverseEntry>>;
 
     struct ConversionCacheEntry
     {
@@ -226,13 +223,27 @@ private:
 
     Cache cache;
     ReverseCache rcache;
+    std::vector<ReverseEntry> unhashableReverseEntries;
+    bool reverseCacheDirty = true;
 
     void genRevCache()
     {
+        if (!reverseCacheDirty)
+            return;
+        rcache.clear();
+        unhashableReverseEntries.clear();
         for (auto it = cache.begin(); it != cache.end(); it++)
         {
-            (rcache)[it->second] = it->first;
+            Py_hash_t hash = PyObject_Hash(it->second->borrowData());
+            if (hash == -1)
+            {
+                PyErr_Clear();
+                unhashableReverseEntries.emplace_back(it->second, it->first);
+            }
+            else
+                rcache[hash].emplace_back(it->second, it->first);
         }
+        reverseCacheDirty = false;
     }
 
     bool python_equal(PyObject *a, PyObject *b)
@@ -308,21 +319,34 @@ public:
     void cache_insert(EasyTerm *dag, PySmtTerm &term)
     {
         cache[dag->getDag()] = term;
+        reverseCacheDirty = true;
     }
 
     EasyTerm *cache_find(PySmtTerm &term)
     {
-
         genRevCache();
 
         PyObject *pyObj = term->borrowData();
-        for (auto &[key, val] : rcache)
+        Py_hash_t hash = PyObject_Hash(pyObj);
+        if (hash == -1)
         {
-            if (python_equal(key->borrowData(), pyObj))
-            {
-                return new EasyTerm(val);
-            }
+            PyErr_Clear();
+            // Keep equality-only matching for custom unhashable expressions.
+            for (const auto &[dag, cached] : cache)
+                if (python_equal(cached->borrowData(), pyObj))
+                    return new EasyTerm(dag);
+            return nullptr;
         }
+
+        auto bucket = rcache.find(hash);
+        if (bucket != rcache.end())
+            for (const auto &[cached, dag] : bucket->second)
+                if (python_equal(cached->borrowData(), pyObj))
+                    return new EasyTerm(dag);
+
+        for (const auto &[cached, dag] : unhashableReverseEntries)
+            if (python_equal(cached->borrowData(), pyObj))
+                return new EasyTerm(dag);
 
         return nullptr;
     }
@@ -338,7 +362,6 @@ public:
         {
             if (d->equal(it2->first))
             {
-                cache.insert({d, it2->second});
                 return it2->second;
             }
         }

@@ -41,13 +41,19 @@ def run(solver: str) -> None:
         "upTerm(return(J)), upTerm(I < 9 and I > 0) = "
         "upTerm((true).Boolean), '*, unbounded, 0, 'QF_LRA)"
     )
-    term = module.parseTerm(expression)
-    if term is None:
-        raise RuntimeError("meta SMT search could not be parsed")
-    term.reduce()
-    result = str(term)
-    if "'return[" not in result or "'J:Integer <-" not in result:
-        raise RuntimeError(f"unexpected meta SMT search result: {term}")
+    expected = None
+    for _ in range(20):
+        term = module.parseTerm(expression)
+        if term is None:
+            raise RuntimeError("meta SMT search could not be parsed")
+        term.reduce()
+        result = str(term)
+        if "'return[" not in result or "'J:Integer <-" not in result:
+            raise RuntimeError(f"unexpected meta SMT search result: {term}")
+        if expected is None:
+            expected = result
+        elif result != expected:
+            raise RuntimeError("repeated meta SMT search changed its result")
 
 
 if __name__ == "__main__":
