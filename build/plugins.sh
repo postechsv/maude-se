@@ -149,5 +149,26 @@ elif [[ "$(uname -s)" == Darwin && "$solver" == yices ]]; then
 fi
 
 mkdir -p "$top_dir/out"
+if [[ "$(uname -s)" == Darwin ]]; then
+  # The selected Python may itself target a newer macOS than this plugin.
+  # The dylib was compiled for $target, so tag the wheel for that target.
+  export _PYTHON_HOST_PLATFORM="macosx-$target-$(uname -m)"
+fi
+wheel_output_dir="$stage/dist"
 MACOSX_DEPLOYMENT_TARGET="$target" "$build_python" -m pip wheel \
-  --no-deps --no-build-isolation -w "$top_dir/out" "$stage"
+  --no-deps --no-build-isolation -w "$wheel_output_dir" "$stage"
+
+wheels=("$wheel_output_dir/maude_se_native_${solver}-${plugin_version}-"*.whl)
+[[ ${#wheels[@]} -eq 1 && -f "${wheels[0]}" ]] || {
+  echo "error: expected one correctly named $solver plugin wheel in $wheel_output_dir" >&2
+  exit 1
+}
+if [[ "$(uname -s)" == Darwin && "$(basename "${wheels[0]}")" != *-macosx_${target//./_}_$(uname -m).whl ]]; then
+  echo "error: $solver plugin wheel has an unexpected macOS deployment target" >&2
+  exit 1
+fi
+unzip -Z1 "${wheels[0]}" | grep -Fxq "maude_se_native_$solver/libmaude_se_$solver.$suffix" || {
+  echo "error: $solver plugin binary is missing from ${wheels[0]}" >&2
+  exit 1
+}
+cp "${wheels[0]}" "$top_dir/out/"

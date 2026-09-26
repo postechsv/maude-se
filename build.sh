@@ -23,6 +23,7 @@ standalone) build_standalone "$@" ;;
 plugin)
   select_wheel_environment
   venv_uses_selected_python "$build_venv" || fail "build environment is missing or uses a different Python; run ./build.sh wheel first"
+  ensure_build_venv
   bash "$top_dir/build/plugins.sh" "$@"
   ;;
 test-standalone) test_standalone "$@" ;;
