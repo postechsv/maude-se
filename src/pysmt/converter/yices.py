@@ -4,16 +4,17 @@ from maudeSE.util import *
 from functools import reduce
 
 from maudeSE.maude import *
+from maudeSE.decorators import converter
 from yices import *
 from yices_api import *
 import re
 
 
-class YicesConverter(Converter):
+@converter
+class YicesConverter:
     """A term converter from Maude to Yices"""
 
     def __init__(self):
-        Converter.__init__(self)
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
@@ -89,7 +90,6 @@ class YicesConverter(Converter):
 
         self._func_dict = dict()
         self._module = None
-        self._dag2term_memoize = dict()
 
     def prepareFor(self, module: Module):
         # clear previous
@@ -99,7 +99,6 @@ class YicesConverter(Converter):
         self._symbol_map.clear()
         self._symbol_info.clear()
         self._fun_dict.clear()
-        self._dag2term_memoize.clear()
         self._module = None
 
         # recreate the id generator
@@ -192,15 +191,11 @@ class YicesConverter(Converter):
     
     def term2dag(self, term):
         try:
-            return self._module.parseTerm(self._term2dag(get_data(term)))
+            return self._module.parseTerm(self._term2dag(term))
         except:
             return None
 
     def _term2dag(self, term):
-        cached_dag = self.cache_find(SmtTerm(term))
-        if cached_dag:
-            return str(cached_dag)
-
         t, ty = term
 
         # variable or function
@@ -384,27 +379,12 @@ class YicesConverter(Converter):
         :returns: A pair of
           an SMT solver term and its variables
         """
-        return SmtTerm(self._dag2term(t))
-    
-    def _dag2term(self, t: Term):
-        cached = self.conversion_cache_find(t)
-        if cached:
-            return get_data(cached)
-        value = self._dag2term_uncached(t)
-        self.conversion_cache_insert(t, SmtTerm(value))
-        return value
-
-    def _dag2term_uncached(self, t: Term):
-        cached_term = self.cache_find(t)
-        if cached_term:
-            return get_data(cached_term)
-
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
         
         if symbol == "toReal":
             child = list(t.arguments())
             assert len(child) == 1
-            c, ty = self._dag2term(child[0])
+            c, ty = self.dag2term(child[0])
 
             assert ty == Types.int_type()
             return c, Types.real_type()
@@ -417,7 +397,6 @@ class YicesConverter(Converter):
             v = Terms.new_uninterpreted_term(sort, name)
 
             ns = (v, sort)
-            self.cache_insert(t, SmtTerm(ns))
             return ns
 
         if t.isVariable():
@@ -444,7 +423,6 @@ class YicesConverter(Converter):
                     v = Terms.new_uninterpreted_term(sort, v_name)
             
             if v is not None:
-                self.cache_insert(t, SmtTerm((v, sort)))
                 return v, sort
 
             raise Exception("wrong variable {} with sort {}".format(v_name, symbol_sort))
@@ -456,7 +434,7 @@ class YicesConverter(Converter):
         k = (symbol, tuple(sorts))
 
         if k in self._symbol_map:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
 
             sym, th, name = self._symbol_map[k]
 
@@ -510,7 +488,7 @@ class YicesConverter(Converter):
             return c, ty
 
         if symbol in self._op_dict:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
             op = self._op_dict[symbol]
 
             raw_args = list(map(lambda x: x[0], p_args))

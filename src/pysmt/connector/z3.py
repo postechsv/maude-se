@@ -1,14 +1,13 @@
 import z3
 
 from maudeSE.maude import *
-from maudeSE.util import id_gen
-from maudeSE.maude import *
+from maudeSE.decorators import connector
 
+@connector
 class Z3Connector(Connector):
     def __init__(self, converter: Converter, logic=None):
         super().__init__()
         self._c = converter
-        self._g = id_gen()
 
         _logic = "QF_LRA" if logic is None else logic
 
@@ -17,7 +16,7 @@ class Z3Connector(Connector):
     
     def check_sat(self, consts):
         for const in consts:
-            self._s.add(get_data(const))
+            self._s.add(const)
 
         r = self._s.check()
 
@@ -40,30 +39,17 @@ class Z3Connector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            body = get_data(cur)
+            body = cur
         else:
-            body = z3.And(get_data(acc), get_data(cur))
+            body = z3.And(acc, cur)
 
-        return SmtTerm(z3.simplify(body))
+        return z3.simplify(body)
 
     def simplify(self, term):
-        return SmtTerm(z3.simplify(get_data(term)))
+        return z3.simplify(term)
 
     def subsume(self, subst, prev, acc, cur):
-        t_l = list()
-        sub = subst.keys()
-        for p in sub:
-            src = get_data(self._c.dag2term(p))
-            trg = get_data(self._c.dag2term(subst.get(p)))
-
-            t_l.append((src, trg))
-
-        prev_c = get_data(prev)
-
-        acc_c = get_data(acc)
-        cur_c = get_data(cur)
-    
-        self._s.add(z3.Not(z3.Implies(z3.And(acc_c, cur_c), z3.substitute(prev_c, *t_l))))
+        self._s.add(z3.Not(z3.Implies(z3.And(acc, cur), z3.substitute(prev, *subst))))
 
         r = self._s.check()
 
@@ -80,10 +66,7 @@ class Z3Connector(Connector):
     def get_model(self):
         raw_m = self._s.model()
         
-        m = SmtModel()
-        for d in raw_m.decls():
-            m.set(d, raw_m[d])
-        return m
+        return [(d, raw_m[d]) for d in raw_m.decls()]
 
     def print_model(self):
         print(self._m)

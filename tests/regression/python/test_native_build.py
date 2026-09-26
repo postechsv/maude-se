@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from maudeSE import native_build
+from maudeSE.plugins import build as native_build
 
 
 class SourceCheckoutTests(unittest.TestCase):

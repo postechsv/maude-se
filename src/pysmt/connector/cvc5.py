@@ -2,14 +2,13 @@ import cvc5
 
 from cvc5 import Kind as cvcKind
 from maudeSE.maude import *
-from maudeSE.util import id_gen
-from maudeSE.maude import *
+from maudeSE.decorators import connector
 
+@connector
 class Cvc5Connector(Connector):
     def __init__(self, converter: Converter, logic=None):
         super().__init__()
         self._c = converter
-        self._g = id_gen()
 
         # set solver
         # Terms are owned by a cvc5 TermManager.  Reuse the converter's
@@ -25,7 +24,7 @@ class Cvc5Connector(Connector):
     
     def check_sat(self, consts):
         for const in consts:
-            self._s.assertFormula(get_data(const))
+            self._s.assertFormula(const)
         
         r = self._s.checkSat()
 
@@ -37,7 +36,7 @@ class Cvc5Connector(Connector):
             return unknown
         
     def simplify(self, term):
-        return SmtTerm(self._s.simplify(get_data(term)))
+        return self._s.simplify(term)
         
     def push(self):
         self._s.push()
@@ -48,14 +47,6 @@ class Cvc5Connector(Connector):
     def reset(self):
         self._s.resetAssertions()
 
-    def _make_model(self):
-        _vars = self._get_vars()
-
-        m = SmtModel()
-        for v in _vars:
-            m.set(v, self._s.getValue(v))
-        return m
-    
     def _get_vars(self):
         assertions = self._s.getAssertions()
         q, _vars, visit = list(assertions), set(), set(assertions)
@@ -74,35 +65,21 @@ class Cvc5Connector(Connector):
     def add_const(self, acc, cur):
         # initial case
         if acc is None:
-            body = get_data(cur)
+            body = cur
         else:
-            acc_f, cur_t = get_data(acc), get_data(cur)
-            body = self._s.mkTerm(cvcKind.AND, acc_f, cur_t)
+            body = self._s.mkTerm(cvcKind.AND, acc, cur)
 
-        return SmtTerm(body)
+        return body
 
     def subsume(self, subst, prev, acc, cur):
-        arr = self._s.getAssertions()
+        assert len(self._s.getAssertions()) == 0
 
-        assert len(arr) == 0
-
-        t_v, t_l = list(), list()
-        sub = subst.keys()
-        for p in sub:
-            src = get_data(self._c.dag2term(p))
-            trg = get_data(self._c.dag2term(subst.get(p)))
-
-            t_v.append(src)
-            t_l.append(trg)
-
-        prev_c = get_data(prev)
-
-        acc_c = get_data(acc)
-        cur_c = get_data(cur)
+        t_v = [source for source, _ in subst]
+        t_l = [target for _, target in subst]
 
         # implication and its children
-        l = self._s.mkTerm(cvcKind.AND, acc_c, cur_c)
-        r = prev_c.substitute(t_v, t_l)
+        l = self._s.mkTerm(cvcKind.AND, acc, cur)
+        r = prev.substitute(t_v, t_l)
         imply = self._s.mkTerm(cvcKind.IMPLIES, l, r)
 
         self._s.assertFormula(self._s.mkTerm(cvcKind.NOT, imply))
@@ -120,7 +97,7 @@ class Cvc5Connector(Connector):
         pass
 
     def get_model(self):
-        return self._make_model()
+        return [(variable, self._s.getValue(variable)) for variable in self._get_vars()]
     
     def print_model(self):
         for v in self._m:

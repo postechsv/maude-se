@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from zipfile import ZipFile
 
-from maudeSE import native_assets
+from maudeSE.plugins import assets as native_assets
 
 
 class NativeAssetTests(unittest.TestCase):

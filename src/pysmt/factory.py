@@ -5,7 +5,7 @@ from maudeSE.maude import (
     loadNativeSmtPlugin,
     nativeSmtPluginError,
 )
-from . import native_assets, native_plugin
+from .plugins import assets as native_assets, plugin as native_plugin
 
 
 class Factory:

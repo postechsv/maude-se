@@ -3,16 +3,17 @@ from typing import Dict
 from maudeSE.util import *
 from functools import reduce
 from maudeSE.maude import *
+from maudeSE.decorators import converter
 
 import z3
 import re
 
 
-class Z3Converter(Converter):
+@converter
+class Z3Converter:
     """A term converter from Maude to Z3"""
 
     def __init__(self):
-        Converter.__init__(self)
         self._g = id_gen()
         self._symbol_info = dict()
         self._symbol_map = dict()
@@ -184,15 +185,11 @@ class Z3Converter(Converter):
     
     def term2dag(self, term):
         try:
-            return self._module.parseTerm(self._term2dag(get_data(term)))
+            return self._module.parseTerm(self._term2dag(term))
         except:
             return None
 
     def _term2dag(self, term):
-        cached_dag = self.cache_find(SmtTerm(term))
-        if cached_dag:
-            return str(cached_dag)
-
         if z3.is_and(term):
             r = " and ".join([self._term2dag(c) for c in term.children()])
             return f"({r})"
@@ -311,21 +308,6 @@ class Z3Converter(Converter):
         :param t: A maude term
         :returns: An SMT solver term
         """
-        return SmtTerm(self._dag2term(t))
-
-    def _dag2term(self, t: Term):
-        cached = self.conversion_cache_find(t)
-        if cached:
-            return get_data(cached)
-        value = self._dag2term_uncached(t)
-        self.conversion_cache_insert(t, SmtTerm(value))
-        return value
-
-    def _dag2term_uncached(self, t: Term):
-        cached_term = self.cache_find(t)
-        if cached_term:
-            return get_data(cached_term)
-
         if t.isVariable():
             v_sort, v_name = str(t.getSort()), t.getVarName()
 
@@ -350,7 +332,6 @@ class Z3Converter(Converter):
                     v = z3.Const(v_name, sort)
             
             if v is not None:
-                self.cache_insert(t, SmtTerm(v))
                 return v
 
             raise Exception("wrong variable {} with sort {}".format(v_name, v_sort))
@@ -365,7 +346,6 @@ class Z3Converter(Converter):
             # print(name, sort)
             v = z3.Const(name, sort)
 
-            self.cache_insert(t, SmtTerm(v))
             return v
 
         sorts = [self._decl_sort(str(arg.symbol().getRangeSort())) for arg in t.arguments()]
@@ -373,7 +353,7 @@ class Z3Converter(Converter):
         k = (symbol, tuple(sorts))
 
         if k in self._symbol_map:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
             sym = self._symbol_map[k]
 
             return sym(*p_args)
@@ -397,7 +377,7 @@ class Z3Converter(Converter):
             return c
 
         if symbol in self._op_dict:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
             op = self._op_dict[symbol]
 
             return op(*p_args)

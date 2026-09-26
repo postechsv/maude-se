@@ -75,8 +75,8 @@ case "$solver" in
     ;;
 esac
 asset_dir="$MAUDE_SE_PLUGIN_ASSET_DIR"
-PYTHONPATH="$top_dir/src/pysmt" "$build_python" -c \
-  'import native_assets, sys; native_assets.install(sys.argv[1], sys.argv[2], archive=sys.argv[3] or None)' \
+PYTHONPATH="$top_dir/src" "$build_python" -c \
+  'from plugins import assets; import sys; assets.install(sys.argv[1], sys.argv[2], archive=sys.argv[3] or None)' \
   "$solver" "$asset_dir" "${MAUDE_SE_ASSET_ARCHIVE:-}"
 if [[ "$solver" == yices ]]; then
   if [[ "$(uname -s)" == Darwin ]]; then
@@ -99,7 +99,7 @@ done
 "${CXX:-c++}" -std=c++17 -O2 -fPIC -DHAVE_CONFIG_H -DUSE_PYSMT \
   "-D$plugin_define" "${includes[@]}" \
   "${link_mode[@]}" \
-  "$top_dir/src/native_plugins/plugin.cc" \
+  "$top_dir/src/plugins/plugin.cc" \
   "$top_dir/src/Extension/$source_file" \
   -L"$(dirname "$core_library")" -lmaude "${solver_links[@]}" \
   -o "$output"

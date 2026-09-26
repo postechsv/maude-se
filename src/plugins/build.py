@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 
-from . import native_assets, native_plugin
+from . import assets as native_assets, plugin as native_plugin
 
 
 SOURCE_URL = "https://github.com/postechsv/maude-se.git"

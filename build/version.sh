@@ -38,6 +38,9 @@ prepare_maude_se_package_sources() {
   rm -rf "$destination"
   mkdir -p "$destination"
   cp -R "$top_dir/src/pysmt" "$destination/pysmt"
+  mkdir -p "$destination/pysmt/plugins"
+  cp "$top_dir/src/plugins/"{__init__.py,assets.py,build.py,plugin.py} \
+    "$destination/pysmt/plugins/"
   cp "$top_dir/src/smt-check.maude" "$destination/smt-check.maude"
   sed \
     -e "s/@MAUDE_SE_VERSION@/$version/g" \

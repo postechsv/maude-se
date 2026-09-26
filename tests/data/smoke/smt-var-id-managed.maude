@@ -1,0 +1,7 @@
+load smt
+load smt-check
+
+mod SMT-VAR-ID-MANAGED is
+  pr SMT-CHECK .
+  ops a b : -> SMTVarId [ctor] .
+endm

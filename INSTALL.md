@@ -178,9 +178,11 @@ rebuild of the affected dependencies.
 
 Native plugins add a C++ solver connection to the Python wheel. They are
 separate from the Python solver packages installed by `maude-se[z3]` and the
-other extras. The plugins are not yet published; see the
-[native plugin build guide](src/native_plugins/README.md) to build and test
-them locally.
+other extras. On macOS, `maude-se-installer install native z3` builds one
+locally against the installed Maude library; it does not install a plugin
+wheel. The installed package directory must be writable. See the
+[native plugin build guide](src/plugins/README.md) for source and
+build-directory options.
 
 ### 7. Use the installed development build
 

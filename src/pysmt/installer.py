@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from . import native_assets, native_build, native_plugin
+from .plugins import assets as native_assets, build as native_build, plugin as native_plugin
 
 
 SOLVERS = {

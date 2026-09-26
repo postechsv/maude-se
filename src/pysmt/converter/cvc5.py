@@ -2,17 +2,18 @@ from maudeSE.util import *
 from functools import reduce
 
 from maudeSE.maude import *
+from maudeSE.decorators import converter
 
 import cvc5
 import re
 from cvc5 import Kind
 
 
-class Cvc5Converter(Converter):
-    """A term converter from Maude to Yices"""
+@converter
+class Cvc5Converter:
+    """A term converter from Maude to cvc5"""
 
     def __init__(self):
-        Converter.__init__(self)
         self._s = cvc5.Solver()
         self._g = id_gen()
         self._symbol_info = dict()
@@ -201,15 +202,11 @@ class Cvc5Converter(Converter):
     
     def term2dag(self, term):
         try:
-            return self._module.parseTerm(self._term2dag(get_data(term)))
+            return self._module.parseTerm(self._term2dag(term))
         except:
             return None
 
     def _term2dag(self, term):
-        cached_dag = self.cache_find(SmtTerm(term))
-        if cached_dag:
-            return str(cached_dag)
-    
         kind, sort = term.getKind(), term.getSort()
         if kind == Kind.AND:
             r = " and ".join([self._term2dag(c) for c in term])
@@ -311,21 +308,6 @@ class Cvc5Converter(Converter):
         :returns: A pair of
           an SMT solver term and its variables
         """
-        return SmtTerm(self._dag2term(t))
-
-    def _dag2term(self, t: Term):
-        cached = self.conversion_cache_find(t)
-        if cached:
-            return get_data(cached)
-        value = self._dag2term_uncached(t)
-        self.conversion_cache_insert(t, SmtTerm(value))
-        return value
-
-    def _dag2term_uncached(self, t: Term):
-        cached_term = self.cache_find(t)
-        if cached_term:
-            return get_data(cached_term)
-
         symbol, symbol_sort = str(t.symbol()), str(t.getSort())
 
         if symbol_sort in self._special_var_sort:
@@ -334,7 +316,6 @@ class Cvc5Converter(Converter):
             sort = self._special_var_sort[symbol_sort]()
 
             v = self._s.mkConst(sort, name)
-            self.cache_insert(t, SmtTerm(v))
             return v
 
         if t.isVariable():
@@ -361,7 +342,6 @@ class Cvc5Converter(Converter):
                     v = self._s.mkConst(sort, v_name)
 
             if v is not None:
-                self.cache_insert(t, SmtTerm(v))
                 return v
 
             raise Exception("wrong variable {} with sort {}".format(v_name, symbol_sort))
@@ -371,7 +351,7 @@ class Cvc5Converter(Converter):
         k = (symbol, tuple(sorts))
 
         if k in self._symbol_map:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
 
             op_s, th = self._symbol_map[k]
 
@@ -414,7 +394,7 @@ class Cvc5Converter(Converter):
             return c
 
         if symbol in self._op_dict:
-            p_args = [self._dag2term(arg) for arg in t.arguments()]
+            p_args = [self.dag2term(arg) for arg in t.arguments()]
             op_s = self._op_dict[symbol]
 
             t = None
