@@ -55,6 +55,7 @@ public:
 private:
     term_t makeVariable(DagNode *dag) override;
     term_t convert(DagNode *dag);
+    term_t convertUncached(DagNode *dag);
     DagNode *convertBack(term_t value, type_t expectedType);
     DagNode *remember(term_t value, DagNode *dag);
     void markReachableNodes() override;
@@ -102,6 +103,7 @@ public:
     }
 };
 
+#ifndef USE_PYSMT
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
@@ -111,5 +113,6 @@ public:
         smtManagerFactory = new YicesSmtManagerFactory();
     }
 };
+#endif
 
 #endif

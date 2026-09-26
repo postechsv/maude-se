@@ -60,7 +60,17 @@ jobs:
     - name: Build Python wheel
       run: ./build/macos.sh
     - name: Test Z3, Yices, and cvc5
-      run: ./build.sh test
+      run: ./build.sh test-wheel
+    - name: Test native installer from built wheel
+      if: matrix.os == 'macos-latest' && matrix.python-version == '3.12'
+      run: |
+        python_tag="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')"
+        test_python=".build-wheel/${python_tag}-$(uname -m)/venv-test/bin/python"
+        test_installer=".build-wheel/${python_tag}-$(uname -m)/venv-test/bin/maude-se-installer"
+        "$test_python" -m unittest discover -s tests/regression/python -p test_native_build.py
+        "$test_installer" install native z3 --source-dir "$PWD"
+        "$test_installer" doctor native z3
+        "$test_python" tests/regression/python/test_native_plugin_only.py z3
     - name: Store wheel distribution
       uses: actions/upload-artifact@v4
       with:

@@ -17,7 +17,7 @@ it checks whether `f` is satisfiable under `Th`.
 MaudeSE> check in M : f using Th .
 ```
 
-For example, consider the module `EUF-EX` ({download}`euf-ex.maude <assets/euf-ex.maude>`) which contains uninterpreted function symbols 
+For example, consider the module `EUF-EX` ({download}`euf-ex.maude <assets/euf-ex.maude>`) which contains uninterpreted function symbols
 declared using `metadata` with `smt euf`.
 
 ```maude

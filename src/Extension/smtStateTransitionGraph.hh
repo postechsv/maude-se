@@ -87,8 +87,8 @@ protected:
     LhsAutomaton *matchingAutomaton;
     int nrMatchingVariables; // number of variables needed for matching; includes any abstraction variables
 
-    bool findMatching(DagNode *other, Converter converter, Connector connector);
-    TermSubst subst;
+    bool subsumes(DagNode *other, Connector connector, const SMT_Info &smtInfo,
+                  SmtTerm accumulated, SmtTerm current);
   };
 
   bool fold;

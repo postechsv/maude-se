@@ -52,6 +52,11 @@ class Cvc5Converter : public _Converter,
 {
 public:
     explicit Cvc5Converter(const SMT_Info &info);
+    ~Cvc5Converter() override
+    {
+        clearConversionCache();
+        smtManagerVariableMap.clear();
+    }
     void prepareFor(VisibleModule *module) override;
     SmtTerm dag2term(DagNode *dag) override;
     DagHandle term2dag(SmtTerm term) override;
@@ -61,6 +66,7 @@ public:
 private:
     cvc5::Term makeVariable(DagNode *dag) override;
     cvc5::Term convert(DagNode *dag);
+    cvc5::Term convertUncached(DagNode *dag);
     DagNode *convertBack(const cvc5::Term &term);
     DagNode *convertBackUnrooted(const cvc5::Term &term);
     DagRootFrame *activeFrame = nullptr;
@@ -110,6 +116,7 @@ public:
     }
 };
 
+#ifndef USE_PYSMT
 class SmtManagerFactorySetter : public SmtManagerFactorySetterInterface
 {
 public:
@@ -119,5 +126,6 @@ public:
         smtManagerFactory = new Cvc5SmtManagerFactory();
     }
 };
+#endif
 
 #endif

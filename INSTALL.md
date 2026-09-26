@@ -1,87 +1,67 @@
-# Installing and Building MaudeSE
+# Installation and source builds
 
-## Install a released package
+## Install the Python package
 
-Install the latest released Python package from PyPI:
-
-```bash
-python3 -m pip install maude-se
-```
-
-MaudeSE selects Z3 by default, but the base wheel does not install any SMT
-solver. The wheel installs `maude-se-installer`, which checks the solvers
-available in the current Python environment:
+For the published release, install MaudeSE and Z3, its default solver, in the
+same Python environment. Published wheels cover Python 3.8–3.13 on macOS and
+Linux:
 
 ```bash
-maude-se-installer doctor
-maude-se-installer doctor cvc5
+python3 -m pip install maude-se 'z3-solver==4.13.0.0'
 ```
 
-Install Z3 for the default configuration, another solver of your choice, or
-all solvers into that same environment:
+MaudeSE already contains the connectors and converters for Z3, Yices2, and
+cvc5. The published release does not include solver extras or the
+`maude-se-installer` command. The current source build adds both and targets
+Python 3.10–3.14.
+
+### Add a solver to an existing installation
+
+The base `maude-se` package includes no solver Python package. If you already
+installed the published release without Z3, add it with:
+
+```bash
+python3 -m pip install 'z3-solver==4.13.0.0'
+```
+
+For Yices2 or cvc5, install the corresponding solver package in the same
+environment and select it with `-s yices` or `-s cvc5`.
+
+### Solver extras in a source build
+
+After building and installing a wheel from this checkout, you can instead
+install MaudeSE and a solver together with `maude-se[z3]`, `maude-se[yices]`,
+or `maude-se[cvc5]`. To add a solver to an existing installation of that
+source-built wheel, use:
 
 ```bash
 maude-se-installer install z3
-maude-se-installer install yices
-maude-se-installer install cvc5
-maude-se-installer install all
 ```
 
-These commands use the installed MaudeSE version's declared dependencies.
-Equivalent package extras are `maude-se[z3]`, `maude-se[yices]`,
-`maude-se[cvc5]`, and `maude-se[all-solvers]`. Install Z3 before running
-`maude-se` with its default configuration. The installer applies to the wheel;
-the standalone executable includes its own solver.
+The installer also accepts `yices`, `cvc5`, or `all`. Its `doctor` command
+checks solver availability without installing anything. The published PyPI
+release does not yet provide this command.
 
-Select a solver when running a Maude file:
+### Run an example
+
+From a checkout of this repository, run an included Maude file with the solver
+you installed:
 
 ```bash
-maude-se example.maude -s cvc5
+maude-se examples/smt-check-ex.maude -s z3
 ```
 
-Check the installation with:
+At the `MaudeSE>` prompt, run
+`check in SIMPLE : X:Integer > 4 using QF_LRA .` and expect `result: sat`.
 
-```bash
-maude-se --help
-```
+Use `maude-se --help` for command options. For a standalone executable that
+includes its own solver, see the [release downloads](https://github.com/postechsv/maude-se/releases)
+and the [website installation page](https://maude-se.github.io/installation.html).
 
-## Change the MaudeSE version
+## Build from source on macOS
 
-The MaudeSE release version has one source of truth:
-`src/pyproject.toml`. Change only its `version` field. Wheel names,
-standalone ZIP names, Python package metadata, and the MaudeSE banner derive
-their version from that value during the build. The banner build date is also
-generated at build time, so building does not modify tracked source files.
-
-Release tags must use the matching `v<version>` form. For example, version
-`0.0.3` must be released with tag `v0.0.3`; the standalone release build fails
-early when the tag and package version differ.
-
-## Build locally on macOS
-
-Generated build files are kept in two directories:
-
-- `.build-wheel/` contains the wheel's external source checkouts, downloaded
-  dependencies, installed native libraries, and Python environments.
-- `.build-standalone/` contains the standalone Maude checkout, downloaded
-  dependencies, and installed native libraries.
-
-Finished wheels and standalone ZIP files are written to `out/`.
-
-The wheel directory contains two isolated Python environments:
-
-- `.build-wheel/venv-build` contains Meson, Ninja, and the Python packaging
-  tools used to build the wheel. CMake and SWIG come from Homebrew.
-- `.build-wheel/venv-test` contains the generated MaudeSE wheel, PyYAML, Z3, Yices, and
-  cvc5. It
-  represents a clean `all-solvers` user installation and is recreated by the
-  test command.
-
-Both directories and all generated build artifacts are ignored by Git.
-
-The standalone build does not use either Python environment. It produces a ZIP
-containing the MaudeSE executable with Z3 statically linked and the required
-Maude modules.
+The following steps are for contributors building wheels and standalone
+executables locally. Finished artifacts are written to `out/`.
 
 ### 1. Check prerequisites
 
@@ -89,8 +69,8 @@ Maude modules.
 ./build.sh doctor
 ```
 
-This command only inspects the environment. It does not install or modify
-anything.
+`doctor` checks the local environment without changing it. The macOS build
+requires Xcode Command Line Tools, Python 3.10–3.14, and Homebrew.
 
 To include the additional standalone-build prerequisites in the check, run:
 
@@ -98,31 +78,17 @@ To include the additional standalone-build prerequisites in the check, run:
 ./build.sh doctor standalone
 ```
 
-The macOS build requires Xcode Command Line Tools, Python 3.10-3.14, and
-Homebrew. Wheel builds use these Homebrew build tools:
+Wheel builds use these Homebrew tools:
 
 - `bison`
 - `flex`
 - `cmake`
 - `swig`
 
-Standalone builds use Homebrew only for build tools:
+Standalone builds also need `autoconf` and `automake`, as well as `zip` and
+`unzip` on your path. The other Homebrew tools above are shared.
 
-- `bison`
-- `flex`
-- `autoconf`
-- `automake`
-- `cmake`
-
-The native libraries used by the wheel and standalone builds are built from
-pinned source versions instead of Homebrew bottles. Standalone builds include
-a statically linked Z3, while wheels declare each pinned solver package as an
-optional dependency. Source archives are checked against pinned SHA-256 hashes
-before extraction; the standalone Z3 tag is also checked against a pinned
-commit. Update `build/versions.env` hashes when intentionally changing a
-dependency version.
-
-Install missing Homebrew packages explicitly with:
+To install missing Homebrew tools, run:
 
 ```bash
 ./build.sh install-deps
@@ -134,14 +100,17 @@ Install missing Homebrew packages explicitly with:
 ./build.sh setup
 ```
 
-This command:
-
-1. checks the local prerequisites;
-2. creates or updates `.build-wheel/venv-build` with pinned build tools;
-3. checks out the pinned `maude-bindings` and `maudesmc` revisions; and
-4. applies the MaudeSE patches if they have not already been applied.
-
-It is safe to run `setup` repeatedly.
+This checks prerequisites, prepares the pinned upstream sources and patches,
+and creates the build environment in `.build-wheel/cp<version>-<architecture>/venv-build`.
+Each Python version and architecture keeps its own Maude sources, native Maude
+build files, and virtual environments. Python-independent static dependencies
+are built under `.build-wheel/dependencies/` and installed to
+`.build-wheel/install/` for reuse by other Python versions. Changes to the
+architecture, macOS deployment target, compiler, SDK, or dependency build
+inputs trigger a rebuild. Switching the selected `python3` does not require
+`clean`; `setup` reuses the matching environment. If the selected Python
+installation changes within the same version, its build virtual environment
+is recreated automatically.
 
 ### 3. Build the wheel
 
@@ -149,38 +118,21 @@ It is safe to run `setup` repeatedly.
 ./build.sh wheel
 ```
 
-This runs `setup`, builds the native dependencies and Maude core, and writes
-the resulting wheel to `out/`. The native Maude library is built in release
-mode with compiler optimization, link-time optimization, and symbol stripping.
+This runs `setup`, builds MaudeSE and its native dependencies, and writes a
+wheel to `out/`.
 
 ### 4. Test the wheel
 
 ```bash
-./build.sh test
+./build.sh test-wheel
 ```
 
-This command does not rebuild the wheel. It expects exactly one wheel in
-`out/`, recreates `.build-wheel/venv-test`, verifies the base wheel has no
-solver, installs Z3 through the installer, then installs all supported solvers
-and checks:
-
-- `import maudeSE`;
-- `maude-se --help`;
-- `maude-se-installer doctor`;
-- Z3, Yices, and cvc5 SAT/UNSAT smoke tests using
-  `examples/smt-check-ex.maude`;
-- native modules have no non-system dynamic-library dependencies.
-
-On macOS, the Python extension and the operating system itself remain dynamic.
-Third-party libraries are linked statically where supported; the wheel-bundled
-`libmaude` reference is allowed because it is shipped inside the wheel.
-
-To build and then test, run:
-
-```bash
-./build.sh wheel
-./build.sh test
-```
+This selects the wheel in `out/` matching the selected `python3` and Mac
+architecture, then recreates the corresponding
+`.build-wheel/cp<version>-<architecture>/venv-test`. Multiple Python wheels
+can coexist in `out/`. The test installs the solver extras and checks imports,
+the installer, and SAT/UNSAT examples with Z3, Yices2, and cvc5. It also
+checks the wheel's native library dependencies.
 
 ### 5. Build and test the standalone executable
 
@@ -189,30 +141,21 @@ To build and then test, run:
 ./build.sh test-standalone
 ```
 
-`standalone` checks out the pinned Maude source, applies the native MaudeSE
-patch, builds its native libraries, and creates
-`out/maude_se_z3-<version>-macosx-<architecture>.zip`. The ZIP is independent
-of the wheel and does not require a Python virtual environment. It keeps the
-official Maude feature defaults and adds the MaudeSE SMT extension with a
-statically linked Z3; the experimental integrated compiler remains disabled.
-On macOS, all native dependencies in both artifact types use the same
-deployment target: 10.13 for x86_64 and 11.0 for arm64. Override it with
-`MAUDE_SE_MACOS_DEPLOYMENT_TARGET` when required.
+`standalone` creates `out/maude_se_z3-<version>-macosx-<architecture>.zip`.
+The executable includes Z3 and does not require the Python package.
 
 `test-standalone` does not rebuild. It extracts the existing ZIP into a
 temporary directory, runs a calculation plus Z3 SAT and UNSAT checks through
 the packaged executable, and rejects non-system dynamic-library dependencies.
 
-The native cvc5 standalone uses cvc5 1.4.0 and can be built separately:
+You can build and test a cvc5 variant separately:
 
 ```bash
 ./build.sh standalone cvc5
 ./build.sh test-standalone cvc5
 ```
 
-This produces `out/maude_se_cvc5-<version>-<platform>-<architecture>.zip`
-with the `maude-se-cvc5` executable. The cvc5 library is statically linked;
-the build downloads a checksum-verified official cvc5 static distribution.
+This produces a ZIP containing `maude-se-cvc5` in `out/`.
 
 To build the native Yices executable, or all three independent executables:
 
@@ -223,12 +166,23 @@ To build the native Yices executable, or all three independent executables:
 ./build.sh test-standalone all
 ```
 
-The Yices build uses the checksum-verified Yices 2.6.5 static release,
-statically links CUDD 3.0.0 from its pinned source revision, and uses the
-libpoly static archive from the checksum-verified cvc5 distribution. Its ZIP
-contains `maude-se-yices` and does not require a locally installed solver.
+The Yices ZIP contains `maude-se-yices`. Each standalone variant includes its
+own solver and can be run without installing a Python solver package. When
+building multiple variants, common static libraries in
+`.build-standalone/install/` are reused; only solver-specific dependencies and
+the Maude executable are built separately. Changes to the architecture,
+deployment target, compiler, SDK, or pinned dependency inputs trigger a
+rebuild of the affected dependencies.
 
-### 6. Use the installed development build
+### 6. Build native solver plugins (optional)
+
+Native plugins add a C++ solver connection to the Python wheel. They are
+separate from the Python solver packages installed by `maude-se[z3]` and the
+other extras. The plugins are not yet published; see the
+[native plugin build guide](src/native_plugins/README.md) to build and test
+them locally.
+
+### 7. Use the installed development build
 
 Open an isolated shell containing the tested MaudeSE installation:
 
@@ -236,13 +190,9 @@ Open an isolated shell containing the tested MaudeSE installation:
 ./build.sh shell
 ```
 
-This is equivalent to:
-
-```bash
-./build.sh shell test
-```
-
-Inside that shell, commands such as the following use `.build-wheel/venv-test`:
+This opens the selected Python's `.build-wheel/cp<version>-<architecture>/venv-test`.
+Inside that shell, commands use the tested
+installation:
 
 ```bash
 maude-se --help
@@ -260,7 +210,7 @@ To inspect the build tools instead, open the build environment:
 The build shell is intended for debugging CMake, Meson, Ninja, SWIG, or the
 wheel build. It does not represent a clean MaudeSE installation.
 
-### 7. Clean generated files
+### 8. Clean generated files
 
 ```bash
 ./build.sh clean
@@ -269,36 +219,25 @@ wheel build. It does not represent a clean MaudeSE installation.
 This removes the local build and test environments, downloaded upstream source,
 native build products, and `out/`. It does not uninstall Homebrew packages.
 
-## Command summary
+For the complete local command list, run `./build.sh --help`.
 
-| Command | Purpose | Changes the system |
-| --- | --- | --- |
-| `./build.sh doctor` | Check macOS build prerequisites | No |
-| `./build.sh doctor standalone` | Check wheel and standalone prerequisites | No |
-| `./build.sh install-deps` | Install required Homebrew packages | Yes |
-| `./build.sh setup` | Prepare pinned sources and `.build-wheel/venv-build` | Repository only |
-| `./build.sh wheel` | Build a wheel into `out/` | Repository only |
-| `./build.sh test` | Recreate `.build-wheel/venv-test` and test the existing wheel | Repository only |
-| `./build.sh standalone` | Build a standalone executable ZIP into `out/` | Repository only |
-| `./build.sh test-standalone` | Test the existing standalone ZIP | Temporary files only |
-| `./build.sh shell` | Open the MaudeSE test environment | No persistent changes |
-| `./build.sh shell build` | Open the build-tool environment | No persistent changes |
-| `./build.sh clean` | Remove both build directories and `out/` | Repository only |
+## Release maintenance
 
-Display this command list at any time with:
+The release version is defined in `src/pyproject.toml`. Wheel and standalone
+artifact names and the MaudeSE banner derive from it during the build. A
+release tag must use the matching `v<version>` form, such as `v0.0.3` for
+version `0.0.3`.
 
-```bash
-./build.sh --help
-```
+Native dependencies are built from pinned sources. Their archives are checked
+against the SHA-256 values in `build/versions.env`; update the pins together
+when changing a dependency version.
 
-## Test distribution builds in GitHub Actions
+### Test distribution builds in GitHub Actions
 
-Once `.github/workflows/build.yml` is on the default branch, a repository
-collaborator with write access can open **Build and test** in GitHub Actions,
-select **Run workflow**, and choose a pushed branch. This runs the macOS and
-Linux wheel and standalone builds and tests without publishing. Build
-artifacts are available from the completed workflow run. Unpushed local
-changes are not included.
+A collaborator with write access can open **Build and test** in GitHub Actions,
+select **Run workflow**, and choose a pushed branch. This runs macOS and Linux
+builds and tests without publishing. Build artifacts are available from the
+completed workflow run. Unpushed local changes are not included.
 
 The separate **Release** workflow runs the same build and tests when a
 matching `v<version>` tag is pushed. It publishes wheels to PyPI unless the

@@ -1,11 +1,13 @@
 //
-//	Class for folding and maintaining the history of a search.
+//	Pattern candidate index for constrained-state folding.
 //
 #ifndef _folder_hh_
 #define _folder_hh_
-#include <set>
 #include <map>
+#include <vector>
 #include "simpleRootContainer.hh"
+
+class NarrowingFolder;
 
 class Folder : private SimpleRootContainer
 {
@@ -15,8 +17,8 @@ public:
   Folder(bool fold);
   ~Folder();
 
-  bool insertState(int index, DagNode *state, int parentIndex, int *gIdx);
-  void getState(int index, DagNode *&state) const;
+  void addState(int index, DagNode *state, int parentIndex);
+  void findSubsumers(DagNode *state, std::vector<int> &indices) const;
 
 private:
   struct RetainedState
@@ -24,6 +26,7 @@ private:
     RetainedState(DagNode *state, int parentIndex, bool fold);
     ~RetainedState();
     bool subsumes(DagNode *state) const;
+    void releaseMatcher();
 
     DagNode *const state;
     const int parentIndex;
@@ -38,21 +41,22 @@ private:
   };
 
   typedef map<int, RetainedState *> RetainedStateMap;
-  typedef set<int> StateSet;
-
+  // A root is a most-general pattern. Its groups contain equivalent
+  // patterns; every group pattern is an instance of the root pattern.
+  typedef map<int, std::vector<int> > PatternGroups;
   void markReachableNodes();
 
-  const bool fold; // we do folding to prune less general states
-  RetainedStateMap mostGeneralSoFar;
-  int currentStateIndex;
+  const bool fold;
+  // Maude's folder owns only representative patterns. It must not decide
+  // whether a constrained state can be discarded.
+  NarrowingFolder *patternIndex;
+  // SMT constraints decide whether a state can be discarded, so pattern
+  // matching alone must never evict an entry from this index.
+  RetainedStateMap retainedStates;
+  // Only representatives are matched during candidate discovery. The
+  // retainedStates map continues to root every constrained state for Maude GC.
+  PatternGroups groups;
+  PatternGroups roots;
 };
-
-inline void
-Folder::getState(int index, DagNode *&state) const
-{
-  RetainedStateMap::const_iterator i = mostGeneralSoFar.find(index);
-  Assert(i != mostGeneralSoFar.end(), "couldn't find state with index " << index);
-  state = i->second->state;
-}
 
 #endif

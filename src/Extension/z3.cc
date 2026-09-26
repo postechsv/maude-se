@@ -232,6 +232,7 @@ _Z3Converter::_Z3Converter(const SMT_Info &smtInfo)
 
 void _Z3Converter::prepareFor(VisibleModule *module)
 {
+    clearConversionCache();
     sg.setModule(module);
     smtManagerVariableMap.clear();
 }
@@ -274,6 +275,14 @@ void _Z3Converter::markReachableNodes()
 }
 
 z3::expr _Z3Converter::dag2termInternal(DagNode *dag)
+{
+    if (auto cached = cachedConversion(dag)) return *cached;
+    z3::expr result = dag2termInternalUncached(dag);
+    rememberConversion(dag, result);
+    return result;
+}
+
+z3::expr _Z3Converter::dag2termInternalUncached(DagNode *dag)
 {
     if (SMT_NumberDagNode *n = dynamic_cast<SMT_NumberDagNode *>(dag))
     {

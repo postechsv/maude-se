@@ -1,45 +1,38 @@
-MaudeSE is an SMT extension of [Maude](https://github.com/SRI-CSL/Maude) that supports various SMT features, including symbolic SMT search and satisfiability checking for SMT formulas.
+# MaudeSE
 
-It provides a *generic interface* that enables Maude to connect with SMT solvers. Users can implement their own connectors to integrate Maude with their preferred SMT solvers. Currently, MaudeSE includes built-in interfaces for Z3, Yices2, and CVC5.
+MaudeSE extends [Maude](https://github.com/SRI-CSL/Maude) with SMT solving. It
+supports satisfiability checks and symbolic search, with Python connectors for
+Z3, Yices2, and cvc5. You can also write a connector for another solver.
 
-For details on implementing a custom connector or using MaudeSE, please refer to our [webpage](https://maude-se.github.io).
+## Install and run
 
+For the published release, install MaudeSE and Z3, its default solver, in the
+same Python environment:
 
-## Prerequisite
-
-* MaudeSE supports Python 3.10-3.14, matching the official Maude wheel range.
-* Python supported SMT solvers that you want to use. 
-  * E.g., `z3`, `yices`, `cvc5`.
-
-## Installation
-
-For local development builds and command details, see [INSTALL.md](INSTALL.md).
-
-Use `pip` to install `maude-se`
-
-```
-pip install maude-se
+```sh
+python3 -m pip install maude-se 'z3-solver==4.13.0.0'
 ```
 
-Use the following command to test successful installation.
+Published wheels are available for Python 3.8–3.13 on macOS and Linux. The
+current source build targets Python 3.10–3.14 and adds solver extras and the
+`maude-se-installer` command; these are not yet in the published release.
 
+From a checkout of this repository, open one of the included examples:
+
+```sh
+maude-se examples/smt-check-ex.maude -s z3
 ```
-$ maude-se -h
-```
 
-If the installation was successful, you can see the following message.
+At the `MaudeSE>` prompt, run `check in SIMPLE : X:Integer > 4 using QF_LRA .`;
+the result should be `sat`.
 
-```
-usage: maude-se [-h] [-cfg CONFIG] [-s SOLVER] [-no-meta] [file]
+The connectors and converters for Z3, Yices2, and cvc5 are included in
+MaudeSE. To use Yices2 or cvc5 instead, install the corresponding solver
+Python package and select it with `-s yices` or `-s cvc5`. See
+[installation and build instructions](INSTALL.md) for other installation
+options, standalone executables, and local builds.
 
-positional arguments:
-  file                  input Maude file
+## Documentation
 
-options:
-  -h, --help            show this help message and exit
-  -cfg CONFIG, -config CONFIG
-                        a directory to a configuration file (default: "config.yml")
-  -s SOLVER, -solver SOLVER
-                        solver name
-  -no-meta              no metaInterpreter
-```
+The [MaudeSE documentation](https://maude-se.github.io) covers commands,
+examples, and the connector interface.

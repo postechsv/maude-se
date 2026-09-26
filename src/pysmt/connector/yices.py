@@ -17,6 +17,16 @@ class YicesConnector(Connector):
 
         self._ctx: Context = Context(self._cfg)
         self._m = None
+
+    def __del__(self):
+        # The Python Yices bindings do not automatically dispose of either
+        # native allocation when their wrappers are garbage-collected.
+        context = getattr(self, "_ctx", None)
+        if context is not None and context.context is not None:
+            context.dispose()
+        config = getattr(self, "_cfg", None)
+        if config is not None and config.config is not None:
+            config.dispose()
     
     def check_sat(self, consts):
         fs = list()

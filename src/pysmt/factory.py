@@ -1,52 +1,35 @@
-import maudeSE.maude
+"""Register Python or separately installed native SMT backends."""
 
-from .connector import *
-from .converter import *
-from maudeSE.maude import SmtManagerFactory
+from maudeSE.maude import (
+    install_python_smt_factory,
+    loadNativeSmtPlugin,
+    nativeSmtPluginError,
+)
+from . import native_assets, native_plugin
 
-class Factory(SmtManagerFactory):
+
+class Factory:
     def __init__(self):
-        SmtManagerFactory.__init__(self)
-        self._map = dict()
-        self._converter = None
+        self._map = {}
 
-    def register(self, name, conv_cls, conn_cls):
-        self._map[name] = (conv_cls, conn_cls)
+    def register(self, name, converter_class, connector_class):
+        self._map[name] = (converter_class, connector_class)
 
-    def check_solver(self, solver: str):
-        # deprecate ...
+    def install(self, solver):
         if solver not in self._map:
-            raise Exception("unregistered solver {}".format(solver))
+            raise ValueError(f"unregistered solver {solver}")
+        install_python_smt_factory(*self._map[solver])
 
-    def createConverter(self):
-        solver = maudeSE.maude.cvar.smtSolver
-
-        self.check_solver(solver)
- 
-        cv, _ = self._map[solver]
-        conv = cv()
-    
-        if conv is None:
-            raise Exception("fail to create converter")
-
-        # Keep the Python director object.  SWIG passes createConnector a
-        # base-class proxy, which hides solver-specific Python attributes
-        # needed by backends such as cvc5.
-        self._converter = conv
-    
-        # must be disown in order to take over the ownership
-        return conv.__disown__()
-    
-    def createConnector(self, conv):
-        solver = maudeSE.maude.cvar.smtSolver
-
-        self.check_solver(solver)
-
-        _, cn = self._map[solver]
-        conn = cn(self._converter)
-    
-        if conn is None:
-            raise Exception("fail to create connector")
-    
-        # must be disown in order to take over the ownership
-        return conn.__disown__()
+    def install_native(self, solver):
+        if solver not in ("z3", "yices", "cvc5"):
+            raise ValueError(f"native backend is unavailable for {solver}")
+        path = native_plugin.library_path(solver)
+        if not path.is_file():
+            raise RuntimeError(f"native {solver} plugin is unavailable; run: maude-se-installer install native {solver}")
+        if not native_assets.ready(solver, path.parent / "solver"):
+            raise RuntimeError(
+                f"native {solver} upstream library is missing; run: "
+                f"maude-se-installer install native {solver}"
+            )
+        if not loadNativeSmtPlugin(str(path), solver):
+            raise RuntimeError(f"native {solver} plugin could not load: {nativeSmtPluginError()}")

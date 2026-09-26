@@ -57,7 +57,8 @@ endm
 
 ### Basic Usage
 
-Use the following commmand to load the example Maude file and set the SMT solver to Yices2.
+Download the example above, then use the following command to load it with
+Yices2. Install the Yices2 Python packages first; see {doc}`installation`.
 
 ```console
 $ maude-se coffee.maude -s yices
@@ -72,7 +73,7 @@ If successful, the MaudeSE interpreter will appear as follows.
 ```maude
           ===================================
                         MaudeSE
-               (0.0.3 built: June 6 2025)
+               (<version and build date>)
           ===================================
 
 

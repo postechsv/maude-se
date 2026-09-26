@@ -40,6 +40,7 @@ libExtension_a_SOURCES = \
 	extGlobal.cc
 
 
+# CVC4 is retained as legacy source, but current builds select cvc5 instead.
 EXTRA_DIST = \
     z3.cc \
     yices2.cc \

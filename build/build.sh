@@ -18,12 +18,18 @@ source "$top_dir/build/source-integrity.sh"
 # shellcheck source=version.sh
 source "$top_dir/build/version.sh"
 
-work_dir="$top_dir/.build-wheel"
+work_dir="${MAUDE_SE_WHEEL_WORK_DIR:-$top_dir/.build-wheel}"
 bindings_dir="$work_dir/sources/maude-bindings"
 smc_dir="$bindings_dir/subprojects/maudesmc"
-build_dir="$work_dir/install"
-third_party="$work_dir/dependencies"
-package_src_dir="$build_dir/package-src"
+if [[ -n "${MAUDE_SE_WHEEL_DEPS_DIR:-}" ]]; then
+  build_dir="$MAUDE_SE_WHEEL_DEPS_DIR/install"
+  third_party="$MAUDE_SE_WHEEL_DEPS_DIR/dependencies"
+  package_src_dir="$work_dir/package-src"
+else
+  build_dir="$work_dir/install"
+  third_party="$work_dir/dependencies"
+  package_src_dir="$build_dir/package-src"
+fi
 
 # OS & architecture detection
 
@@ -137,7 +143,43 @@ make_patch() {
   git diff --no-prefix src/ >$top_dir/src/patch/d-$(git log -1 --pretty=format:"%h").patch
 }
 
-build_deps() {
+build_deps() (
+  local signature marker lock_dir file deps_complete
+
+  if [[ -n "${MAUDE_SE_WHEEL_DEPS_DIR:-}" ]]; then
+    mkdir -p "$MAUDE_SE_WHEEL_DEPS_DIR"
+    lock_dir="$MAUDE_SE_WHEEL_DEPS_DIR/.build-lock"
+    if ! mkdir "$lock_dir" 2>/dev/null; then
+      echo "error: shared wheel dependencies are already being built: $lock_dir" >&2
+      return 1
+    fi
+    trap 'rmdir -- "$lock_dir"' EXIT
+
+    signature="$({
+      printf '%s\n' "$arch" "$deployment_target" "$native_cflags" "$native_cxxflags" "$native_ldflags"
+      clang --version | sed -n '1p'
+      xcrun --show-sdk-path
+      shasum -a 256 "$top_dir/build/build.sh" "$top_dir/build/versions.env" \
+        "$top_dir/build/source-integrity.sh" "$top_dir/build/config.guess" "$top_dir/build/config.sub"
+    } | shasum -a 256 | cut -d ' ' -f 1)"
+    marker="$MAUDE_SE_WHEEL_DEPS_DIR/.build-signature"
+    if [[ -f "$marker" && "$(<"$marker")" == "$signature" ]]; then
+      deps_complete=true
+      for file in libgmp.a libgmpxx.a libbdd.a libtecla.a libsigsegv.a; do
+        if [[ ! -f "$build_dir/lib/$file" ]]; then
+          deps_complete=false
+          break
+        fi
+      done
+      if [[ "$deps_complete" == true &&
+            -f "$build_dir/include/gmp.h" && -f "$build_dir/include/bdd.h" &&
+            -f "$build_dir/include/libtecla.h" && -f "$build_dir/include/sigsegv.h" ]]; then
+        progress "Reusing shared wheel dependencies from $build_dir"
+        return 0
+      fi
+    fi
+    rm -f "$marker"
+  fi
 
   build_libsigsegv
   build_gmp
@@ -146,7 +188,10 @@ build_deps() {
 
   rm -rf "$build_dir"/lib/*.so*
   rm -rf "$build_dir"/lib/*.dylib*
-}
+  if [[ -n "${MAUDE_SE_WHEEL_DEPS_DIR:-}" ]]; then
+    printf '%s\n' "$signature" >"$marker"
+  fi
+)
 
 build_maude() {
   rm -rf "$smc_dir/src/Extension"

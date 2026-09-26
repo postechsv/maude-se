@@ -27,7 +27,7 @@ build() {
   cp $top_dir/examples/coffee.maude $top_dir/examples/euf-ex.maude .
 
   cd $doc_dir
-  make html
+  make html SPHINXOPTS="-W --keep-going"
 }
 
 publish() {

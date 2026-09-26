@@ -23,20 +23,6 @@ MaudeSE is a rewriting modulo SMT extension of Maude. It is a flexible yet effic
 See our paper
 ```
 
----
-<!-- 
-Maude-SE is an SMT extension of Maude that tightly integrates Maude and SMT solvers with extra functionality. It extends the original Maude-SMT at the core Maude level.
-In addition to the existing SMT solving capability of Maude, the tool provides three additional features that are not currently supported by Maude but that are very useful for rewriting modulo SMT: 
-
-- building satisfying assignments by SMT solving, 
-- simplifying formulas using the underlying SMT solver, and 
-- dealing with non-linear arithmetic formulas. 
-
-Maude-SE can analyze nontrivial systems that cannot be dealt with by the previous Maude-SMT implementation.
-
-There are three versions of Maude SE (i.e., Z3, Yices2, CVC4), depending on an underlying SMT solver it uses. -->
-
-
 ## Bug report
 
 To report bugs or provide suggestions, contact [maude-se@postech.ac.kr](mailto:maude-se@postech.ac.kr) or 
