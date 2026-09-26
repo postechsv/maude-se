@@ -19,28 +19,22 @@ def _run(command, cwd, env=None):
     subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
-def install(solvers, source_dir=None, build_dir=None, asset_archive=None):
-    if sys.platform != "darwin":
-        raise RuntimeError("local native plugin compilation currently supports macOS only")
-    root = native_plugin.package_root()
-    core = root / "maude" / "libmaude.dylib"
-    if not core.is_file():
-        raise RuntimeError(f"maude-se core library is missing: {core}")
+def _source_checkout(root, source_dir=None, build_dir=None):
     if source_dir:
         source = Path(source_dir).expanduser().resolve()
         if not (source / "build.sh").is_file():
             raise RuntimeError(f"maude-se source checkout is missing build.sh: {source}")
     else:
         work = Path(build_dir).expanduser().resolve() if build_dir else root / ".native-build"
-        work.mkdir(parents=True, exist_ok=True)
-        source = work / "maude-se"
+        version = metadata.version("maude-se")
+        version_work = work / f"v{version}"
+        version_work.mkdir(parents=True, exist_ok=True)
+        source = version_work / "maude-se"
         if not source.exists():
-            version = metadata.version("maude-se")
-            _run(["git", "clone", "--branch", f"v{version}", "--depth", "1", SOURCE_URL, str(source)], work)
+            _run(["git", "clone", "--branch", f"v{version}", "--depth", "1", SOURCE_URL, str(source)], version_work)
         elif not (source / "build.sh").is_file():
             raise RuntimeError(f"build source is invalid: {source}")
         else:
-            version = metadata.version("maude-se")
             tag_commit = subprocess.run(
                 ["git", "rev-list", "-n", "1", f"v{version}"], cwd=source,
                 capture_output=True, text=True, check=True,
@@ -51,6 +45,17 @@ def install(solvers, source_dir=None, build_dir=None, asset_archive=None):
             ).stdout.strip()
             if tag_commit != head_commit:
                 raise RuntimeError(f"cached sources do not match installed maude-se tag v{version}: {source}")
+    return source
+
+
+def install(solvers, source_dir=None, build_dir=None, asset_archive=None):
+    if sys.platform != "darwin":
+        raise RuntimeError("local native plugin compilation currently supports macOS only")
+    root = native_plugin.package_root()
+    core = root / "maude" / "libmaude.dylib"
+    if not core.is_file():
+        raise RuntimeError(f"maude-se core library is missing: {core}")
+    source = _source_checkout(root, source_dir=source_dir, build_dir=build_dir)
     env = os.environ.copy()
     tool_paths = [str(Path(sys.executable).parent)]
     for tool in ("bison", "flex"):

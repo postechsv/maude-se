@@ -38,8 +38,6 @@ Commands:
   test-wheel    Install the wheel in an isolated environment and run smoke tests
   standalone [z3|yices|cvc5|all]
                 Build a self-contained macOS executable ZIP into out/
-  plugin [z3|yices|cvc5|all]
-                Build optional native solver plugin wheels into out/
   test-standalone [z3|yices|cvc5|all]
                 Extract and smoke-test the standalone ZIP
   shell [test|build]

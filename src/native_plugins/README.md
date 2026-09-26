@@ -29,7 +29,7 @@ maude-se model.maude -s z3 -native
 ```
 
 Without `--source-dir`, the installer clones the `v<installed maude-se version>`
-source tag to `maudeSE/.native-build/maude-se`. The tag must exist upstream.
+source tag to `maudeSE/.native-build/v<version>/maude-se`. The tag must exist upstream.
 Use `--build-dir DIRECTORY` to keep that clone elsewhere. This process needs
 the macOS build prerequisites listed in `INSTALL.md`, network access for
 pinned dependencies, and write access to the installed package directory.
