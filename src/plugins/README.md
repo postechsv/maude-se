@@ -15,17 +15,43 @@ For a local macOS build, first build the base wheel:
 ./build.sh wheel
 ```
 
-To test in another Python environment, install the locally built base wheel
-there first. The `out/` directory may contain wheels for several Python
-versions; select the current one:
+To test in another Python environment, activate it first. The `out/`
+directory may contain wheels for several Python versions, so determine the
+active Python's wheel tag:
 
 ```sh
 python_tag="$(python3 -c 'import sys; print(f"cp{sys.version_info.major}{sys.version_info.minor}")')"
+```
+
+Determine the Mac architecture:
+
+```sh
 arch="$(uname -m)"
+```
+
+Install the matching locally built base wheel into that environment:
+
+```sh
 python3 -m pip install out/maude_se-*-"$python_tag"-"$python_tag"-macosx_*_"$arch".whl
+```
+
+From the repository root, build and install all three native plugins using
+the local source checkout:
+
+```sh
 maude-se-installer install native all --source-dir .
+```
+
+Check that the plugins are available:
+
+```sh
 maude-se-installer doctor native
-maude-se model.maude -s z3 -native
+```
+
+Run an included example with the native Z3 plugin:
+
+```sh
+maude-se examples/smt-check-ex.maude -s z3 -native
 ```
 
 Without `--source-dir`, the installer clones the `v<installed maude-se version>`

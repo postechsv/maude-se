@@ -78,9 +78,8 @@ With the downloaded wheel in your current directory, install that file with
 python3 -m pip install ./maude_se-VERSION-PYTHON-PLATFORM.whl
 ```
 
-For a wheel that includes `maude-se-installer`, add a solver as described
-above. The table includes older releases, so check the instructions for the
-release you download. For local source builds, see
+After installing the wheel, add a solver with `maude-se-installer` as described
+above. For local source builds, see
 [INSTALL.md](https://github.com/postechsv/maude-se/blob/main/INSTALL.md).
 
 ```{include} wheels.md
@@ -89,7 +88,8 @@ release you download. For local source builds, see
 ### Standalone executable
 
 Download a standalone executable for your platform from the releases below.
-The listed executables include Z3 and do not need a Python installation. They
+The listed executables are available with Z3, Yices2, or cvc5 and do not need
+a Python installation. They
 use a native C++ solver connection; custom Python
 [connectors](https://github.com/postechsv/maude-se/tree/main/src/pysmt/connector)
 and [converters](https://github.com/postechsv/maude-se/tree/main/src/pysmt/converter)
@@ -98,8 +98,8 @@ require the Python package instead.
 ```{include} native.md
 ```
 
-For local source builds, including the Yices2 and cvc5 standalone variants,
-see [INSTALL.md](https://github.com/postechsv/maude-se/blob/main/INSTALL.md).
+For local source builds, see
+[INSTALL.md](https://github.com/postechsv/maude-se/blob/main/INSTALL.md).
 
 ---
 
@@ -119,11 +119,15 @@ maude-se-installer install native z3
 
 This builds the plugin locally. It requires the native build prerequisites,
 network access to obtain the matching MaudeSE source and solver dependencies,
-and write access to the installed Python package. Check the plugin and select
-it when running MaudeSE:
+and write access to the installed Python package. Check the plugin:
 
 ```sh
 maude-se-installer doctor native z3
+```
+
+Then select it when running MaudeSE:
+
+```sh
 maude-se examples/smt-check-ex.maude -s z3 -native
 ```
 

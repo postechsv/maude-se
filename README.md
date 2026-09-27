@@ -6,32 +6,45 @@ Z3, Yices2, and cvc5. You can also write a connector for another solver.
 
 ## Install and run
 
-The upcoming release supports Python 3.10–3.14 on macOS and Linux. Install
-MaudeSE with Z3, its default solver:
+The current release supports Python 3.10–3.14 on macOS and Linux. First,
+install the base MaudeSE package from PyPI:
 
 ```sh
-python3 -m pip install 'maude-se[z3]'
+python3 -m pip install maude-se
 ```
 
-This command applies after the upcoming release is published. Until then,
-build and test the current source as described in [INSTALL.md](INSTALL.md).
+The base package includes the solver connectors, but not a solver. Install Z3
+in the same Python environment:
 
-This installs both MaudeSE and the Z3 Python package. The connectors and
-converters are included in MaudeSE; the extra installs the solver package.
+```sh
+maude-se-installer install z3
+```
 
-From a checkout of this repository, open one of the included examples:
+Check that Z3 is available to MaudeSE:
+
+```sh
+maude-se-installer doctor z3
+```
+
+The example below requires a checkout of this repository; the PyPI package
+does not include the `examples/` directory. From the repository root, open
+an included example:
 
 ```sh
 maude-se examples/smt-check-ex.maude -s z3
 ```
 
-At the `MaudeSE>` prompt, run `check in SIMPLE : X:Integer > 4 using QF_LRA .`;
-the result should be `sat`.
+At the `MaudeSE>` prompt, enter:
 
-To use Yices2 or cvc5 instead, install `maude-se[yices]` or `maude-se[cvc5]`
-and select it with `-s yices` or `-s cvc5`. See the
-[installation guide](INSTALL.md) for existing installations, standalone
-executables, and source builds.
+```maude
+check in SIMPLE : X:Integer > 4 using QF_LRA .
+```
+
+The result should be `sat`.
+
+For other solvers, installation alternatives, and local builds, see
+[INSTALL.md](INSTALL.md). The [website installation guide](https://maude-se.github.io/installation.html)
+also covers release downloads and native solver plugins.
 
 ## Documentation
 

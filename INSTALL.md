@@ -2,28 +2,33 @@
 
 ## Install the Python package
 
-The upcoming release supports Python 3.10–3.14 on macOS and Linux. Install
-MaudeSE with Z3, the default solver:
+The current release supports Python 3.10–3.14 on macOS and Linux. First,
+install the base MaudeSE package from PyPI:
 
 ```bash
-python3 -m pip install 'maude-se[z3]'
+python3 -m pip install maude-se
 ```
 
-This command applies after the upcoming release is published. To use the
-current checkout now, build a wheel using the steps below.
-
-MaudeSE already contains the connectors and converters for Z3, Yices2, and
-cvc5. The `z3` extra installs the Z3 Python package; it does not install a
-separate connector.
-
-### Add a solver to an existing installation
-
-The base wheel includes no solver Python package. If you installed `maude-se`
-without an extra, add Z3 to that environment with:
+The base package includes the solver connectors, but not a solver. Install Z3,
+the default solver, in the same Python environment:
 
 ```bash
 maude-se-installer install z3
 ```
+
+Alternatively, install both in one step with
+`python3 -m pip install 'maude-se[z3]'`. To use the current checkout, build a
+wheel using the steps below.
+
+MaudeSE already contains the connectors and converters for Z3, Yices2, and
+cvc5. The installer and the `z3` extra install the Z3 Python package; neither
+installs a separate connector.
+
+### Add a solver to an existing installation
+
+The base wheel includes no solver Python package. If you installed `maude-se`
+without an extra, add Z3 to that environment using the installer command
+shown above.
 
 For a fresh installation with another solver, replace `[z3]` with `[yices]`
 or `[cvc5]`; the Yices2 extra installs both `yices` and
@@ -43,8 +48,13 @@ you installed:
 maude-se examples/smt-check-ex.maude -s z3
 ```
 
-At the `MaudeSE>` prompt, run
-`check in SIMPLE : X:Integer > 4 using QF_LRA .` and expect `result: sat`.
+At the `MaudeSE>` prompt, enter:
+
+```maude
+check in SIMPLE : X:Integer > 4 using QF_LRA .
+```
+
+The result should be `sat`.
 
 Use `maude-se --help` for command options. For a standalone executable that
 includes its own solver, see the [release downloads](https://github.com/postechsv/maude-se/releases)
@@ -221,8 +231,8 @@ For the complete local command list, run `./build.sh --help`.
 
 The release version is defined in `src/pyproject.toml`. Wheel and standalone
 artifact names and the MaudeSE banner derive from it during the build. A
-release tag must use the matching `v<version>` form, such as `v0.0.3` for
-version `0.0.3`.
+release tag must use the matching `v<version>` form, such as `v0.0.4` for
+version `0.0.4`.
 
 Native dependencies are built from pinned sources. Their archives are checked
 against the SHA-256 values in `build/versions.env`; update the pins together

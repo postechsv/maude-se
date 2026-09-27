@@ -33,10 +33,10 @@ For Yices to handle nonlinear theories, mcsat is required
 
 | #        | Name          | Files |
 |:-------------|:------------------|:------|
-| 1 | maude-se-z3 | \[macOS\]\[[Linux][maude-se-z3-linux]\] |
-| 2 | maude-se-yices2 | \[macOS\]\[[Linux][maude-se-yices-linux]\] |
-| 3 | maude-se-yices2-mcsat | \[macOS\]\[[Linux][maude-se-yices-mcsat-linux]\] |
-| 4 | maude-se-cvc4 | \[macOS\]\[[Linux][maude-se-cvc4-linux]\] |
+| 1 | maude-se-z3 | [macOS][maude-se-z3-mac-intel], [Linux][maude-se-z3-linux] |
+| 2 | maude-se-yices2 | [macOS][maude-se-yices-mac-intel], [Linux][maude-se-yices-linux] |
+| 3 | maude-se-yices2-mcsat | [macOS][maude-se-yices-mcsat-mac-intel], [Linux][maude-se-yices-mcsat-linux] |
+| 4 | maude-se-cvc4 | [macOS][maude-se-cvc4-mac-intel], [Linux][maude-se-cvc4-linux] |
 
 
 ## SMT Interface
