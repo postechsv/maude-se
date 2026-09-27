@@ -235,6 +235,17 @@ select **Run workflow**, and choose a pushed branch. This runs macOS and Linux
 builds and tests without publishing. Build artifacts are available from the
 completed workflow run. Unpushed local changes are not included.
 
+macOS CI saves the pinned static dependencies in a GitHub Actions cache for
+later runs with the same architecture, compiler, SDK, deployment target, and
+dependency build scripts. A cache miss rebuilds them normally. The cache is
+scoped by GitHub's branch and tag access rules, so a release tag may need to
+populate its own cache.
+
+Each macOS standalone solver is built and tested in its own job after the
+shared dependencies are restored. This reduces the sequential build path
+when runners are available, without changing the three solver-specific ZIPs
+or skipping any solver tests.
+
 The separate **Release** workflow runs the same build and tests when a
 matching `v<version>` tag is pushed. It publishes wheels to PyPI unless the
 tag contains `pre`, and publishes wheels plus standalone ZIPs to GitHub
