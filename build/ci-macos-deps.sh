@@ -6,6 +6,20 @@ archive="$top_dir/.ci-deps/macos-deps.tar.gz"
 cd "$top_dir"
 
 case "${1:-}" in
+cache-key)
+  {
+    uname -m
+    sw_vers -productVersion | cut -d. -f1
+    xcrun --show-sdk-path
+    clang --version | sed -n '1p'
+    c++ --version | sed -n '1p'
+    printf '%s\n' "${MAUDE_SE_MACOS_DEPLOYMENT_TARGET:-default}"
+    git hash-object \
+      build/ci-macos-deps.sh build/build.sh build/native.sh \
+      build/versions.env build/source-integrity.sh \
+      build/config.guess build/config.sub
+  } | shasum -a 256 | cut -d ' ' -f1
+  ;;
 prepare)
   ./build.sh install-deps
   export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$(brew --prefix autoconf)/bin:$(brew --prefix automake)/bin:$PATH"
@@ -42,7 +56,7 @@ restore)
   tar -xzf "$archive"
   ;;
 *)
-  echo "usage: $0 prepare|restore" >&2
+  echo "usage: $0 cache-key|prepare|restore" >&2
   exit 2
   ;;
 esac

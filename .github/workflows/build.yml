@@ -14,9 +14,9 @@ permissions:
 jobs:
   verify-version:
     name: Verify package version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Match release tag to package version
       env:
         RELEASE_TAG: ${{ github.ref_name }}
@@ -33,16 +33,16 @@ jobs:
   manylinux_2_28:
     name: Linux wheels (manylinux_2_28)
     if: ${{ !inputs.linux_standalone_only }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: verify-version
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Build and test Linux wheels
       run: |
         docker run --rm -v "$PWD:/work" -w /work quay.io/pypa/manylinux_2_28_x86_64 \
           bash -c './build/many_linux.sh && bash ./build/test-linux.sh wheel'
     - name: Store wheel distributions
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: py-package-dist-many-linux
         path: out/
@@ -56,11 +56,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: verify-version
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
+    - name: Identify macOS dependency cache
+      id: deps-key
+      run: echo "value=$(bash ./build/ci-macos-deps.sh cache-key)" >> "$GITHUB_OUTPUT"
+    - name: Restore macOS dependency cache
+      id: deps-cache
+      uses: actions/cache@v5
+      with:
+        path: .ci-deps/macos-deps.tar.gz
+        key: macos-deps-v1-${{ matrix.os }}-${{ steps.deps-key.outputs.value }}
     - name: Build shared wheel and standalone dependencies
+      if: steps.deps-cache.outputs.cache-hit != 'true'
       run: bash ./build/ci-macos-deps.sh prepare
     - name: Store macOS dependencies
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: macos-deps-${{ matrix.os }}
         path: .ci-deps/macos-deps.tar.gz
@@ -77,16 +87,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: macos_deps
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Download shared macOS dependencies
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: macos-deps-${{ matrix.os }}
         path: .ci-deps/
     - name: Restore shared macOS dependencies
       run: bash ./build/ci-macos-deps.sh restore
     - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install pypa/build
@@ -121,17 +131,17 @@ jobs:
         "$test_python" tests/regression/python/test_native_plugin_only.py z3
         "$test_python" tests/regression/python/test_native_backends.py z3
     - name: Store wheel distribution
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: py-package-dist-${{ strategy.job-index }}
         path: out/
 
   manylinux_native:
     name: Linux standalone (manylinux_2_34)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: verify-version
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Build MaudeSE
       env:
         TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
@@ -162,46 +172,38 @@ jobs:
           quay.io/pypa/manylinux_2_34_x86_64 \
           bash -c 'top_dir=/work; source build/version.sh; release_tag="${TAG:-$(maude_se_release_tag)}"; ./build/native.sh set-env && ./build/native.sh deps yices && ./build/native.sh build-maude-se "$release_tag" yices && bash ./build/test-linux.sh standalone yices'
     - name: Store standalone distribution
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: native-dist-many-linux
         path: out/
 
   macos_native:
-    name: macOS standalone
+    name: macOS standalone (${{ matrix.os }}, ${{ matrix.solver }})
     if: ${{ !inputs.linux_standalone_only }}
     strategy:
       matrix:
         os: ['macos-latest','macos-15-intel']
+        solver: ['z3','cvc5','yices']
     runs-on: ${{ matrix.os }}
     needs: macos_deps
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Download shared macOS dependencies
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: macos-deps-${{ matrix.os }}
         path: .ci-deps/
     - name: Restore shared macOS dependencies
       run: bash ./build/ci-macos-deps.sh restore
-    - name: Build MaudeSE
-      env:
-        TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-      run: |
-        export GITHUB_TOKEN="${{ github.token }}"
-        ./build/native.sh build "$TAG"
+    - name: Install macOS build tools
+      run: ./build.sh install-deps
+    - name: Build standalone executable
+      run: ./build.sh standalone "${{ matrix.solver }}"
     - name: Test standalone executable
-      run: ./build.sh test-standalone
-    - name: Build and test cvc5 standalone
-      run: |
-        ./build.sh standalone cvc5
-        ./build.sh test-standalone cvc5
-    - name: Build and test Yices standalone
-      run: |
-        ./build.sh standalone yices
-        ./build.sh test-standalone yices
+      run: ./build.sh test-standalone "${{ matrix.solver }}"
     - name: Store standalone distribution
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: native-dist-${{ strategy.job-index }}
-        path: out/
+        name: native-dist-${{ matrix.os }}-${{ matrix.solver }}
+        path: out/maude_se_${{ matrix.solver }}-*.zip
+        if-no-files-found: error
